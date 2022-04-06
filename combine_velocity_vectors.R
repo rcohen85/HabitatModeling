@@ -48,7 +48,7 @@ for (i in seq_along(fileListU)){ # for each file in FileListU
     # calculate magnitude of resultant vector
     velocityMag = sqrt((dataU*dataU)+(dataV*dataV))
     # calculate angle of resultant vector
-    velocityAngle = atan2(dataU/dataV)
+    velocityAngle = (pi/2) - atan2(dataV,dataU)
     velocityAngle[velocityAngle<0] = velocityAngle[velocityAngle<0] + (2*pi)
     # convert from radians to degrees
     velocityAngle = (velocityAngle*180)/pi
