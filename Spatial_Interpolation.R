@@ -1,3 +1,9 @@
+
+# Some informative webpages:
+# https://rspatial.org/raster/analysis/4-interpolation.html
+# http://132.72.155.230:3838/r/spatial-interpolation-of-point-data.html
+# https://mgimond.github.io/Spatial/interpolation-in-r.html
+
 library(sp)
 library(oce)
 library(rgdal)
