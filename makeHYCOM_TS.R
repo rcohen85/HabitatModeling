@@ -99,7 +99,7 @@ for (j in 5:length(Covars)){
         }
         
         # grab data values at this HARP site
-        thisFileData[m,1] = data[sitelon,sitelat]
+        thisFileData[m,1] = data[sitelat,sitelon]
         thisFileLat[m] = lats[sitelat]
         thisFileLon[m] = lons[sitelon]
         
