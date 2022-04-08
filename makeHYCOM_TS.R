@@ -31,24 +31,30 @@ HARPs$Lon1 = HARPs$Lon1+360
 HARPs$Lon2 = HARPs$Lon2+360
 fullFileList = dir(inDir,".Rdata")
 
-# initialize arrays to hold data from all files matching sites
-masterData.Data = double()
-masterData.Lat = double()
-masterData.Lon = double()
-masterData.Time = double()
 
-# define where our specific depth layers are
-depths = c(0,200,500,1000)
-# which covars have multiple depths
-deepCovars = list("U_Velocity", "V_Velocity", "Temperature", "Salinity")
 
-for (j in 1:length(deepCovars)){
+# Covars of interest
+Covars = list("SSH","U_Velocity", "V_Velocity", "Temperature", "Salinity")
+
+for (j in 5:length(Covars)){
+  
+  if (j%in%c(2:5)){
+    depths = c(0,100,200,300,400,500,600,700,800)
+  } else {
+    depths = 0
+  }
   
   for (k in 1:length(depths)){
 
-    thisCovar = which(str_detect(fullFileList,unlist(deepCovars[j])))
-    thisDepth = which(str_detect(fullFileList,paste('_',depths[j],'_',sep="")))
+    thisCovar = which(str_detect(fullFileList,unlist(Covars[j])))
+    thisDepth = which(str_detect(fullFileList,paste('_',depths[k],'_',sep="")))
     fileInd = intersect(thisCovar,thisDepth)
+    
+    # initialize arrays to hold data from all files matching sites
+    masterData.Data=double()
+    masterData.Lat=double()
+    masterData.Lon=double()
+    masterData.Time=double()
     
     for (i in 1:length(fileInd)){
       
@@ -56,7 +62,7 @@ for (j in 1:length(deepCovars)){
       load(paste(inDir,'/',fullFileList[fileInd[i]],sep=""))
       
       # get 6-digit datestamps from file names
-      fileDate = str_extract(fullFileList[i],"\\d\\d\\d\\d\\d\\d\\d\\d") 
+      fileDate = str_extract(fullFileList[fileInd[i]],"\\d\\d\\d\\d\\d\\d\\d\\d") 
       time_temp = paste(str_sub(fileDate,start=1L,end=4L),'-',
                         str_sub(fileDate,start=5L,end=6L),'-',
                         str_sub(fileDate,start=7L,end=8L),sep="")
@@ -79,15 +85,15 @@ for (j in 1:length(deepCovars)){
             sitelat = which.min(abs(HARPs[m,3]-lats))
             sitelon = which.min(abs(HARPs[m,4]-lons))
           }
-        } else if (m==2) {
-          if (time>OC_change){
+        } else if (m==2) {# at OC, account for slight change in site location
+          if (time<OC_change){
             sitelat = which.min(abs(HARPs[m,1]-lats))
             sitelon = which.min(abs(HARPs[m,2]-lons))
           } else {
             sitelat = which.min(abs(HARPs[m,3]-lats))
             sitelon = which.min(abs(HARPs[m,4]-lons))
           }
-          } else {
+        } else {
           sitelat = which.min(abs(HARPs[m,1]-lats))
           sitelon = which.min(abs(HARPs[m,2]-lons))
         }
@@ -107,8 +113,15 @@ for (j in 1:length(deepCovars)){
       
     }
     
+    # Make sure data is sorted chronologically
+    q = sort(masterData.Time,decreasing=FALSE,index.return=TRUE)
+    masterData.Data = masterData.Data[,q$ix]
+    masterData.Lat = masterData.Lat[,q$ix]
+    masterData.Lon = masterData.Lon[,q$ix]
+    masterData.Time = masterData.Time[q$ix]
+    
     save(masterData.Data,masterData.Lat,masterData.Lon,masterData.Time,
-         file=paste(outDir,'/',deepCovars[j],'_',depths[k],'_TS.Rdata',sep=""))
+         file=paste(outDir,'/',Covars[j],'_',depths[k],'_TS.Rdata',sep=""))
     
   }
 }
