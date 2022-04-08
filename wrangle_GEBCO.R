@@ -1,10 +1,10 @@
 library(ncdf4)
+library(EFDR)
 library(ggplot2)
 library(viridis)
 library(grid)
 library(pracma)
 library(geodist)
-source("cgrad_RC.R")
 
 
 # If necessary, load original high-res file and downsample to desired resolution
@@ -21,12 +21,12 @@ source("cgrad_RC.R")
 #                       y=rep(lat,length.out=length(lon)*length(lat)),
 #                       x=rep(lon,each=length(lat)))
 # 
-# newx = seq(278,297,by=0.04)
-# newy = seq(24,44,by=0.04)
+# newx = seq(278,297,by=0.02)
+# newy = seq(24,44,by=0.02)
 # newGrid = regrid(highRes,n1=length(newx),n2=length(newy),method="idw")
 # colnames(newGrid) = c("Lon","Lat","Depth")
 # depthData = matrix(newGrid$Depth,ncol=length(newx),byrow=TRUE)
-# save(newGrid,depthData,file=('J:/Chpt_3/GEBCO/DownsampledGrid_04deg.Rdata'))
+# save(newGrid,depthData,newx,newy,file=('J:/Chpt_3/GEBCO/DownsampledGrid_02deg.Rdata'))
 
 # Load depth grid of desired resolution
 load('J:/Chpt_3/GEBCO/DownsampledGrid_04deg.Rdata')
@@ -45,7 +45,6 @@ for (i in 1:length(newx)){
   latDist = geodist_vec(latMat$longitude,latMat$latitude,sequential=TRUE,measure="geodesic")
   dy = cbind(dy,latDist)
 }
-# dy = rbind(dy,dy[dim(dy)[1],]+0.0312)
 colnames(dy) = as.character(newx)
 rownames(dy) = as.character(newy[-length(newy)])
 
@@ -57,9 +56,47 @@ for (j in 1:length(newy)){
   dx = cbind(dx,lonDist)
 }
 dx = t(dx)
-# dx = cbind(dx,dx[,dim(dx)[2]])
 colnames(dx) = as.character(newx[-length(newx)])
 rownames(dx) = as.character(newy)
+
+# Function to calculate components of unit normal vector at each depth grid point
+# taken from insol package
+cgrad_RC <-
+  function(dem, dlx, dly, cArea=FALSE){
+    if (nargs() < 1) {
+      cat("USAGE: cgrad(dem, dx, dly=dlx, cArea=FALSE) \n")
+      return()
+    }
+    if ("RasterLayer" %in% class(dem)) {
+      dlx = raster::res(dem)[1]
+      dly = raster::res(dem)[2]
+      dem = raster::as.matrix(dem)
+    }
+    if (dlx == 0){
+      cat("Input data is not a RasterLayer, then I need the DEM resolution dlx \n")
+      return()
+    }
+    mm=as.matrix(dem)
+    rows=nrow(mm)
+    cols=ncol(mm)
+    cellgr=array(dim=c(rows,cols,3))
+    md=mm[-rows,-1]
+    mr=mm[-1,-cols]
+    mrd=mm[-1,-1]
+    dlx=dlx[-rows,]
+    dly=dly[,-cols]
+    cellgr[-rows,-cols,2]=.5*dlx*(mm[-rows,-cols]+md-mr-mrd)
+    cellgr[-rows,-cols,1]=.5*dly*(mm[-rows,-cols]-md+mr-mrd)
+    cellgr[-rows,-cols,3]=dlx*dly
+    #last row and col are undefined. Replicate last value form previous row/col
+    cellgr[rows,,]=cellgr[(rows-1),,]
+    cellgr[,cols,]=cellgr[,(cols-1),]
+    cellArea=sqrt(cellgr[,,1]^2+cellgr[,,2]^2+cellgr[,,3]^2)
+    if (cArea) return(cellArea) else {
+      for (i in 1:3) cellgr[,,i] = cellgr[,,i]/cellArea
+      return(cellgr)
+    }
+  }
 
 # get x/y/z components of unit vector normal to each grid point
 g = cgrad_RC(depthData,dlx=dx,dly=dy)
@@ -108,8 +145,8 @@ for (m in 1:nrow(HARPs)){ # for each HARP site
     eval(parse(text=paste('sitelon = which.min(abs(HARPs$Lon',j,'[m]-newx))',sep="")))
     
     # grab slope and aspect values at this HARP site
-    slopeMat[m,j] = floorSlope[sitelon,sitelat]
-    aspectMat[m,j] = floorAspect[sitelon,sitelat]
+    slopeMat[m,j] = floorSlope[sitelat,sitelon]
+    aspectMat[m,j] = floorAspect[sitelat,sitelon]
     
   }
 }
