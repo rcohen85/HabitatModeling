@@ -5,15 +5,21 @@ library(rlang)
 library(lubridate)
 library(stringr)
 library(stats)
-library(splines2)
+library(pracma)
+library(splines)
 
+inDir = 'J:/Chpt_3/CovarTS'
 outDir = 'J:/Chpt_3/CovarPlots'
 
+fileList = dir(inDir)
+
 ## Clean FSLE data -------------------------
-# load('J:/Chpt_3/FSLE_TS.Rdata')
-# FSLE = data.frame(Time=as.Date(masterData.Time[1,],origin="1970-01-01"),HZ0=masterData.Fsle[1,],OC0=masterData.Fsle[2,],NC0=masterData.Fsle[3,],BC0=masterData.Fsle[4,],
-#                      WC0=masterData.Fsle[5,],NFC0=masterData.Fsle[6,],HAT0=masterData.Fsle[7,],GS0=masterData.Fsle[8,],
-#                      BP0=masterData.Fsle[9,],BS0=masterData.Fsle[10,],JAX0=masterData.Fsle[11,])
+# Aviso FSLE is daily at 1/25the (0.04) degree spatial resolution, regridded to 0.08deg
+# load('J:/Chpt_3/CovarTS/FSLE_TS.Rdata')
+# FSLE = data.frame(Time=as.Date(masterData.Time[1,],origin="1970-01-01"),HZ0=masterData.Data[1,],
+#                   OC0=masterData.Data[2,],NC0=masterData.Data[3,],BC0=masterData.Data[4,],
+#                      WC0=masterData.Data[5,],NFC0=masterData.Data[6,],HAT0=masterData.Data[7,],GS0=masterData.Data[8,],
+#                      BP0=masterData.Data[9,],BS0=masterData.Data[10,],JAX0=masterData.Data[11,])
 # 
 # sites = colnames(FSLE)
 # 
@@ -29,8 +35,8 @@ outDir = 'J:/Chpt_3/CovarPlots'
 # ggplot(stack(FSLE[,2:12]))+geom_boxplot(aes(x=ind,y=values))+labs(x="Site & Depth",y="FSLE",title="FSLE")
 # ggsave(paste(outDir,'/',"FSLE_boxplot.png",sep=""),device="png",width=600,height=800,units="px",scale=5,dpi=600)
 # 
-# q25 = quantile(stack(FSLE)$values,probs=0.25)
-# q75 = quantile(stack(FSLE)$values,probs=0.75)
+# q25 = quantile(stack(FSLE[,2:12])$values,probs=0.25)
+# q75 = quantile(stack(FSLE[,2:12])$values,probs=0.75)
 # iqr = q75-q25
 # 
 # # Remove outliers (make NA, interpolate later)
@@ -71,76 +77,259 @@ outDir = 'J:/Chpt_3/CovarPlots'
 # write.csv(FSLE,file=paste(outDir,'/','FSLE_TS.csv',sep=""),row.names=FALSE)
 
 ## Clean HYCOM data --------------------------------
-# library(R.matlab)
-# HYCOM = readMat('J:/Chpt_3/HYCOM_VerticalProfiles_forR.mat')
-# chopInd = which(floor_date(as_date((HYCOM$Time[[1]][[1]]-719529),origin="1970-01-01"),unit="day")>as_date('2019-04-30',format="%Y-%m-%d"))[[1]]
+# Downloaded HYCOM data are daily at 2/25th (0.08) degrees spatial resolution
+vars = c('SSH','Salinity','Temperature','VelocityMag','VelocityAsp')
+for (j in 1:length(vars)){
 
-# SSH ---------------------------------
-# SSH = data.frame(HZ0=HYCOM$SSH[[1]][[1]][1:chopInd],OC0=HYCOM$SSH[[2]][[1]][1:chopInd],NC0=HYCOM$SSH[[3]][[1]][1:chopInd],
-#                  BC0=HYCOM$SSH[[4]][[1]][1:chopInd],WC0=HYCOM$SSH[[5]][[1]][1:chopInd],NFC0=HYCOM$SSH[[6]][[1]][1:chopInd],
-#                  HAT0=HYCOM$SSH[[7]][[1]][1:chopInd],GS0=HYCOM$SSH[[8]][[1]][1:chopInd],BP0=HYCOM$SSH[[9]][[1]][1:chopInd],
-#                  BS0=HYCOM$SSH[[10]][[1]][1:chopInd],JAX0=HYCOM$SSH[[11]][[1]][1:chopInd])
-# sites = colnames(SSH)
+  if (vars[j]=="SSH"){
+
+    TSind = which(!is.na(str_match(fileList,vars[j])))
+    load(paste(inDir,'/',fileList[TSind],sep=""))
+    sites = c('HZ0','OC0','NC0','BC0','WC0','NFC0','HAT0','GS0','BP0','BS0')
+
+    SSHDF = data.frame(t(masterData.Data))
+    colnames(SSHDF) = sites
+
+    # Histograms
+    for (i in 1:10){
+      eval(parse(text=(paste(sites[i],' = ggplot(data=SSHDF)+geom_histogram(aes(x=',sites[i],'))+labs(x="m",y="",title=sites[i])',sep=""))))
+    }
+    png(file=paste(outDir,'/',"SSH_hist.png",sep=""),width = 800, height = 800, units = "px")
+    grid.arrange(HZ0,OC0,NC0,BC0,WC0,NFC0,HAT0,GS0,BP0,BS0, ncol=4,nrow=3,top="SSH")
+    while (dev.cur()>1) {dev.off()}
+
+    # Plot boxplots and calculate quantiles to identify outliers
+    ggplot(stack(SSHDF))+geom_boxplot(aes(x=ind,y=values))+labs(x="Site & Depth",y="m",title="SSH")
+    ggsave(paste(outDir,'/',"SSH_boxplot.png",sep=""),device="png",width=600,height=800,units="px",scale=5,dpi=600)
+
+    q25 = quantile(stack(SSHDF)$values,probs=0.25)
+    q75 = quantile(stack(SSHDF)$values,probs=0.75)
+    iqr = q75-q25
+
+    # Remove outliers?
+    # for (i in 1:11){
+    #   q = round(plotDF[,i],digits=10)
+    #   plotDF[q==0,i] = NA
+    # }
+
+    # Check for missing dates
+    timeDiff = diff(masterData.Time)
+    skipped = which(timeDiff>1)
+
+    # Interpolate missing dates
+    fullSSH = data.frame(Time=seq.Date(from=as.Date("2016-02-01",origin="1970-01-01"),to=as.Date("2019-04-30",origin="1970-01-01"),by=1))
+    for (i in 1:10){
+      # fixedHYCOMTime = floor_date(as_date((HYCOM$Time[[i]][[1]][1:chopInd]-719529),origin="1970-01-01"),unit="day")
+      putWhere1 = match(masterData.Time,fullSSH$Time)
+      eval(parse(text=paste('fullSSH$',sites[i],'=NA',sep="")))
+      eval(parse(text=paste('fullSSH$',sites[i],'[putWhere1[!is.na(putWhere1)]]=SSHDF$',sites[i],'[-which(is.na(putWhere1))]',sep="")))
+      missSSH = apply(cbind(SSHDF[skipped,i],SSHDF[skipped+1,i]),MARGIN=1,mean)
+      missTimes = masterData.Time[skipped]+1
+      putWhere2 = match(skipped,fullSSH$Time) # indices where data is missing
+      missSSH = missSSH[-which(is.na(putWhere2))]
+      putWhere2 = putWhere2[-which(is.na(putWhere2))]
+      eval(parse(text=paste('fullSSH$',sites[i],'[putWhere2] = missSSH',sep="")))
+    }
+
+    # Check for NAs and interpolate
+    for (i in 1:10){
+      skippedBins = which(is.na(fullSSH[,i])) # missing data
+      missSSH = apply(cbind(fullSSH[skippedBins-1,i],fullSSH[skippedBins+1,i]),MARGIN=1,mean)
+      fullSSH[skippedBins,i] = missSSH
+    }
+
+    # Create time lagged vectors
+    startInd = which(fullSSH$Time==as.Date('2016-05-01',origin="1970-01-01"))
+    fullLength = length(fullSSH$Time)
+    for (i in 1:10){
+      for (k in 1:3){
+        if (k==1){
+          lag = 7
+          lagInd = startInd-lag
+        } else if (k==2){
+          lag=14
+          lagInd = startInd-lag
+        } else if (k==3){
+          lag=21
+          lagInd = startInd-lag
+        }
+        eval(parse(text=paste('fullSSH$',sites[i],'Lag',lag,' = NA',sep="")))
+        eval(parse(text=paste('fullSSH$',sites[i],'Lag',lag,'[startInd:',fullLength,'] = fullSSH$',sites[i],'[lagInd:(',fullLength,'-lag)]',sep="")))
+      }
+    }
+    write.csv(fullSSH,file=paste(outDir,'/','SSH_TS.csv',sep=""),row.names=FALSE)
+  } else { # Multi-depth Variables
+
+    TSind = which(!is.na(str_match(fileList,paste(vars[j],'_Profiles',sep=""))))
+    load(paste(inDir,'/',fileList[TSind],sep=""))
+    outDFs = c('fullSalinity','fullTemperature','fullVelocityMag','fullVelocityAsp')
+    depths = c(0,100,200,300,400,500,600,700,800) # desired depth layers
+    units = c("PPT",paste(intToUtf8(176),"C",sep=""),"m/s",'m/s')
+
+    eval(parse(text=paste('full',vars[j],' = data.frame(Time=seq.Date(from=as.Date("2016-02-01",origin="1970-01-01"),to=as.Date("2019-04-30",origin="1970-01-01"),by=1))',sep="")))
+
+    for (l in 1:length(depths)){
+
+      eval(parse(text=paste('Temp = data.frame(HZ',depths[l],'=HZProfile[l,],
+                            OC',depths[l],'=OCProfile[l,],
+                            NC',depths[l],'=NCProfile[l,],
+                            BC',depths[l],'=BCProfile[l,],
+                            WC',depths[l],'=WCProfile[l,],
+                            NFC',depths[l],'=NFCProfile[l,],
+                            HAT',depths[l],'=HATProfile[l,],
+                            GS',depths[l],'=GSProfile[l,],
+                            BP',depths[l],'=BPProfile[l,],
+                            BS',depths[l],'=BSProfile[l,])',sep="")))
+      sites = colnames(Temp)
+      siteName = str_replace(sites,as.character(depths[l]),"")
+
+      for (i in 1:10){
+        eval(parse(text=paste('Temp$',sites[i],'[is.nan(Temp$',sites[i], ')] = NA',sep="")))
+        eval(parse(text=paste('Temp$',sites[i],'[Temp$',sites[i],'==0] = NA',sep="")))
+      }
+
+      # Histograms
+      for (i in 1:10){
+        eval(parse(text=(paste(siteName[i],' = ggplot(data=Temp)+geom_histogram(aes(x=',
+                               sites[i],'))+labs(x=units[j],title=sites[i])',sep=""))))
+      }
+      png(file=paste(outDir,'/',vars[j],'_',as.character(depths[l]),"_hist.png",sep=""),width = 800, height = 800, units = "px")
+      grid.arrange(HZ,NC,OC,BC,WC,NFC,HAT,GS,BP,BS, ncol=4,nrow=3,top=paste(vars[j],' at ',as.character(depths[l]),'m',sep=""))
+      while (dev.cur()>1) {dev.off()}
+
+      # Plot boxplots and calculate quantiles to identify outliers
+      ggplot(stack(Temp))+geom_boxplot(aes(x=ind,y=values))+labs(x="Site & Depth",y="m",title=paste(vars[j]),' at ',as.character(depths[l]),'m',sep="")
+      ggsave(paste(outDir,'/',vars[j],'_',as.character(depths[l]),"_boxplot.png",sep=""),device="png",width=600,height=800,units="px",scale=5,dpi=600)
+
+      # Remove outliers?
+      q25 = quantile(stack(Temp)$values,probs=0.25,na.rm=TRUE)
+      q75 = quantile(stack(Temp)$values,probs=0.75,na.rm=TRUE)
+      iqr = q75-q25
+      upperThresh = q75+(1.5*iqr)
+      lowerThresh = q25-(1.5*iqr)
+
+      # Check for missing dates
+        timeDiff = diff(masterData.Time)
+        skipped = which(timeDiff>1)
+
+      # Interpolate missing dates
+        if (!isempty(skipped)){
+          for (i in 1:10){
+            # fixedHYCOMTime = floor_date(as_date((HYCOM$Time[[i]][[1]][1:chopInd]-719529),origin="1970-01-01"),unit="day")
+            eval(parse(text=paste('putWhere1 = match(masterData.Time,full',vars[j],'$Time)',sep="")))
+            eval(parse(text=paste('full',vars[j],'$',sites[i],'=NA',sep="")))
+            eval(parse(text=paste('full',vars[j],'$',sites[i],'[putWhere1[!is.na(putWhere1)]]=Temp$',sites[i],'[-which(is.na(putWhere1))]',sep="")))
+            missData = apply(cbind(Temp[skipped,i],Temp[skipped+1,i]),MARGIN=1,mean)
+            missTimes = masterData.Time[skipped]+1
+            eval(parse(text=paste('putWhere2 = match(missTimes,full',vars[j],'$Time)',sep=""))) # indices where data is missing
+            missData = missData[-which(is.na(putWhere2))]
+            putWhere2 = putWhere2[-which(is.na(putWhere2))]
+            eval(parse(text=paste('full',vars[j],'$',sites[i],'[putWhere2] = missData',sep="")))
+
+          }
+        } else {
+          for (i in 1:10){
+            eval(parse(text=paste('putWhere1 = match(masterData.Time,full',vars[j],'$Time)',sep="")))
+            eval(parse(text=paste('full',vars[j],'$',sites[i],'=NA',sep="")))
+            eval(parse(text=paste('full',vars[j],'$',sites[i],'[putWhere1[!is.na(putWhere1)]]=Temp$',sites[i],'[-which(is.na(putWhere1))]',sep="")))
+          }
+        }
+
+    }
+
+
+    # Check for NAs and linearly interpolate across gaps
+    for (i in 2:91){
+      eval(parse(text=paste('skippedBins = which(is.na(full',vars[j],'[,i]))',sep=""))) # missing data
+      if(any(diff(skippedBins)==1)){
+        eval(parse(text=paste('datBins = setdiff(1:dim(full',vars[j],')[1],skippedBins)',sep="")))
+        eval(parse(text=paste('missDatNS = approx(x=full',vars[j],'[datBins,1],y=full',vars[j],'[datBins,i],xout=full',vars[j],'[,1],method=\"linear\")',sep="")))
+      } else {
+      eval(parse(text=paste('missData = apply(cbind(full',vars[j],'[skippedBins-1,i],full',vars[j],'[skippedBins+1,i]),MARGIN=1,mean)',sep="")))
+      eval(parse(text=paste('full',vars[j],'[skippedBins,i] = missData',sep="")))
+      }
+    }
+
+    if (eval(parse(text=paste('any(full',vars[j],'<0)',sep="")))){
+      return('WARNING: SPURIOUS NEGATIVE VALUES CHECK DATA')
+    }
+
+
+    # Create time lagged vectors
+    eval(parse(text=paste('startInd = which(full',vars[j],'$Time==as.Date("2016-05-01",origin="1970-01-01"))',sep="")))
+    eval(parse(text=paste('fullLength = length(full',vars[j],'$Time)',sep="")))
+    eval(parse(text=paste('fullColNames = colnames(full',vars[j],')',sep="")))
+    for (i in 2:length(fullColNames)){
+      for (k in 1:3){
+        if (k==1){
+          lag = 7
+          lagInd = startInd-lag
+        } else if (k==2){
+          lag=14
+          lagInd = startInd-lag
+        } else if (k==3){
+          lag=21
+          lagInd = startInd-lag
+        }
+        # baseData = paste(sites[i],'0',sep="")
+        # thisDepth =
+        eval(parse(text=paste('full',vars[j],'$',fullColNames[i],'Lag',lag,' = NA',sep="")))
+        eval(parse(text=paste('full',vars[j],'$',fullColNames[i],'Lag',lag,'[startInd:',fullLength,'] = full',vars[j],'$',fullColNames[i],'[lagInd:(',fullLength,'-lag)]',sep="")))
+      }
+    }
+
+    # Save data as .csv
+    eval(parse(text=paste("write.csv(full",vars[j],",file=\"J:/Chpt_3/CovarPlots/",vars[j],"_TS.csv\",row.names=FALSE)",sep="")))
+
+  }
+
+}
+## Clean Chla Data  --------------------------------------
+# Downloaded Chla data are daily at 1/24th (0.04166667) degree spatial resolution
+# load('J:/Chpt_3/CovarTS/Chl_TS_4Averaged.Rdata')
+# Chl = data.frame(Time=as.Date(masterData.Time,origin="1970-01-01"),HZ0=masterData.Data[1,],
+#                  OC0=masterData.Data[2,],NC0=masterData.Data[3,],BC0=masterData.Data[4,],
+#                   WC0=masterData.Data[5,],NFC0=masterData.Data[6,],HAT0=masterData.Data[7,],GS0=masterData.Data[8,],
+#                   BP0=masterData.Data[9,],BS0=masterData.Data[10,],JAX0=masterData.Data[11,])
 # 
+# sites = colnames(Chl)
 # 
-# # Histograms
-# for (i in 1:11){
-#   eval(parse(text=(paste(sites[i],' = ggplot(data=SSH)+geom_histogram(aes(x=',sites[i],'))+labs(x="m",y="",title=sites[i])',sep=""))))
+# # Plot histograms
+# for (i in 2:12){
+#   eval(parse(text=(paste(sites[i],' = ggplot(data=Chl)+geom_histogram(aes(x=',sites[i],'))+labs(x=expression("mg/m"^3),title=sites[i])',sep=""))))
 # }
-# png(file=paste(outDir,'/',"SSH_hist.png",sep=""),width = 800, height = 800, units = "px")
-# grid.arrange(HZ0,OC0,NC0,BC0,WC0,NFC0,HAT0,GS0,BP0,BS0,JAX0, ncol=4,nrow=3,top="SSH")
+# png(file=paste(outDir,'/',"Chl_hist.png",sep=""),width = 800, height = 800, units = "px")
+# grid.arrange(HZ0,OC0,NC0,BC0,WC0,NFC0,HAT0,GS0,BP0,BS0,JAX0, ncol=4,nrow=3,top="Chl")
 # while (dev.cur()>1) {dev.off()}
 # 
 # # Plot boxplots and calculate quantiles to identify outliers
-# ggplot(stack(SSH))+geom_boxplot(aes(x=ind,y=values))+labs(x="Site & Depth",y="m",title="SSH")
-# ggsave(paste(outDir,'/',"SSH_boxplot.png",sep=""),device="png",width=600,height=800,units="px",scale=5,dpi=600)
+# ggplot(stack(Chl[,2:12]))+geom_boxplot(aes(x=ind,y=values))+labs(x="Site & Depth",y=expression("mg/m"^3),title="Chl")
+# ggsave(paste(outDir,'/',"Chl_boxplot.png",sep=""),device="png",width=600,height=800,units="px",scale=5,dpi=600)
 # 
-# q25 = quantile(stack(SSH)$values,probs=0.25)
-# q75 = quantile(stack(SSH)$values,probs=0.75)
+# q25 = quantile(stack(Chl)$values,probs=0.25,na.rm=TRUE)
+# q75 = quantile(stack(Chl)$values,probs=0.75,na.rm=TRUE)
 # iqr = q75-q25
 # 
 # # Remove outliers?
-# for (i in 1:11){
-#   q = round(SSH[,i],digits=10)
-#   SSH[q==0,i] = NA
-# }
 # 
 # # Check for missing dates
-# missDate = list()
-# for (i in 1:11){
-# timeDiff = diff(HYCOM$Time[[i]][[1]][,])
-# skipped = which(timeDiff>1)
-# if(!is_empty(skipped)){
-# missDate = c(missDate,list(skipped))
-# } else {missDate = c(missDate,"No skipped dates")}
-# }
+# timeDiff = diff(as.numeric(Chl$Time))
+# any(timeDiff>1)
 # 
-# # Interpolate missing dates
-# fullSSH = data.frame(Time=seq.Date(from=as.Date("2016-02-01",origin="1970-01-01"),to=as.Date("2019-04-30",origin="1970-01-01"),by=1))
-# for (i in 1:11){
-#   fixedHYCOMTime = floor_date(as_date((HYCOM$Time[[i]][[1]][1:chopInd]-719529),origin="1970-01-01"),unit="day")
-#   putWhere1 = match(fixedHYCOMTime,fullSSH$Time)
-#   eval(parse(text=paste('fullSSH$',sites[i],'=NA',sep="")))
-#   eval(parse(text=paste('fullSSH$',sites[i],'[putWhere1[!is.na(putWhere1)]]=SSH$',sites[i],'[-which(is.na(putWhere1))]',sep="")))
-#   missSSH = apply(cbind(SSH[unlist(missDate[i]),i],SSH[unlist(missDate[i])+1,i]),MARGIN=1,mean)
-#   missTimes = fixedHYCOMTime[unlist(missDate[i])]+1
-#   putWhere2 = match(missTimes,fullSSH$Time) # indices where data is missing
-#   missSSH = missSSH[-which(is.na(putWhere2))]
-#   putWhere2 = putWhere2[-which(is.na(putWhere2))]
-#   eval(parse(text=paste('fullSSH$',sites[i],'[putWhere2] = missSSH',sep="")))
-# }
+# # Interpolate missing values (many missing, need to interpolate whole TS at each
+# # site, instead of just interpolating across occasional gaps)
+# for (i in 2:12){
+#   datBins = which(!is.na(Chl[,i]))
+#   
+#   missChl = approx(x=Chl[datBins,1],y=Chl[datBins,i],xout=Chl[,1],method="linear")
 # 
-# # Check for NAs and interpolate
-# for (i in 1:11){
-#   skippedBins = which(is.na(fullSSH[,i])) # missing data
-#   missSSH = apply(cbind(fullSSH[skippedBins-1,i],fullSSH[skippedBins+1,i]),MARGIN=1,mean)
-#   fullSSH[skippedBins,i] = missSSH
+#   Chl[,i] = missChlNS
 # }
 # 
 # # Create time lagged vectors
-# startInd = which(fullSSH$Time==as.Date('2016-05-01',origin="1970-01-01"))
-# fullLength = length(fullSSH$Time)
-# for (i in 1:11){
+# startInd = which(Chl$Time==as.Date('2016-05-01',origin="1970-01-01"))
+# fullLength = length(Chl$Time)
+# for (i in 2:12){
 #   for (k in 1:3){
 #     if (k==1){
 #       lag = 7
@@ -152,188 +341,11 @@ outDir = 'J:/Chpt_3/CovarPlots'
 #       lag=21
 #       lagInd = startInd-lag
 #     }
-#     eval(parse(text=paste('fullSSH$',sites[i],'Lag',lag,' = NA',sep="")))
-#     eval(parse(text=paste('fullSSH$',sites[i],'Lag',lag,'[startInd:',fullLength,'] = fullSSH$',sites[i],'[lagInd:(',fullLength,'-lag)]',sep="")))
+#     eval(parse(text=paste('Chl$',sites[i],'Lag',lag,' = NA',sep="")))
+#     eval(parse(text=paste('Chl$',sites[i],'Lag',lag,'[startInd:',fullLength,'] = Chl$',sites[i],'[lagInd:(',fullLength,'-lag)]',sep="")))
 #   }
 # }
-# write.csv(fullSSH,file=paste(outDir,'/','SSH_TS.csv',sep=""),row.names=FALSE)
-
-
-
-# Multi-depth Variables----------------
-# vars = c('Salinity','Temperature','WaterU','WaterV')
-# outDFs = c('SalFull','TempFull','UFull','VFull')
-# depths = c(0,50,200,500,600,700,1000) # desired depth layers
-# depInd = c(1,15,23,28,30,31,33)
-# units = c("PPT",paste(intToUtf8(176),"C",sep=""),"m/s",'m/s')
-# 
-# for (j in 1:length(vars)){
-#   
-#   eval(parse(text=paste('full',vars[j],' = data.frame(Time=seq.Date(from=as.Date("2016-02-01",origin="1970-01-01"),to=as.Date("2019-04-30",origin="1970-01-01"),by=1))',sep="")))
-#   
-#   for (l in 1:length(depths)){
-#     
-#     eval(parse(text=paste('Temp = data.frame(HZ',depths[l],'=HYCOM$',vars[j],'[[1]][[1]][',depInd[l],
-#                           ',1:chopInd],OC',depths[l],'=HYCOM$',vars[j],'[[2]][[1]][',depInd[l],
-#                           ',1:chopInd],NC',depths[l],'=HYCOM$',vars[j],'[[3]][[1]][',depInd[l],
-#                           ',1:chopInd],BC',depths[l],'=HYCOM$',vars[j],'[[4]][[1]][',depInd[l],
-#                           ',1:chopInd],WC',depths[l],'=HYCOM$',vars[j],'[[5]][[1]][',depInd[l],
-#                           ',1:chopInd],NFC',depths[l],'=HYCOM$',vars[j],'[[6]][[1]][',depInd[l],
-#                           ',1:chopInd],HAT',depths[l],'=HYCOM$',vars[j],'[[7]][[1]][',depInd[l],
-#                           ',1:chopInd],GS',depths[l],'=HYCOM$',vars[j],'[[8]][[1]][',depInd[l],
-#                           ',1:chopInd],BP',depths[l],'=HYCOM$',vars[j],'[[9]][[1]][',depInd[l],
-#                           ',1:chopInd],BS',depths[l],'=HYCOM$',vars[j],'[[10]][[1]][',depInd[l],
-#                           ',1:chopInd],JAX',depths[l],'=HYCOM$',vars[j],'[[11]][[1]][',depInd[l],
-#                           ',1:chopInd])',sep="")))
-#     sites = colnames(Temp)
-#     siteName = str_replace(sites,as.character(depths[l]),"")
-#     
-#     for (i in 1:11){
-#       eval(parse(text=paste('Temp$',sites[i],'[is.nan(Temp$',sites[i], ')] = NA',sep="")))
-#       if (vars[j]=="Temperature"){
-#         eval(parse(text=paste('Temp$',sites[i],'[Temp$',sites[i],'==0] = NA',sep="")))
-#       }
-#       if (vars[j]=="WaterU"){
-#         eval(parse(text=paste('Temp$',sites[i],'[Temp$',sites[i],'==0] = NA',sep="")))
-#       }
-#       if (vars[j]=="WaterU"){
-#         eval(parse(text=paste('Temp$',sites[i],'[Temp$',sites[i],'==0] = NA',sep="")))
-#       }
-#     }
-#     
-#     # Histograms
-#     for (i in 1:11){
-#       eval(parse(text=(paste(siteName[i],' = ggplot(data=Temp)+geom_histogram(aes(x=',
-#                              sites[i],'))+labs(x=units[j],title=sites[i])',sep=""))))
-#     }
-#     png(file=paste(outDir,'/',vars[j],'_',as.character(depths[l]),"_hist.png",sep=""),width = 800, height = 800, units = "px")
-#     grid.arrange(HZ,NC,OC,BC,WC,NFC,HAT,GS,BP,BS,JAX, ncol=4,nrow=3,top=paste(vars[j],' at ',as.character(depths[l]),'m',sep=""))
-#     while (dev.cur()>1) {dev.off()}
-#     
-#     # Plot boxplots and calculate quantiles to identify outliers
-#     ggplot(stack(Temp))+geom_boxplot(aes(x=ind,y=values))+labs(x="Site & Depth",y="m",title=paste(vars[j]),' at ',as.character(depths[l]),'m',sep="")
-#     ggsave(paste(outDir,'/',vars[j],'_',as.character(depths[l]),"_boxplot.png",sep=""),device="png",width=600,height=800,units="px",scale=5,dpi=600)
-#     
-#     # Remove outliers?
-#     q25 = quantile(stack(Temp[,1:10])$values,probs=0.25,na.rm=TRUE)
-#     q75 = quantile(stack(Temp[,1:10])$values,probs=0.75,na.rm=TRUE)
-#     iqr = q75-q25
-#     upperThresh = q75+(1.5*iqr)
-#     lowerThresh = q25-(1.5*iqr)
-#     
-#     # Check for missing dates
-#     missDate = list()
-#     for (i in 1:11){
-#       timeDiff = diff(HYCOM$Time[[i]][[1]][,])
-#       skipped = which(timeDiff>1)
-#       if(!is_empty(skipped)){
-#         missDate = c(missDate,list(skipped))
-#       } else {missDate = c(missDate,"No skipped dates")}
-#     }
-#     
-#     # Interpolate missing dates
-#     
-#     for (i in 1:11){
-#       fixedHYCOMTime = floor_date(as_date((HYCOM$Time[[i]][[1]][1:chopInd]-719529),origin="1970-01-01"),unit="day")
-#       eval(parse(text=paste('putWhere1 = match(fixedHYCOMTime,full',vars[j],'$Time)',sep="")))
-#       eval(parse(text=paste('full',vars[j],'$',sites[i],'=NA',sep="")))
-#       eval(parse(text=paste('full',vars[j],'$',sites[i],'[putWhere1[!is.na(putWhere1)]]=Temp$',sites[i],'[-which(is.na(putWhere1))]',sep="")))
-#       missData = apply(cbind(Temp[unlist(missDate[i]),i],Temp[unlist(missDate[i])+1,i]),MARGIN=1,mean)
-#       missTimes = fixedHYCOMTime[unlist(missDate[i])]+1
-#       eval(parse(text=paste('putWhere2 = match(missTimes,full',vars[j],'$Time)',sep=""))) # indices where data is missing
-#       missData = missData[-which(is.na(putWhere2))]
-#       putWhere2 = putWhere2[-which(is.na(putWhere2))]
-#       eval(parse(text=paste('full',vars[j],'$',sites[i],'[putWhere2] = missData',sep="")))
-#       
-#     }
-#   }
-#   
-#   # Check for NAs and interpolate (Need a catch for 2+ consecutive data points missing)
-#   for (i in 2:78){
-#     eval(parse(text=paste('skippedBins = which(is.na(full',vars[j],'[,i]))',sep=""))) # missing data
-#     if(any(diff(skippedBins)==1)){
-#       return("WARNING: 2 OR MORE NAs IN A ROW; CAN'T INTERPOLATE")
-#     }
-#     eval(parse(text=paste('missData = apply(cbind(full',vars[j],'[skippedBins-1,i],full',vars[j],'[skippedBins+1,i]),MARGIN=1,mean)',sep="")))
-#     eval(parse(text=paste('full',vars[j],'[skippedBins,i] = missData',sep="")))
-#   }
-# 
-#   # Create time lagged vectors
-#   eval(parse(text=paste('startInd = which(full',vars[j],'$Time==as.Date("2016-05-01",origin="1970-01-01"))',sep="")))
-#   eval(parse(text=paste('fullLength = length(full',vars[j],'$Time)',sep="")))
-#   eval(parse(text=paste('fullColNames = colnames(full',vars[j],')',sep="")))
-#   for (i in 2:length(fullColNames)){
-#     for (k in 1:3){
-#       if (k==1){
-#         lag = 7
-#         lagInd = startInd-lag
-#       } else if (k==2){
-#         lag=14
-#         lagInd = startInd-lag
-#       } else if (k==3){
-#         lag=21
-#         lagInd = startInd-lag
-#       }
-#       # baseData = paste(sites[i],'0',sep="")
-#       # thisDepth = 
-#       eval(parse(text=paste('full',vars[j],'$',fullColNames[i],'Lag',lag,' = NA',sep="")))
-#       eval(parse(text=paste('full',vars[j],'$',fullColNames[i],'Lag',lag,'[startInd:',fullLength,'] = full',vars[j],'$',fullColNames[i],'[lagInd:(',fullLength,'-lag)]',sep="")))
-#     }
-#   }
-#   
-#   # Save data as .csv
-#   eval(parse(text=paste('write.csv(full',vars[j],',file=',outDir,'/',vars[j],'_TS.csv)',sep="")),row.names=FALSE)
-#   
-# }
-
-## Clean Chla Data  --------------------------------------
-load('J:/Chpt_3/Chl_TS.Rdata')
-Chl = data.frame(Time=as.Date(masterData.Time[1,],origin="1970-01-01"),HZ0=masterData.Chl[1,],OC0=masterData.Chl[2,],NC0=masterData.Chl[3,],BC0=masterData.Chl[4,],
-                  WC0=masterData.Chl[5,],NFC0=masterData.Chl[6,],HAT0=masterData.Chl[7,],GS0=masterData.Chl[8,],
-                  BP0=masterData.Chl[9,],BS0=masterData.Chl[10,],JAX0=masterData.Chl[11,])
-
-sites = colnames(Chl)
-
-# Plot histograms
-for (i in 2:12){
-  eval(parse(text=(paste(sites[i],' = ggplot(data=Chl)+geom_histogram(aes(x=',sites[i],'))+labs(x=expression("mg/m"^3),title=sites[i])',sep=""))))
-}
-png(file=paste(outDir,'/',"Chl_hist.png",sep=""),width = 800, height = 800, units = "px")
-grid.arrange(HZ0,OC0,NC0,BC0,WC0,NFC0,HAT0,GS0,BP0,BS0,JAX0, ncol=4,nrow=3,top="Chl")
-while (dev.cur()>1) {dev.off()}
-
-# Plot boxplots and calculate quantiles to identify outliers
-ggplot(stack(Chl[,2:12]))+geom_boxplot(aes(x=ind,y=values))+labs(x="Site & Depth",y=expression("mg/m"^3),title="Chl")
-ggsave(paste(outDir,'/',"Chl_boxplot.png",sep=""),device="png",width=600,height=800,units="px",scale=5,dpi=600)
-
-q25 = quantile(stack(Chl)$values,probs=0.25,na.rm=TRUE)
-q75 = quantile(stack(Chl)$values,probs=0.75,na.rm=TRUE)
-iqr = q75-q25
-
-# Remove outliers?
-
-# Check for missing dates
-timeDiff = diff(as.numeric(Chl$Time))
-any(timeDiff>1)
-
-# Interpolate missing values (many missing, need to interpolate whole TS at each
-# site, instead of just interpolating across occasional gaps)
-for (i in 2:12){
-  datBins = which(!is.na(Chl[,i]))
-  missChlLin = approx(x=Chl[datBins,1],y=Chl[datBins,i],xout=Chl[,1],rule=1,method="linear",ties=mean)
-
-  ChlBasis = bSpline(as.numeric(Chl[,1]),df=20,Boundary.knots=c(min(Chl[,1],na.rm=TRUE),max(Chl[,1],na.rm=TRUE)))
-  ChlMod = gam(Chl[,i]~s(as.numeric(Chl[,1]),bs="cs",k=21),family=gaussian)
-  missChlBS = ChlBasis%*%coef(ChlMod)[2:21]
-  
-  missChlSS = smooth.spline(x=Chl[datBins,1],y=Chl[datBins,i],all.knots=TRUE)
-  
-  missChlNS = spline(x=Chl[datBins,1],y=Chl[datBins,i],xout=Chl[,1],method="natural")
-  
-  Chl[,i] = missChl
-}
-
-# Create time lagged vectors
+# write.csv(Chl,file=paste(outDir,'/','Chl_TS.csv',sep=""),row.names=FALSE)
 
 ## Make modeling csv files ---------------------------
 
