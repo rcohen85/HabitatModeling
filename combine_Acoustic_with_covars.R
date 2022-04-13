@@ -84,25 +84,44 @@ for (i in seq_along(dailyTotsFiles)) {
     eval(parse(text=paste(dfList[j],"=data.frame(",dfList[j],")")))
     # Change column names
     eval(parse(text=paste("colnames(",dfList[j],")=c('Date','Site')")))
-   
+    
     if (j!=7) {   # If species is not Risso's
       # Find the daily totals column for this species
       thisSpeciesDT = dailyTots[,speciesInd$Ind1[j]+1]
       # Add it to the data frames
       eval(parse(text=paste(dfList[j],"=cbind(",dfList[j],",thisSpeciesDT)")))
     }
-    if (j == 7) {
+    if (j == 7) {  # If species is Risso's
       thisSpeciesDT1 = dailyTots[,speciesInd$Ind1[j]+1]
       thisSpeciesDT2 = dailyTots[,speciesInd$Ind2[j]+1]
       thisSpeciesDT = c(thisSpeciesDT1,thisSpeciesDT2)
       tempRisso_UD36 = data.frame(Date=rep(tempRisso_UD36$Date, length.out=(length(tempRisso_UD36$Date))*2),
-                              Site=rep(tempRisso_UD36$Site, length.out=(length(tempRisso_UD36$Site))*2),
-                              thisSpeciesDT=thisSpeciesDT)
+                                  Site=rep(tempRisso_UD36$Site, length.out=(length(tempRisso_UD36$Site))*2),
+                                  thisSpeciesDT=thisSpeciesDT)
     }
   }
   
- for (j in seq_along(masterDfList)) {
-   eval(parse(text=paste(masterDfList[j],"=rbind(",masterDfList[j],",",dfList[j],")")))
- }
+  for (j in seq_along(masterDfList)) {
+    eval(parse(text=paste(masterDfList[j],"=rbind(",masterDfList[j],",",dfList[j],")")))
+  }
   
+}
+
+## COMBINE ACOUSTIC WITH COVARIATE DATA
+covarList = list.files(outDir, pattern=".csv")
+siteMatch = double()
+
+for (i in seq_along(covarList)) { # Read in covar csv file
+  thisCovar = read.csv(file = paste(outDir,"/",covarList[i],sep=""), header=TRUE)
+  for (j in seq_along(sites)) {
+    # Find where columns matching site are
+    siteInd = grep(sites[j],colnames(thisCovar))
+    siteMatch = cbind(siteMatch,thisCovar[,siteInd])
+    ## ISSUE! The dates do not line up!! Double check this before adding to master data frame
+    
+    # for (k in seq_along(masterDfList)) {
+    #   # Add matching columns to master data frames
+    # }
+    
+  }
 }
