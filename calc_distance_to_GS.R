@@ -6,10 +6,12 @@ library(lubridate)
 library(geodist)
 library(stringr)
 
-inDir = 'E:/hycom/0.08deg'
-outDir = 'E:/hycom/0.08deg/TS'
+inDir = 'J:/Chpt_3/HYCOM/0.08deg'
+outDir = 'J:/Chpt_3/HYCOM/0.08deg'
 sites = c('HZ','OC','NC','BC','WC','NFC','HAT','GS','BP','BS','JAX')
-setLon = -74.75
+# setLon = -74.75
+setLon = -73
+
 
 #HARP Sites
 OC_change = as_date('2018-05-01') # account for change in
@@ -28,7 +30,7 @@ HARPs = data.frame(t(data.frame(c(41.06165, -66.35155), # WAT_HZ
 rownames(HARPs) = sites
 colnames(HARPs) = c("Lat1", "Lon1", "Lat2", "Lon2","Lat3","Lon3")
 
-fileList = list.files(inDir,pattern = "SSH",full.names = TRUE,recursive=TRUE)
+fileList = list.files(inDir,pattern = "SSH",full.names = TRUE,recursive=FALSE)
 
 ## Action ----------------------------------------------------------------------
 
@@ -51,9 +53,9 @@ for (i in seq_along(fileList)){   #for each file in fileList
   
   thisFileTime = as.Date(time_temp,format='%Y-%m-%d',tz="UTC")
   
-  # Trim the lats
-  trimInd = which(lats>33.5 & lats<38)
-  lats = subset(lats, (lats>33.5 & lats<38))
+  # Trim the lats ( 33.5:38 at -74.75, 35:38 at -73)
+  trimInd = which(lats>35 & lats<38)
+  lats = subset(lats, (lats>35 & lats<38))
   # Trim the SSH data frame
   data = data[trimInd,]
   

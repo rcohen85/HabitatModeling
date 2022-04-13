@@ -1,11 +1,12 @@
 library(stringr)
 library(lubridate)
 library(ncdf4)
+library(ggplot2)
 
 ######## Settings ------------------
 
 inDir = "J:/Chpt_3/HYCOM/0.08deg" # directory containing .RData files
-outDir = 'J:/Chpt_3/HYCOM'
+outDir = 'J:/Chpt_3/CovarTS'
 sites = c('HZ','OC','NC','BC','WC','NFC','HAT','GS','BP','BS','JAX')
 
 # Only change these if using different sites
@@ -31,12 +32,11 @@ HARPs$Lon1 = HARPs$Lon1+360
 HARPs$Lon2 = HARPs$Lon2+360
 fullFileList = dir(inDir,".Rdata")
 
-
-
 # Covars of interest
-Covars = list("SSH","U_Velocity", "V_Velocity", "Temperature", "Salinity")
+Covars = list("SSH", "Temperature", "Salinity","VelocityMag", "VelocityAsp")
 
-for (j in 5:length(Covars)){
+
+for (j in 1:length(Covars)){
   
   if (j%in%c(2:5)){
     depths = c(0,100,200,300,400,500,600,700,800)
@@ -67,7 +67,7 @@ for (j in 5:length(Covars)){
                         str_sub(fileDate,start=5L,end=6L),'-',
                         str_sub(fileDate,start=7L,end=8L),sep="")
       
-      time = as.Date(time_temp,format='%Y-%m-%d',tz="UTC")
+      thisTime = as.Date(time_temp,format='%Y-%m-%d',tz="UTC")
       
       # # initialize arrays to hold relevant data points from this file
       thisFileData = matrix(nrow=11,ncol=1)
@@ -78,7 +78,7 @@ for (j in 5:length(Covars)){
         
         # find data points nearest this HARP site
         if (m==7){ # at HAT, pull points first from site A, then from site B
-          if (time<HAT_change){
+          if (thisTime<HAT_change){
             sitelat = which.min(abs(HARPs[m,1]-lats))
             sitelon = which.min(abs(HARPs[m,2]-lons))
           } else {
@@ -86,7 +86,7 @@ for (j in 5:length(Covars)){
             sitelon = which.min(abs(HARPs[m,4]-lons))
           }
         } else if (m==2) {# at OC, account for slight change in site location
-          if (time<OC_change){
+          if (thisTime<OC_change){
             sitelat = which.min(abs(HARPs[m,1]-lats))
             sitelon = which.min(abs(HARPs[m,2]-lons))
           } else {
@@ -103,13 +103,18 @@ for (j in 5:length(Covars)){
         thisFileLat[m] = lats[sitelat]
         thisFileLon[m] = lons[sitelon]
         
+        thisData = data.frame(z=stack(data.frame(data))[,1],
+                             y=rep(lats,length.out=length(lons)*length(lats)),
+                               x=rep(lons,each=length(lats)))
+        ggplot(thisData,aes(x=x,y=y))+geom_tile(aes(fill=z))+geom_point(x=lons[sitelon],y=lats[sitelat],color="white")
+        
       }
       
       # add data points from all files to master data frame
       masterData.Data = cbind(masterData.Data, thisFileData)
       masterData.Lat = cbind(masterData.Lat,thisFileLat)
       masterData.Lon = cbind(masterData.Lon,thisFileLon)
-      masterData.Time = cbind(masterData.Time,time)
+      masterData.Time = cbind(masterData.Time,thisTime)
       
     }
     

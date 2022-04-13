@@ -29,7 +29,7 @@ library(geodist)
 # save(newGrid,depthData,newx,newy,file=('J:/Chpt_3/GEBCO/DownsampledGrid_02deg.Rdata'))
 
 # Load depth grid of desired resolution
-load('J:/Chpt_3/GEBCO/DownsampledGrid_04deg.Rdata')
+load('J:/Chpt_3/GEBCO/DownsampledGrid_02deg.Rdata')
 
 # Plot bathymetry and save
 ggplot(newGrid,aes(x=Lon,y=Lat))+geom_tile(aes(fill=Depth))+ggtitle("0.04deg Grid")+scale_fill_viridis()
