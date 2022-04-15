@@ -1,10 +1,11 @@
 # NOTE: If remaking profile files, delete old ones from inDir, or they will be concatenated with new ones
 
-inDir = 'J:/Chpt_3/HYCOM/0.08deg/TS'
+inDir = 'J:/Chpt_3/CovarTS'
 fileList = dir(inDir)
-covar = "Temperature"
+covar = "VelocityMag"
+lon = "ES"
 
-whichInd = which(!is.na(str_match(fileList,covar)))
+whichInd = which(!is.na(str_match(fileList,covar)) & !is.na(str_match(fileList,lon)))
 HZProfile = numeric()
 OCProfile = numeric()
 NCProfile = numeric()
@@ -45,4 +46,4 @@ save(HZProfile,
      BSProfile,
      JAXProfile,
      masterData.Time,
-     file=paste(inDir,'/',covar,'_Profiles.Rdata',sep=""))
+     file=paste(inDir,'/',covar,'_Profiles_ES.Rdata',sep=""))

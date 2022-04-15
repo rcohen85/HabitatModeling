@@ -99,14 +99,14 @@ for (j in 1:length(Covars)){
         }
         
         # grab data values at this HARP site
-        thisFileData[m,1] = data[sitelat,sitelon]
-        thisFileLat[m] = lats[sitelat]
-        thisFileLon[m] = lons[sitelon]
+        thisFileData[m,1] = data[sitelat-1,sitelon+1]
+        thisFileLat[m] = lats[sitelat-1]
+        thisFileLon[m] = lons[sitelon+1]
         
-        thisData = data.frame(z=stack(data.frame(data))[,1],
-                             y=rep(lats,length.out=length(lons)*length(lats)),
-                               x=rep(lons,each=length(lats)))
-        ggplot(thisData,aes(x=x,y=y))+geom_tile(aes(fill=z))+geom_point(x=lons[sitelon],y=lats[sitelat],color="white")
+        # thisData = data.frame(z=stack(data.frame(data))[,1],
+        #                      y=rep(lats,length.out=length(lons)*length(lats)),
+        #                        x=rep(lons,each=length(lats)))
+        # ggplot(thisData,aes(x=x,y=y))+geom_tile(aes(fill=z))+geom_point(x=lons[sitelon],y=lats[sitelat],color="white")
         
       }
       
@@ -126,7 +126,7 @@ for (j in 1:length(Covars)){
     masterData.Time = masterData.Time[q$ix]
     
     save(masterData.Data,masterData.Lat,masterData.Lon,masterData.Time,
-         file=paste(outDir,'/',Covars[j],'_',depths[k],'_TS.Rdata',sep=""))
+         file=paste(outDir,'/',Covars[j],'_',depths[k],'_TS_ES.Rdata',sep=""))
     
   }
 }
