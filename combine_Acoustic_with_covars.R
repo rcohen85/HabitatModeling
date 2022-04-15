@@ -69,40 +69,37 @@ for (i in seq_along(dailyTotsFiles)) {
   fileDate = as.POSIXct((matFileDate-719529)*86400,format='%Y-%m-%d',origin='1970-01-01',tz="UTC")
   # fileDate = as.numeric(fileDate)
   
-  # Get species list from file
-  speciesList = t(data.frame(thisDailyTotsFile$spNameList))
-  
-  
-  
   # Add site and dates to data frames
-  for (j in seq_along(dfList)) {
+  for (k in seq_along(dfList)) {
     # Add fileDate as a column in each data frame
-    eval(parse(text=paste(dfList[j],"=cbind(",dfList[j],",as.Date(fileDate))")))
+    eval(parse(text=paste(dfList[k],"=cbind(",dfList[k],",as.Date(fileDate))")))
     # Add site as a column in each data frame
-    eval(parse(text=paste(dfList[j],"=cbind(",dfList[j],",site)")))
+    eval(parse(text=paste(dfList[k],"=cbind(",dfList[k],",site)")))
     # Make them all data frames
-    eval(parse(text=paste(dfList[j],"=data.frame(",dfList[j],")")))
+    eval(parse(text=paste(dfList[k],"=data.frame(",dfList[k],")")))
     # Change column names
-    eval(parse(text=paste("colnames(",dfList[j],")=c('Date','Site')")))
+    eval(parse(text=paste("colnames(",dfList[k],")=c('Date','Site')")))
     
-    if (j!=7) {   # If species is not Risso's
+    if (k!=7) {   # If species is not Risso's
       # Find the daily totals column for this species
-      thisSpeciesDT = dailyTots[,speciesInd$Ind1[j]+1]
+      thisSpeciesDT = dailyTots[,speciesInd$Ind1[k]+1]
       # Add it to the data frames
-      eval(parse(text=paste(dfList[j],"=cbind(",dfList[j],",thisSpeciesDT)")))
+      eval(parse(text=paste(dfList[k],"=cbind(",dfList[k],",thisSpeciesDT)")))
+      eval(parse(text=paste(dfList[k],"$Date = as.Date(as.numeric(",dfList[k],"$Date), origin = '1970-01-01')",sep="")))
     }
-    if (j == 7) {  # If species is Risso's
-      thisSpeciesDT1 = dailyTots[,speciesInd$Ind1[j]+1]
-      thisSpeciesDT2 = dailyTots[,speciesInd$Ind2[j]+1]
+    if (k == 7) {  # If species is Risso's
+      thisSpeciesDT1 = dailyTots[,speciesInd$Ind1[k]+1]
+      thisSpeciesDT2 = dailyTots[,speciesInd$Ind2[k]+1]
       thisSpeciesDT = c(thisSpeciesDT1,thisSpeciesDT2)
       tempRisso_UD36 = data.frame(Date=rep(tempRisso_UD36$Date, length.out=(length(tempRisso_UD36$Date))*2),
                                   Site=rep(tempRisso_UD36$Site, length.out=(length(tempRisso_UD36$Site))*2),
                                   thisSpeciesDT=thisSpeciesDT)
+      # eval(parse(text=paste(dfList[k],"$Date = as.Date(as.numeric(",dfList[k],"$Date), origin = '1970-01-01')",sep="")))
     }
   }
   
-  for (j in seq_along(masterDfList)) {
-    eval(parse(text=paste(masterDfList[j],"=rbind(",masterDfList[j],",",dfList[j],")")))
+  for (l in seq_along(masterDfList)) {
+    eval(parse(text=paste(masterDfList[l],"=rbind(",masterDfList[l],",",dfList[l],")",sep="")))
   }
   
 }
@@ -113,13 +110,19 @@ siteMatch = double()
 
 for (i in seq_along(covarList)) { # Read in covar csv file
   thisCovar = read.csv(file = paste(outDir,"/",covarList[i],sep=""), header=TRUE)
-  for (j in seq_along(sites)) {
+  
+  for (j in seq_along(masterDfList)) { # Find where dates match
+  dateInd = match(thisCovar$Time,as.character(master.Blainville$Date))
+    # match(master.Blainville$Date,thisCovar$Time)
+  }
+
+    for (k in seq_along(sites)) {
     # Find where columns matching site are
-    siteInd = grep(sites[j],colnames(thisCovar))
+    # tried grep, str_match, intersect
+    siteInd = grep(sites[k],colnames(thisCovar))
     siteMatch = cbind(siteMatch,thisCovar[,siteInd])
-    ## ISSUE! The dates do not line up!! Double check this before adding to master data frame
     
-    # for (k in seq_along(masterDfList)) {
+    # for (l in seq_along(masterDfList)) {
     #   # Add matching columns to master data frames
     # }
     
