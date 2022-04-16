@@ -93,11 +93,11 @@ for (j in 1:length(vars)){
     colnames(SSHDF) = sites
 
     # Histograms
-    for (i in 1:10){
+    for (i in 1:11){
       eval(parse(text=(paste(sites[i],' = ggplot(data=SSHDF)+geom_histogram(aes(x=',sites[i],'))+labs(x="m",y="",title=sites[i])',sep=""))))
     }
     png(file=paste(outDir,'/',"SSH_hist.png",sep=""),width = 800, height = 800, units = "px")
-    grid.arrange(HZ0,OC0,NC0,BC0,WC0,NFC0,HAT0,GS0,BP0,BS0, ncol=4,nrow=3,top="SSH")
+    grid.arrange(HZ0,OC0,NC0,BC0,WC0,NFC0,HAT0,GS0,BP0,BS0,JAX0, ncol=4,nrow=3,top="SSH")
     while (dev.cur()>1) {dev.off()}
 
     # Plot boxplots and calculate quantiles to identify outliers
@@ -194,15 +194,28 @@ for (j in 1:length(vars)){
       upperThresh = q75+(1.5*iqr)
       lowerThresh = q25-(1.5*iqr)
 
-      # Interpolate missing dates and NAs
-          for (i in 1:10){
-            datBins = which(!is.na(Temp[,i]))
-            eval(parse(text=paste('full',vars[j],'$',sites[i],'=NA',sep="")))
-            eval(parse(text=paste('full',vars[j],'$',sites[i],' = (approx(x=masterData.Time[datBins],y=Temp[datBins,i],xout=full',vars[j],'[,1],method="linear"))$y',sep="")))
-          }
+      # Interpolate missing dates and NAs (can't interpolate JAX at most depths, too little data!)
+      if (l==1){    
+        for (i in 1:11){
+          datBins = which(!is.na(Temp[,i]))
+          eval(parse(text=paste('full',vars[j],'$',sites[i],'=NA',sep="")))
+          eval(parse(text=paste('full',vars[j],'$',sites[i],' = (approx(x=masterData.Time[datBins],y=Temp[datBins,i],xout=full',vars[j],'[,1],method="linear"))$y',sep="")))
+        }
+      } else {
+        for (i in 1:10){
+          datBins = which(!is.na(Temp[,i]))
+          eval(parse(text=paste('full',vars[j],'$',sites[i],'=NA',sep="")))
+          eval(parse(text=paste('full',vars[j],'$',sites[i],' = (approx(x=masterData.Time[datBins],y=Temp[datBins,i],xout=full',vars[j],'[,1],method="linear"))$y',sep="")))
+        }
+        # add (likely hole-y) JAX data without interpolation
+        eval(parse(text=paste('full',vars[j],'$',sites[i+1],'=NA',sep="")))
+        eval(parse(text=paste('putWhere = match(masterData.Time,full',vars[j],'$Time)',sep="")))
+        eval(parse(text=paste('full',vars[j],'$',sites[i+1],'[putWhere[!is.na(putWhere)]]=Temp[-which(is.na(putWhere)),i+1]',sep="")))
+      }
+     
     }
 
-    if (eval(parse(text=paste('any(full',vars[j],'<0)',sep="")))){
+    if (eval(parse(text=paste('any(full',vars[j],'<0,na.rm=TRUE)',sep="")))){
       return('WARNING: SPURIOUS NEGATIVE VALUES CHECK DATA')
     }
 
