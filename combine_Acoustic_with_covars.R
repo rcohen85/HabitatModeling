@@ -3,128 +3,112 @@
 # One csv file will be created for each species
 
 ## SETTINGS --------------------------------------------------------------------
+library(tidyverse)
 library(stringr)
 library(R.matlab)
+library(lubridate)
 
-inDir = 'E:/NEWdailyTotals'
-outDir = 'E:/ModelingCovarData'
+presDir = 'J:/Chpt_2/TimeSeries_ScaledByEffortError'
+covarDir = 'J:/Chpt_3/CovarTS'
+outDir = 'J:/Chpt_3/ModelData'
 sites = c('HZ','OC','NC','BC','WC','NFC','HAT','GS','BP','BS','JAX')
+covarAbbrev = cbind(c("Chl","FSLE","Salinity","SSH","Temperature","VelocityAsp","VelocityMag"),
+                    c("Chl","FSLE","Sal","SSH","Temp","VelAsp","VelMag"))
+lags = c("Lag7","Lag14","Lag21")
 
 ## ACTION ----------------------------------------------------------------------
 
-# Create a list of daily totals files
-dailyTotsFiles = list.files(inDir, pattern=".mat", full.names=TRUE)
+# Create a list of daily species presence files
+presFiles = list.files(presDir, pattern="_Daily.csv", full.names=TRUE)
+goodFiles = c(1,2,4,8,11,13:15,17:19)
 
-# Initialize data frames for each species
-master.Blainville = double()
-master.UD26 = double()
-master.UD28 = double()
-master.Cuvier = double()
-master.Gervais = double()
-master.Kogia = double()
-master.Risso = double()
-master.Sowerby = double()
-master.SpermWhale = double()
-master.True = double()
+# find covariate data
+varFiles = list.files(covarDir,pattern=".csv",full.names=TRUE)
 
-masterDfList = c("master.Blainville","master.UD26","master.UD28","master.Cuvier","master.Gervais","master.Kogia","master.Risso","master.Sowerby","master.SpermWhale","master.True")
-
-for (i in seq_along(dailyTotsFiles)) {
+for (i in goodFiles) {
   
-  # Initialize temp data frames for each species
-  tempBlainville = double()
-  tempUD26 = double()
-  tempUD28 = double()
-  tempCuvier = double()
-  tempGervais = double()
-  tempKogia = double()
-  tempRisso_UD36 = double()
-  tempSowerby = double()
-  tempSpermWhale = double()
-  tempTrue = double()
-  
-  dfList = c("tempBlainville","tempUD26","tempUD28","tempCuvier","tempGervais","tempKogia","tempRisso_UD36","tempSowerby","tempSpermWhale","tempTrue")
-  speciesInd = data.frame(c(dfList),c(1,4,5,9,21,13,3,18,19,20),c(1,4,5,9,21,13,16,18,19,20))
-  colnames(speciesInd) = c("Species","Ind1","Ind2")
+  # Initialize temp data frame
+  thisSpecies = numeric()
   
   # Load in a file
-  thisDailyTotsFile = readMat(dailyTotsFiles[i])
+  thisFile = data.frame(read.csv(presFiles[i]))
+  colnames(thisFile) = c("Date",sites)
   
-  # Get species list from file
-  speciesList = t(data.frame(thisDailyTotsFile$spNameList))
+  # Get species from file name
+  species = str_remove(presFiles[i],"_5minBin.csv")
+  species = str_remove(species,paste(presDir,'/',sep=""))
+  if (str_detect(species,"Atl")){
+    species = "Gervais"
+  }
   
-  # Get site from file name
-  for (j in seq_along(sites)) {
-    if (isTRUE(str_detect(dailyTotsFiles[i], sites[j]))) {
-      site = sites[j]
+  # stack presence data from all sites
+  thisSpecies = data.frame(Date=as.numeric(rep(as.numeric(as.Date(thisFile[,1],"%d-%b-%Y",origin="1970-01-01")),times=10)),
+                           Pres=as.numeric(stack(thisFile[,2:11])[,1]),
+                           Site=as.character(rep(sites[1:10],each=dim(thisFile)[1])))
+
+  # Remove NA rows (no-effort days)
+  noDat = which(thisSpecies$Pres=="NaN")
+  thisSpecies = thisSpecies[-noDat,]
+  rownames(thisSpecies) = seq(length=nrow(thisSpecies))
+  
+  if (i==11) {   # If Risso's, save data for later combination w UD36
+    GgTemp = thisSpecies
+    next
+  } else if (i == 19) {  # If species is UD36, combine w Risso's
+    thisSpecies = rbind(GgTemp,thisSpecies)
+    thisSpecies = thisSpecies %>% group_by(Date,Site) %>% summarise(Pres=sum(Pres))
+    thisSpecies = thisSpecies[order(thisSpecies$Site,thisSpecies$Date),]
+  }
+  
+  for (j in 1:length(varFiles)){ # load covar files one by one
+ 
+    thisVar = data.frame(read.csv(varFiles[j]))
+    thisVar[,1] = as.numeric(as.Date(thisVar[,1],origin="1970-01-01"))
+    thisVarName = str_remove(str_remove(varFiles[j],paste(covarDir,'/',sep="")),'_TS.csv')
+    abbrev = covarAbbrev[which(str_detect(covarAbbrev[,1],thisVarName)),2]
+    
+    if (abbrev%in%c("Sal","Temp","VelAsp","VelMag")){
+      depths = c(0,100,200,300,400,500,600,700)
+    } else {
+      depths = 0
+    }
+    
+    for (k in 1:length(sites)){ # For each site find data points at this site from all depths and time stamps, plus lags
+      
+      # match up site & dates
+      siteInd = which(!is.na(str_match(thisSpecies$Site,sites[k])))
+      putWhere = match(thisVar[,1],thisSpecies$Date[siteInd])
+      
+      for (l in 1:length(depths)){
+        # find covar cols with data for this site & depth (not lag cols!)
+        thisSiteDepth = which(!is.na(str_match(colnames(thisVar),
+                                               paste(sites[k],as.character(depths[l]),sep=""))) 
+                              & !str_detect(colnames(thisVar),"Lag"))
+        
+        # add data to master data frame
+        if (k==1){
+        eval(parse(text=paste('thisSpecies$',abbrev,as.character(depths[l]),' = NA',sep="")))}
+        eval(parse(text=paste('thisSpecies$',abbrev,as.character(depths[l]),
+                              '[siteInd[putWhere[!is.na(putWhere)]]] = thisVar[-which(is.na(putWhere)),thisSiteDepth]',sep="")))
+        
+        for (m in 1:length(lags)){
+          # find covar cols with data for this site & depth & lag
+          thisSiteDepth = which(!is.na(str_match(colnames(thisVar),
+                                                 paste(sites[k],as.character(depths[l]),sep=""))) 
+                                & str_detect(colnames(thisVar),lags[m]))
+          
+          # add data to master data frame
+          if(k==1){
+          eval(parse(text=paste('thisSpecies$',abbrev,as.character(depths[l]),lags[m],' = NA',sep="")))}
+          eval(parse(text=paste('thisSpecies$',abbrev,as.character(depths[l]),
+                                lags[m],'[siteInd[putWhere[!is.na(putWhere)]]] = thisVar[-which(is.na(putWhere)),thisSiteDepth]',sep="")))
+        }
+      }
     }
   }
   
-  # Get daily totals from file
-  dailyTots = thisDailyTotsFile$dailyTots
+  thisSpecies = apply(thisSpecies,2,as.character)
+  saveName = paste(outDir,'/',species,'_masterDF.csv',sep="")
+  write.csv(thisSpecies,saveName,row.names=FALSE)
   
-  # Get date from daily totals
-  matFileDate = dailyTots[,1]
-  # Convert to R dates
-  fileDate = as.POSIXct((matFileDate-719529)*86400,format='%Y-%m-%d',origin='1970-01-01',tz="UTC")
-  # fileDate = as.numeric(fileDate)
-  
-  # Add site and dates to data frames
-  for (k in seq_along(dfList)) {
-    # Add fileDate as a column in each data frame
-    eval(parse(text=paste(dfList[k],"=cbind(",dfList[k],",as.Date(fileDate))")))
-    # Add site as a column in each data frame
-    eval(parse(text=paste(dfList[k],"=cbind(",dfList[k],",site)")))
-    # Make them all data frames
-    eval(parse(text=paste(dfList[k],"=data.frame(",dfList[k],")")))
-    # Change column names
-    eval(parse(text=paste("colnames(",dfList[k],")=c('Date','Site')")))
-    
-    if (k!=7) {   # If species is not Risso's
-      # Find the daily totals column for this species
-      thisSpeciesDT = dailyTots[,speciesInd$Ind1[k]+1]
-      # Add it to the data frames
-      eval(parse(text=paste(dfList[k],"=cbind(",dfList[k],",thisSpeciesDT)")))
-      eval(parse(text=paste(dfList[k],"$Date = as.Date(as.numeric(",dfList[k],"$Date), origin = '1970-01-01')",sep="")))
-    }
-    if (k == 7) {  # If species is Risso's
-      thisSpeciesDT1 = dailyTots[,speciesInd$Ind1[k]+1]
-      thisSpeciesDT2 = dailyTots[,speciesInd$Ind2[k]+1]
-      thisSpeciesDT = c(thisSpeciesDT1,thisSpeciesDT2)
-      tempRisso_UD36 = data.frame(Date=rep(tempRisso_UD36$Date, length.out=(length(tempRisso_UD36$Date))*2),
-                                  Site=rep(tempRisso_UD36$Site, length.out=(length(tempRisso_UD36$Site))*2),
-                                  thisSpeciesDT=thisSpeciesDT)
-      # eval(parse(text=paste(dfList[k],"$Date = as.Date(as.numeric(",dfList[k],"$Date), origin = '1970-01-01')",sep="")))
-    }
-  }
-  
-  for (l in seq_along(masterDfList)) {
-    eval(parse(text=paste(masterDfList[l],"=rbind(",masterDfList[l],",",dfList[l],")",sep="")))
-  }
-  
-}
-
-## COMBINE ACOUSTIC WITH COVARIATE DATA
-covarList = list.files(outDir, pattern=".csv")
-siteMatch = double()
-
-for (i in seq_along(covarList)) { # Read in covar csv file
-  thisCovar = read.csv(file = paste(outDir,"/",covarList[i],sep=""), header=TRUE)
-  
-  for (j in seq_along(masterDfList)) { # Find where dates match
-  dateInd = match(thisCovar$Time,as.character(master.Blainville$Date))
-    # match(master.Blainville$Date,thisCovar$Time)
-  }
-
-    for (k in seq_along(sites)) {
-    # Find where columns matching site are
-    # tried grep, str_match, intersect
-    siteInd = grep(sites[k],colnames(thisCovar))
-    siteMatch = cbind(siteMatch,thisCovar[,siteInd])
-    
-    # for (l in seq_along(masterDfList)) {
-    #   # Add matching columns to master data frames
-    # }
-    
-  }
 }
