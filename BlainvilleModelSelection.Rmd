@@ -760,6 +760,11 @@ VIFvals
 Removing Salinity at 700m bc. highly collinear w Temp at 700m
 
 ```{r smooth vs linear}
+
+# Test whether continuous covars should be included in model as linear or smooth terms
+# (not testing Slope or Aspect as smooths...for now)
+
+startTime = Sys.time()
 smoothVarList = c("Temp0Lag42",
              "Temp700Lag7",
              "Sal0Lag21",
@@ -771,7 +776,9 @@ smoothVarList = c("Temp0Lag42",
              "Chl0Lag7",
              "FSLE0",
              "GSLatLag14",
-             "GSDist")
+             "GSDist",
+             "Slope",
+             "Aspect")
 
 termVote = matrix(ncol=length(smoothVarList),nrow=1)
 
@@ -779,10 +786,7 @@ for (i in 1:length(smoothVarList)){
   
   eval(parse(text=paste('linMod = geeglm(Pres~',smoothVarList[i],',family=poisson,data=data,id=GroupID,corstr=\"ar1\")',sep="")))
   
-  eval(parse(text=paste('smoothMod=geeglm(Pres~mSpline(',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',prob=c(0.275, 0.5, 0.725)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')),family=poisson,
-             data=data,
-             id=GroupID,
-            corstr=\"ar1\")',sep="")))
+  eval(parse(text=paste('smoothMod=geeglm(Pres~mSpline(',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',prob=c(0.275,0.5,0.725)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],'))),family=poisson,data=data,id=GroupID,corstr=\"ar1\")',sep="")))
   
   QIC_vals = c(QIC(linMod)[[1]],QIC(smoothMod)[[1]])
   colnames(QIC_vals) = c("linMod","smoothMod")
@@ -790,7 +794,8 @@ for (i in 1:length(smoothVarList)){
   termVote[1,i] = colnames(QIC_vals)[which.min(QIC_vals)]
 }
 
-
+endTime = Sys.time()
+endTime-startTime
 
 
 ```
@@ -810,7 +815,9 @@ smoothVarList = c("Temp0Lag42",
              "Chl0Lag7",
              "FSLE0",
              "GSLatLag14",
-             "GSDist")
+             "GSDist",
+             "Slope",
+             "Aspect")
 
 smoothNameList = character()
 
@@ -820,7 +827,7 @@ for (i in 1:length(smoothVarList)){
   
   smoothNameList = c(smoothNameList,paste('S_',smoothVarList[i],sep=""))
 }
- thisForm = formula(paste('Pres~',paste(smoothNameList,collapse="+"),'+Slope+Aspect',sep=""))
+ thisForm = formula(paste('Pres~',paste(smoothNameList,collapse="+"),sep=""))
 
 colMod = geeglm(thisForm,
              family=poisson,
@@ -837,7 +844,7 @@ Changing the grouping variable doesn't have any effect at all on the residual au
 
 ```{r checkPV}
  #Add interaction term and run full model
-thisForm = formula(paste('Pres~',paste(smoothNameList,collapse="+"),'+Slope+Aspect+S_VelAsp700Lag28:Aspect',sep=""))
+thisForm = formula(paste('Pres~',paste(smoothNameList,collapse="+"),'+S_VelAsp700Lag28:Aspect',sep=""))
 
 fullMod = geeglm(thisForm,
              family=poisson,
