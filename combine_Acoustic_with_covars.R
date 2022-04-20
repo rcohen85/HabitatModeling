@@ -11,11 +11,12 @@ library(lubridate)
 presDir = 'J:/Chpt_2/TimeSeries_ScaledByEffortError'
 covarDir = 'J:/Chpt_3/CovarTS'
 outDir = 'J:/Chpt_3/ModelData'
-sites = c('HZ','OC','NC','BC','WC','NFC','HAT','GS','BP','BS','JAX')
+sites = c('HZ','OC','NC','BC','WC','NFC','HAT','GS','BP','BS')
 covarAbbrev = cbind(c("Chl","FSLE","Salinity","SSH","Temperature","VelocityAsp","VelocityMag"),
                     c("Chl","FSLE","Sal","SSH","Temp","VelAsp","VelMag"))
-lags = c("Lag7","Lag14","Lag21")
-
+lags = c("Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+OC_change = as_date('2018-05-01') # account for change in OC site location
+HAT_change = as_date('2017-05-01') # account for change in HAT location from site A to B
 ## ACTION ----------------------------------------------------------------------
 
 # Create a list of daily species presence files
@@ -24,6 +25,8 @@ goodFiles = c(1,2,4,8,11,13:15,17:19)
 
 # find covariate data
 varFiles = list.files(covarDir,pattern=".csv",full.names=TRUE)
+staticFiles = list.files(covarDir,pattern="Geo",full.names=TRUE)
+staticFiles = c(staticFiles,list.files(covarDir,pattern="Slope",full.names=TRUE))
 
 for (i in goodFiles) {
   
@@ -35,7 +38,7 @@ for (i in goodFiles) {
   colnames(thisFile) = c("Date",sites)
   
   # Get species from file name
-  species = str_remove(presFiles[i],"_5minBin.csv")
+  species = str_remove(presFiles[i],"_Daily.csv")
   species = str_remove(species,paste(presDir,'/',sep=""))
   if (str_detect(species,"Atl")){
     species = "Gervais"
@@ -46,6 +49,49 @@ for (i in goodFiles) {
                            Pres=as.numeric(stack(thisFile[,2:11])[,1]),
                            Site=as.character(rep(sites[1:10],each=dim(thisFile)[1])))
 
+  # add GS latitudinal position time series
+  load(staticFiles[1])
+  # Interpolate missing data
+  GSLat = approx(masterData.Time,masterData.Frontal,as.numeric(as.Date(thisFile$Date,"%d-%b-%Y",origin="1970-01-01")),method="linear")
+  
+  # load Dist to GS
+  load(staticFiles[2])
+  # load Slope & Aspect
+  load(staticFiles[3])
+  
+  thisSpecies$GSLat = NA
+  thisSpecies$GSDist = NA
+  thisSpecies$Slope = NA
+  thisSpecies$Aspect = NA
+  
+  for (n in 1:length(sites)){
+    # interpolate GS Dist to fill in missing time stamps
+    GSdist = approx(masterData.Time,masterData.GeoDist[n,],as.numeric(as.Date(thisFile$Date,"%d-%b-%Y",origin="1970-01-01")),method="linear")
+    
+    # Plug data points in at correct time stamps
+    siteInd = which(!is.na(str_match(thisSpecies$Site,sites[n])))
+    putWhere = match(GSLat$x,thisSpecies$Date[siteInd])
+    thisSpecies$GSLat[siteInd[putWhere]] = GSLat$y[putWhere]
+    thisSpecies$GSDist[siteInd[putWhere]] = GSdist$y[putWhere]
+    
+    if (n!=2 & n!=7){
+    thisSpecies$Slope[siteInd] = slopeMat[n,1]
+    thisSpecies$Aspect[siteInd] = aspectMat[n,1]
+    } else if (n==2) {
+      before = which(thisSpecies$Date[siteInd]<OC_change)
+      thisSpecies$Slope[siteInd[before]] = slopeMat[n,1]
+      thisSpecies$Slope[siteInd[-before]] = slopeMat[n,2]
+      thisSpecies$Aspect[siteInd[before]] = aspectMat[n,1]
+      thisSpecies$Aspect[siteInd[-before]] = aspectMat[n,2]
+    } else if (n==7) {
+      before = which(thisSpecies$Date[siteInd]<HAT_change)
+      thisSpecies$Slope[siteInd[before]] = slopeMat[n,1]
+      thisSpecies$Slope[siteInd[-before]] = slopeMat[n,2]
+      thisSpecies$Aspect[siteInd[before]] = aspectMat[n,1]
+      thisSpecies$Aspect[siteInd[-before]] = aspectMat[n,2]
+    }
+  }
+  
   # Remove NA rows (no-effort days)
   noDat = which(thisSpecies$Pres=="NaN")
   thisSpecies = thisSpecies[-noDat,]
@@ -56,7 +102,11 @@ for (i in goodFiles) {
     next
   } else if (i == 19) {  # If species is UD36, combine w Risso's
     thisSpecies = rbind(GgTemp,thisSpecies)
-    thisSpecies = thisSpecies %>% group_by(Date,Site) %>% summarise(Pres=sum(Pres))
+    thisSpecies = thisSpecies %>% group_by(Date,Site) %>% summarise(Pres=sum(Pres),
+                                                                    GSLat=mean(GSLat),
+                                                                    GSDist=mean(GSDist),
+                                                                    Slope=mean(Slope),
+                                                                    Aspect=mean(Aspect))
     thisSpecies = thisSpecies[order(thisSpecies$Site,thisSpecies$Date),]
   }
   
