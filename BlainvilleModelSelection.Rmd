@@ -1,0 +1,78 @@
+---
+title: "BlainvilleModelSelection"
+author: "RC"
+date: '2022-04-18'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(geepack)
+library(splines2)
+library(lubridate)
+library(tidyverse)
+
+data = data.frame(read.csv('J:/Chpt_3/ModelData/Blainville_masterDF.csv'))
+lagID = 41 
+numClust = length(data$Pres)/(lagID-1)
+if (numClust<length(data$Pres)){
+  clustID = rep(1:ceiling(numClust),each=lagID)
+  clustID = clustID[1:length(data$Pres)]
+} else {
+  clustID = 1:length(data$Pres)
+}
+data$GroupID = clustID
+
+# convert hours of presence back to # 5-min bins, then round to get Poisson dist
+data$Pres = round(data$Pres*12)
+```
+
+# Test temperature at several time lags
+
+```{r temp0Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"Temp0")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+
+
+
+
+```{r temp700Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"Temp700")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
