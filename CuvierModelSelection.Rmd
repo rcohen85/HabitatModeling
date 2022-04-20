@@ -763,8 +763,50 @@ colnames(AIC_comp)[order(AIC_comp)]
 
 
 
+# Try Chl at 0m
+```{r Chl0Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"Chl0")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
 
 
 
+# Try FSLE at 0m
+```{r FSLE0Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"FSLE0")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
 
 
