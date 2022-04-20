@@ -1,0 +1,812 @@
+---
+title: "CuvierModelSelection"
+author: "RC + LB"
+date: '2022-04-20'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(geepack)
+library(splines2)
+library(lubridate)
+library(tidyverse)
+
+data = data.frame(read.csv('E:/ModelingCovarData/Master_DFs/Cuvier_masterDF.csv'))
+lagID = 41 
+numClust = length(data$Pres)/(lagID-1)
+if (numClust<length(data$Pres)){
+  clustID = rep(1:ceiling(numClust),each=lagID)
+  clustID = clustID[1:length(data$Pres)]
+} else {
+  clustID = 1:length(data$Pres)
+}
+data$GroupID = clustID
+
+# convert hours of presence back to # 5-min bins, then round to get Poisson dist
+data$Pres = round(data$Pres*12)
+```
+
+# Test temperature at several time lags
+
+```{r temp0Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"Temp0")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r temp100Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"Temp100")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r temp200Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"Temp200")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r temp300Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"Temp300")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r temp400Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"Temp400")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r temp500Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"Temp500")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r temp600Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"Temp600")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r temp700Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"Temp700")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+# Test salinity at different time lags
+
+```{r salinity0Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"Sal0")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r salinity100Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"Sal100")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r salinity200Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"Sal200")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r salinity300Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"Sal300")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r salinity400Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"Sal400")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r salinity500Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"Sal500")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r salinity600Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"Sal600")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r salinity700Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"Sal700")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+# Test velocity magnitude at different depths
+```{r velMag0Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"VelMag0")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r velMag100Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"VelMag100")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r velMag200Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"VelMag200")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r velMag300Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"VelMag300")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r velMag400Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"VelMag400")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r velMag500Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"VelMag500")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r velMag600Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"VelMag600")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r velMag700Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"VelMag700")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+
+# Test velocity aspect at different depths
+```{r velAsp0Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"VelAsp0")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r velAsp100Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"VelAsp100")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r velAsp200Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"VelAsp200")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r velAsp300Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"VelAsp300")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r velAsp400Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"VelAsp400")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r velAsp500Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"VelAsp500")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r velAsp600Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"VelAsp600")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+```{r velAsp700Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"VelAsp700")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+# Try SSH at 0m
+```{r SSH0Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"SSH0")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+
+
+# Try Chl at 0m
+```{r Chl0Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"Chl0")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
+
+# Try FSLE at 0m
+```{r FSLE0Lags}
+
+colInd = which(!is.na(str_match(colnames(data),"FSLE0")))
+AIC_comp = matrix(ncol=length(colInd),nrow=1)
+names = character()
+
+for (i in 1:length(colInd)){
+mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
+                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
+              data=data,family=poisson)
+AIC_comp[1,i] = AIC(mod)[[1]]
+names = c(names,colnames(data)[colInd[i]])
+}
+
+# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
+# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
+colnames(AIC_comp) = names
+AIC_comp
+colnames(AIC_comp)[order(AIC_comp)]
+```
+
+
