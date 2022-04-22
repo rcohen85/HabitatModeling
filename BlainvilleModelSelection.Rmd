@@ -823,7 +823,6 @@ Removing Salinity at 700m bc. highly collinear w Temp at 700m
 ```{r smooth vs linear}
 
 # Test whether continuous covars should be included in model as linear or smooth terms
-# (not testing Slope or Aspect as smooths...for now)
 
 startTime = Sys.time()
 smoothVarList = c("Temp0Lag42",
@@ -845,9 +844,15 @@ termVote = matrix(ncol=length(smoothVarList),nrow=1)
 
 for (i in 1:length(smoothVarList)){
   
-  eval(parse(text=paste('linMod = geeglm(Pres~',smoothVarList[i],',family=poisson,data=data,id=GroupID,corstr=\"ar1\")',sep="")))
+  linMod = geeglm(Pres~data[[smoothVarList[i]]],data=data,family=poisson,id=GroupID,corstr="ar1")
   
-  eval(parse(text=paste('smoothMod=geeglm(Pres~mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',prob=c(0.275,0.5,0.725)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],'))),family=poisson,data=data,id=GroupID,corstr=\"ar1\")',sep="")))
+   smoothMod = geeglm(Pres~mSpline(data[[smoothVarList[i]]],
+                                   knots=quantile(data[[smoothVarList[i]]],probs=c(0.275,0.5,0.725)),
+                                   Boundary.knots=c(min(data[[smoothVarList[i]]]),max(data[[smoothVarList[i]]]))),
+                      data=data,
+                      family=poisson,
+                      id=GroupID,
+                      corstr="ar1")
   
   QIC_vals = c(QIC(linMod)[[1]],QIC(smoothMod)[[1]])
   colnames(QIC_vals) = c("linMod","smoothMod")
