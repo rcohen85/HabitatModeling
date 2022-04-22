@@ -1,7 +1,7 @@
 ---
-title: "CuvierModelSelection"
+title: "TrueModelSelection"
 author: "RC + LB"
-date: '2022-04-20'
+date: "4/20/2022"
 output: html_document
 ---
 
@@ -15,7 +15,7 @@ library(car)
 library(splines2)
 source("getPvalues.R")
 
-data = data.frame(read.csv('E:/ModelingCovarData/Master_DFs/Cuvier_masterDF.csv'))
+data = data.frame(read.csv('E:/ModelingCovarData/Master_DFs/True_masterDF.csv'))
 lagID = 41 
 numClust = length(data$Pres)/(lagID-1)
 if (numClust<length(data$Pres)){
@@ -29,6 +29,7 @@ data$GroupID = clustID
 # convert hours of presence back to # 5-min bins, then round to get Poisson dist
 data$Pres = round(data$Pres*12)
 ```
+
 
 # Test temperature at several time lags
 
@@ -52,6 +53,7 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
+
 
 
 ```{r temp100Lags}
@@ -835,25 +837,25 @@ colnames(AIC_comp)[order(AIC_comp)]
 ```
 
 
-Covar selection to start: Temp0Lag0
+Covar selection to start: Temp0Lag42
                           Temp700Lag42
                           Sal0Lag56
                           Sal700Lag42
-                          VelMag0Lag42 
-                          VelMag700mLag42
+                          VelMag0Lag14
+                          VelMag700mLag28
                           VelAsp0mLag0
-                          VelAsp700mLag56
-                          SSH0Lag28
-                          Chl0Lag14
-                          FSLE0Lag56
-                          GSLatLag7
+                          VelAsp700mLag0
+                          SSH0Lag0
+                          Chl0Lag21
+                          FSLE0Lag0
+                          GSLatLag14
                           GSDist
                           Slope
                           Aspect
-                          VelAsp700Lag56:Aspect
+                          VelAsp700Lag0:Aspect
 
 
-## THE FOLLOWING IS COPIED AND PASTED FROM BLAINVILLE'S, MODIFY FOR CUVIER'S BEFORE RUNNING
+## THE FOLLOWING IS COPIED AND PASTED FROM BLAINVILLE'S, MODIFY FOR TRUE'S BEFORE RUNNING
 
 ```{r checkVIF}
 # calculate VIF for each of the variables desired in the full model
