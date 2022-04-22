@@ -26,8 +26,8 @@ if (numClust<length(data$Pres)){
 }
 data$GroupID = clustID
 
-# convert hours of presence back to # 5-min bins, then round to get Poisson dist
-data$Pres = round(data$Pres*12)
+# Round presence to get Poisson dist
+data$Pres = round(data$Pres)
 ```
 
 ```{r temp0Lags}
@@ -748,6 +748,12 @@ for (i in 1:length(smoothVarList)){
              alpha=0.5
   ) + labs(y="Normalized Counts",x=NULL,title=smoothVarList[i]
   ) + theme_minimal())
+  
+  print(ggplot(data
+  )+geom_point(aes(x=.data[[smoothVarList[i]]],y=Pres)
+  )+geom_smooth(aes(x=.data[[smoothVarList[i]]],y=Pres),
+                method="loess"
+  )+labs(title=smoothVarList[i]))
 
 }
 
