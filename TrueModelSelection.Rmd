@@ -26,8 +26,8 @@ if (numClust<length(data$Pres)){
 }
 data$GroupID = clustID
 
-# convert hours of presence back to # 5-min bins, then round to get Poisson dist
-data$Pres = round(data$Pres*12)
+# Round presence to get Poisson dist
+data$Pres = round(data$Pres)
 ```
 
 
@@ -53,9 +53,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
-
 ```{r temp100Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"Temp100")))
@@ -76,8 +73,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r temp200Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"Temp200")))
@@ -98,8 +93,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r temp300Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"Temp300")))
@@ -120,8 +113,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r temp400Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"Temp400")))
@@ -142,8 +133,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r temp500Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"Temp500")))
@@ -164,8 +153,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r temp600Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"Temp600")))
@@ -186,8 +173,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r temp700Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"Temp700")))
@@ -232,8 +217,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r salinity100Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"Sal100")))
@@ -254,8 +237,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r salinity200Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"Sal200")))
@@ -276,8 +257,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r salinity300Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"Sal300")))
@@ -298,8 +277,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r salinity400Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"Sal400")))
@@ -320,8 +297,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r salinity500Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"Sal500")))
@@ -342,8 +317,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r salinity600Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"Sal600")))
@@ -364,8 +337,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r salinity700Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"Sal700")))
@@ -409,8 +380,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r velMag100Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"VelMag100")))
@@ -431,8 +400,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r velMag200Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"VelMag200")))
@@ -453,8 +420,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r velMag300Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"VelMag300")))
@@ -475,8 +440,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r velMag400Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"VelMag400")))
@@ -497,8 +460,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r velMag500Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"VelMag500")))
@@ -519,8 +480,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r velMag600Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"VelMag600")))
@@ -541,8 +500,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r velMag700Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"VelMag700")))
@@ -563,7 +520,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
 
 
 # Test velocity aspect at different depths
@@ -587,8 +543,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r velAsp100Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"VelAsp100")))
@@ -609,8 +563,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r velAsp200Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"VelAsp200")))
@@ -631,8 +583,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r velAsp300Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"VelAsp300")))
@@ -653,8 +603,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r velAsp400Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"VelAsp400")))
@@ -675,8 +623,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r velAsp500Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"VelAsp500")))
@@ -697,8 +643,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r velAsp600Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"VelAsp600")))
@@ -719,8 +663,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
-
 ```{r velAsp700Lags}
 
 colInd = which(!is.na(str_match(colnames(data),"VelAsp700")))
@@ -766,8 +708,6 @@ colnames(AIC_comp)[order(AIC_comp)]
 ```
 
 
-
-
 # Try Chl at 0m
 ```{r Chl0Lags}
 
@@ -789,7 +729,6 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-
 
 
 # Try FSLE at 0m
@@ -843,11 +782,11 @@ Covar selection to start: Temp0Lag42
                           Sal700Lag42
                           VelMag0Lag14
                           VelMag700mLag28
-                          VelAsp0mLag0
-                          VelAsp700mLag0
-                          SSH0Lag0
+                          VelAsp0m
+                          VelAsp700m
+                          SSH0
                           Chl0Lag21
-                          FSLE0Lag0
+                          FSLE0
                           GSLatLag14
                           GSDist
                           Slope
@@ -855,20 +794,80 @@ Covar selection to start: Temp0Lag42
                           VelAsp700Lag0:Aspect
 
 
+
+
 ## THE FOLLOWING IS COPIED AND PASTED FROM BLAINVILLE'S, MODIFY FOR TRUE'S BEFORE RUNNING
+
+```{r plotCovars}
+# Fill in smoothVarList based on selection made above
+smoothVarList = c("Temp0Lag42",
+             "Temp700Lag42",
+             "Sal0Lag56",
+             "Sal700Lag42",
+             "VelMag0Lag14" ,
+             "VelMag700Lag28",
+             "VelAsp0" ,
+             "VelAsp700",
+             "SSH0",
+             "Chl0Lag21",
+             "FSLE0",
+             "GSLatLag14",
+             "GSDist",
+             "Slope",
+             "Aspect")
+
+ pres = which(data$Pres>0)
+  presDF = data[pres,]
+
+ 
+for (i in 1:length(smoothVarList)){
+  
+   # Plot presence bins across all data for each covar
+  edges = seq(min(data[[smoothVarList[i]]]),max(data[[smoothVarList[i]]]),length.out=50)
+  binDiff = diff(edges[1:2])
+  plotDF = data.frame(Obs=histc(data[[smoothVarList[i]]],edges=edges)$cnt/dim(data)[1],
+                    Pres=histc(presDF[[smoothVarList[i]]],edges=edges)$cnt/dim(presDF)[1],
+                    BinCenter=seq(min(data[[smoothVarList[i]]])+(0.5*binDiff),
+                                  max(data[[smoothVarList[i]]])+(0.5*binDiff),
+                                  by=binDiff))
+
+  print(ggplot(plotDF
+  )+geom_col(aes(x=BinCenter,y=Obs),
+             fill='#bfbfbf',
+             alpha=0.6
+  )+geom_col(aes(x=BinCenter,y=Pres),
+             fill='#66B2FF',
+             alpha=0.5
+  ) + labs(y="Normalized Counts",x=NULL,title=smoothVarList[i]
+  ) + theme_minimal())
+  
+  print(ggplot(data
+  )+geom_point(aes(x=.data[[smoothVarList[i]]],y=Pres)
+  )+geom_smooth(aes(x=.data[[smoothVarList[i]]],y=Pres),
+                method="loess"
+  )+labs(title=smoothVarList[i]))
+
+}
+
+```
+
+Looks like there may be a pattern: Temp0Lag42, Temp700Lag42,Sal0Lag56, Sal700Lag42,
+  VelMag0Lag14, VelMag700Lag28, VelAsp0, VelAsp700, SSH0, GSDist, 
+
+Looks like no pattern: ChlLag21, FSLE0, GSLatLag14, Slope, Aspect
 
 ```{r checkVIF}
 # calculate VIF for each of the variables desired in the full model
 colMod = glm(Pres~Temp0Lag42
-             +Temp700Lag7
-             +Sal0Lag21
-             # +Sal700Lag7
-             +VelMag0Lag28 
-             +VelMag700Lag7
-             +VelAsp0Lag14 
-             +VelAsp700Lag28
+             +Temp700Lag42
+             +Sal0Lag56
+             # +Sal700Lag42
+             +VelMag0Lag14 
+             +VelMag700Lag28
+             +VelAsp0 
+             +VelAsp700
              +SSH0
-             +Chl0Lag7
+             +Chl0Lag21
              +FSLE0
              +GSLatLag14
              +GSDist
@@ -881,12 +880,13 @@ VIFvals = vif(colMod)
 VIFvals
 # remove vars in stepwise fashion as necessary
 ```
-Removing Salinity at 700m bc. highly collinear w Temp at 700m
+Remove Salinity700, collinear with temp and SSH
+Maybe remoce Chl, FSLE, GSLat, Slope, Aspect? Not collinear, but doesn't look like
+  much of a trend
 
 ```{r smooth vs linear}
 
 # Test whether continuous covars should be included in model as linear or smooth terms
-# (not testing Slope or Aspect as smooths...for now)
 
 startTime = Sys.time()
 smoothVarList = c("Temp0Lag42",
@@ -908,9 +908,15 @@ termVote = matrix(ncol=length(smoothVarList),nrow=1)
 
 for (i in 1:length(smoothVarList)){
   
-  eval(parse(text=paste('linMod = geeglm(Pres~',smoothVarList[i],',family=poisson,data=data,id=GroupID,corstr=\"ar1\")',sep="")))
+  linMod = geeglm(Pres~data[[smoothVarList[i]]],data=data,family=poisson,id=GroupID,corstr="ar1")
   
-  eval(parse(text=paste('smoothMod=geeglm(Pres~mSpline(',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',prob=c(0.275,0.5,0.725)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],'))),family=poisson,data=data,id=GroupID,corstr=\"ar1\")',sep="")))
+   smoothMod = geeglm(Pres~mSpline(data[[smoothVarList[i]]],
+                                   knots=quantile(data[[smoothVarList[i]]],probs=c(0.275,0.5,0.725)),
+                                   Boundary.knots=c(min(data[[smoothVarList[i]]]),max(data[[smoothVarList[i]]]))),
+                      data=data,
+                      family=poisson,
+                      id=GroupID,
+                      corstr="ar1")
   
   QIC_vals = c(QIC(linMod)[[1]],QIC(smoothMod)[[1]])
   colnames(QIC_vals) = c("linMod","smoothMod")
@@ -966,6 +972,7 @@ modACF = acf(residuals(colMod),lag.max=180)
 
 Changing the grouping variable doesn't have any effect at all on the residual autocorrelation, which is already quite minimal. Going with the most conservative grouping variable of 126 days.
 
+
 ```{r checkPV}
  #Add interaction term and run full model
 thisForm = formula(paste('Pres~',paste(smoothNameList,collapse="+"),'+S_VelAsp700Lag28:Aspect',sep=""))
@@ -981,10 +988,4 @@ getPvalues(fullMod)
 
 
 ```
-
-
-
-
-
-
 
