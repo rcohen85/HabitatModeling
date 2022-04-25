@@ -717,36 +717,33 @@ AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
 
-Covar selection to start: Temp0Lag2
-                          Temp700Lag7
-                          Sal0Lag21
-                          Sal700mLag7
-                          VelMag0mLag28 
-                          VelMag700mLag7
-                          VelAsp0mLag14 
-                          VelAsp700mLag28
-                          SSH0
-                          Chl0Lag7
-                          FSLE0
-                          GSLatLag14
-                          GSDist
-                          Slope
-                          Aspect
-                          VelAsp700Lag28:Aspect
+Covars to start in full model: Temp0Lag14 
+                                Temp100
+                                Sal0Lag56 
+                                Sal100Lag42
+                                VelMag0Lag7 
+                                VelMag100
+                                VelAsp0Lag56
+                                VelAsp100Lag56
+                                SSH0
+                                Chl0
+                                FSLE0
+                                GSLatLag14
+
 
 
 ```{r plotCovars}
 # Fill in smoothVarList based on selection made above
-smoothVarList = c("Temp0Lag42",
-             "Temp700Lag7",
-             "Sal0Lag21",
-             "Sal700Lag7",
-             "VelMag0Lag28" ,
-             "VelMag700Lag7",
-             "VelAsp0Lag14" ,
-             "VelAsp700Lag28",
+smoothVarList = c("Temp0Lag14",
+             "Temp100",
+             "Sal0Lag56",
+             "Sal100Lag42",
+             "VelMag0Lag7" ,
+             "VelMag100",
+             "VelAsp0Lag56" ,
+             "VelAsp100Lag56",
              "SSH0",
-             "Chl0Lag7",
+             "Chl0",
              "FSLE0",
              "GSLatLag14",
              "GSDist",
@@ -787,24 +784,32 @@ for (i in 1:length(smoothVarList)){
 }
 
 ```
+Looks like there may be a trend: Temp0Lag14, Temp100, Sal0Lag56, Sal100Lag42, VelAsp0Lag56,
+  VelAsp100Lag56, SSH0, Chl0, GSDist
+  
+Looks like there is no trend: VelMag0Lag7, VelMag100, FSLE, GSLatLag14, Slope, Aspect
+
+**None of these have a super clear trend
+
+
 
 ```{r checkVIF}
 # calculate VIF for each of the variables desired in the full model
-colMod = glm(Pres~Temp0Lag42
-             +Temp700Lag7
-             +Sal0Lag21
-             # +Sal700Lag7
-             +VelMag0Lag28 
-             +VelMag700Lag7
-             +VelAsp0Lag14 
-             +VelAsp700Lag28
+colMod = glm(Pres~Temp0Lag14
+             # +Temp100
+             +Sal0Lag56
+             +Sal100Lag42
+             # +VelMag0Lag7 
+             # +VelMag100
+             +VelAsp0Lag56 
+             +VelAsp100Lag56
              +SSH0
-             +Chl0Lag7
-             +FSLE0
-             +GSLatLag14
-             +GSDist
-             +Slope
-             +Aspect,
+             +Chl0
+             # +FSLE0
+             # +GSLatLag14
+             +GSDist,
+             # +Slope
+             # +Aspect,
              family=poisson,
              data=data)
 
@@ -812,7 +817,8 @@ VIFvals = vif(colMod)
 VIFvals
 # remove vars in stepwise fashion as necessary
 ```
-Removing Salinity at 700m bc. highly collinear w Temp at 700m
+At 100m, Temp is collinear with salinity, SSH, and GSDist
+Remove Temp100 so that we can keep the rest of these variables in the model
 
 ```{r smooth vs linear}
 
