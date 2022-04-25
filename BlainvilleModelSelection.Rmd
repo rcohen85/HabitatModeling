@@ -787,8 +787,8 @@ for (i in 1:length(smoothVarList)){
 }
 
 ```
-Looks like there may be a trend: Temp0Lag42, Temp700Lag7, Sal0Lag21, Sal700Lag7, VelMag0Lag28,
-  VelMag700Lag7, VelAsp0Lag14, VelAsp700Lag28, SSH0, Chl0Lag7, FSLE?, GSDist, Slope, Aspect
+Looks like there may be a trend: Temp0Lag42, Temp700Lag7, Sal0Lag21, Sal700Lag7,
+  VelMag700Lag7, VelAsp0Lag14, VelAsp700Lag28, SSH0, Chl0Lag7, GSDist, Slope, Aspect
 
 Looks like there is no trend: GSLatLag14
 
@@ -798,13 +798,13 @@ colMod = glm(Pres~Temp0Lag42
              +Temp700Lag7
              +Sal0Lag21
              # +Sal700Lag7
-             +VelMag0Lag28 
+             # +VelMag0Lag28 
              +VelMag700Lag7
              +VelAsp0Lag14 
              +VelAsp700Lag28
              +SSH0
              +Chl0Lag7
-             +FSLE0
+             # +FSLE0
              # +GSLatLag14
              +GSDist
              +Slope

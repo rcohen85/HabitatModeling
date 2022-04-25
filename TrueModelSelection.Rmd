@@ -852,7 +852,7 @@ for (i in 1:length(smoothVarList)){
 ```
 
 Looks like there may be a pattern: Temp0Lag42, Temp700Lag42, Sal0Lag56, Sal700Lag42, VelMag0Lag14,
-  VelMag700Lag28, VelAsp0, VelAsp700, SSH0, Chl0Lag21, FSLE0?, GSDist, Slope, Aspect
+  VelMag700Lag28, VelAsp0, VelAsp700, SSH0, Chl0Lag21, GSDist, Slope, Aspect
 
 Looks like no pattern: GSLatLag14 
 
@@ -868,7 +868,7 @@ colMod = glm(Pres~Temp0Lag42
              +VelAsp700
              +SSH0
              +Chl0Lag21
-             +FSLE0
+             # +FSLE0
              # +GSLatLag14
              +GSDist
              +Slope

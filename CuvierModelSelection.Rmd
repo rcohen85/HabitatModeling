@@ -849,8 +849,8 @@ for (i in 1:length(smoothVarList)){
 }
 
 ```
-Plots that look like there might be a preference: Temp0?, Temp700Lag42?, Sal0Lag56, Sal700Lag42?, VelMag0Lag42,
-  VelMag700Lag42?, VelAsp0, VelAsp700Lag56?, SSH0Lag28, Chl0Lag14, GSDist?, Slope, Aspect
+Plots that look like there might be a preference: Temp0, Temp700Lag42, Sal0Lag56, Sal700Lag42, VelMag0Lag42,
+  VelMag700Lag42, VelAsp0, VelAsp700Lag56, SSH0Lag28, Chl0Lag14, GSDist, Slope, Aspect
 
 Plots that look like no preference: VelAsp0, Chl0Lag14, FSLE0Lag56, GSLatLag7
 
