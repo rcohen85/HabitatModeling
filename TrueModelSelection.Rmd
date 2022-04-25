@@ -851,10 +851,10 @@ for (i in 1:length(smoothVarList)){
 
 ```
 
-Looks like there may be a pattern: Temp0Lag42, Temp700Lag42,Sal0Lag56, Sal700Lag42,
-  VelMag0Lag14, VelMag700Lag28, VelAsp0, VelAsp700, SSH0, GSDist, 
+Looks like there may be a pattern: Temp0Lag42, Temp700Lag42, Sal0Lag56, Sal700Lag42, VelMag0Lag14,
+  VelMag700Lag28, VelAsp0, VelAsp700, SSH0, Chl0Lag21, FSLE0?, GSDist, Slope, Aspect
 
-Looks like no pattern: ChlLag21, FSLE0, GSLatLag14, Slope, Aspect
+Looks like no pattern: GSLatLag14 
 
 ```{r checkVIF}
 # calculate VIF for each of the variables desired in the full model
@@ -869,7 +869,7 @@ colMod = glm(Pres~Temp0Lag42
              +SSH0
              +Chl0Lag21
              +FSLE0
-             +GSLatLag14
+             # +GSLatLag14
              +GSDist
              +Slope
              +Aspect,
@@ -881,8 +881,7 @@ VIFvals
 # remove vars in stepwise fashion as necessary
 ```
 Remove Salinity700, collinear with temp and SSH
-Maybe remoce Chl, FSLE, GSLat, Slope, Aspect? Not collinear, but doesn't look like
-  much of a trend
+
 
 ```{r smooth vs linear}
 
