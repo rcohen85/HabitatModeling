@@ -787,29 +787,29 @@ for (i in 1:length(smoothVarList)){
 }
 
 ```
-Looks like there is a trend: Temp0?, Temp700Lag28?, SSH0Lag7?, GSDist
+Looks like there is a trend: Temp0?, Temp700Lag28?, SSH0Lag7?, GSDist, Sal0Lag56, Sal700Lag7,
+  VelMag0Lag21, VelMag700Lag56, VelAsp0Lag21, VelAsp700Lag7, Chl0, Slope, Aspect
 
-Looks like there is no trend: Sal0Lag56, Sal700Lag7, VelMag0Lag21, VelMag700Lag56, VelAsp0Lag21,
-  VelAsp700Lag7, Chl0, FSLE0Lag28, GSLatLag28, Slope, Aspect
+Looks like there is no trend: FSLE0Lag28, GSLatLag28
 
 
 ```{r checkVIF}
 # calculate VIF for each of the variables desired in the full model
 colMod = glm(Pres~Temp0
              +Temp700Lag28
-             # +Sal0Lag56
+             +Sal0Lag56
              # +Sal700Lag7
-             # +VelMag0Lag21
-             # +VelMag700Lag56
-             # +VelAsp0Lag21
-             # +VelAsp700Lag7
-              # +SSH0Lag7
-             # +Chl0
+             +VelMag0Lag21
+             +VelMag700Lag56
+             +VelAsp0Lag21
+             +VelAsp700Lag7
+             # +SSH0Lag7
+             +Chl0
              # +FSLE0Lag28
              # +GSLatLag28
-             +GSDist,
-             # +Slope
-             # +Aspect,
+             # +GSDist,
+             +Slope
+             +Aspect,
              family=poisson,
              data=data)
 
@@ -817,8 +817,9 @@ VIFvals = vif(colMod)
 VIFvals
 # remove vars in stepwise fashion as necessary
 ```
-remove the covars that show no relationship in graph
-remove SSH because it is colinear with the temps
+GSDist is pretty collinear with SSH, and a bit with Temp700 and Sal700
+SSH collinear with Temp700, Sal700, and slightly with Chl0
+Temp700 and Sal700 slightly collinear with each other, remove one
 ```{r smooth vs linear}
 
 # Test whether continuous covars should be included in model as linear or smooth terms
