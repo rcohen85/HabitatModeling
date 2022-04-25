@@ -16,7 +16,7 @@ library(splines2)
 library(ggplot2)
 source("getPvalues.R")
 
-data = data.frame(read.csv('J:/Chpt_3/ModelData/Blainville_masterDF.csv'))
+data = data.frame(read.csv('E:/ModelingCovarData/Master_DFs/Blainville_masterDF.csv'))
 lagID = 126
 numClust = length(data$Pres)/(lagID-1)
 if (numClust<length(data$Pres)){
@@ -787,12 +787,10 @@ for (i in 1:length(smoothVarList)){
 }
 
 ```
+Looks like there may be a trend: Temp0Lag42, Temp700Lag7, Sal0Lag21, Sal700Lag7, VelMag0Lag28,
+  VelMag700Lag7, VelAsp0Lag14, VelAsp700Lag28, SSH0, Chl0Lag7, FSLE?, GSDist, Slope, Aspect
 
-
-
-
-
-
+Looks like there is no trend: GSLatLag14
 
 ```{r checkVIF}
 # calculate VIF for each of the variables desired in the full model
@@ -807,7 +805,7 @@ colMod = glm(Pres~Temp0Lag42
              +SSH0
              +Chl0Lag7
              +FSLE0
-             +GSLatLag14
+             # +GSLatLag14
              +GSDist
              +Slope
              +Aspect,
