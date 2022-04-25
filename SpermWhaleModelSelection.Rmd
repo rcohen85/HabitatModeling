@@ -788,26 +788,26 @@ for (i in 1:length(smoothVarList)){
 }
 
 ```
-Looks like there might be a trend: Temp700Lag28, VelAsp700Lag28?, SSH0Lag14?, GSDist?, 
+Looks like there might be a trend: Temp0Lag56, Temp700Lag28, VelAsp700Lag28?, SSH0Lag14?, GSDist?, Chl0Lag7
 
-Looks like no trend: Temp0Lag56, Sal0, Sal700Lag28, VelMag0, VelMag700Lag7, VelAsp0Lag56, Chl0Lag7, FSLE0,
+Looks like no trend: Sal0, Sal700Lag28, VelMag0, VelMag700Lag7, VelAsp0Lag56, FSLE0,
   GSLatLag42, Slope, Aspect
 
 ```{r checkVIF}
 # calculate VIF for each of the variables desired in the full model
 colMod = glm(Pres~
-             # +Temp0Lag56
-             Temp700Lag28
+             +Temp0Lag56
+             +Temp700Lag28
              # +Sal0
              # +Sal700Lag28
              # +VelMag0
              # +VelMag700Lag7
-             # +VelAsp0Lag56 
-             +VelAsp700Lag28
+             # +VelAsp0Lag56
+             # +VelAsp700Lag28
              # +SSH0Lag14
-             # +Chl0Lag7
+             +Chl0Lag7
              # +FSLE0
-             +GSLatLag42
+             # +GSLatLag42
              +GSDist,
              # +Slope
              # +Aspect,
