@@ -2,7 +2,7 @@ tic
 GSvid = VideoWriter('GSPosition.avi','Motion JPEG AVI');
 GSvid.FrameRate = 5
 open(GSvid);
-figDir = 'E:\hycom\0.08deg\fsle_movie';
+figDir = 'E:\hycom\0.08deg\movie';
 fileList = dir(fullfile(figDir,'*.jpeg'));
 
 for i=1:length(fileList)

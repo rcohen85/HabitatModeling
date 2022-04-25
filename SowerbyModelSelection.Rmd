@@ -15,7 +15,7 @@ library(car)
 library(splines2)
 source("getPvalues.R")
 
-data = data.frame(read.csv('J:/Chpt_3/ModelData/Sowerby_masterDF.csv'))
+data = data.frame(read.csv('E:/ModelingCovarData/Master_DFs/Sowerby_masterDF.csv'))
 lagID = 64
 numClust = length(data$Pres)/(lagID-1)
 if (numClust<length(data$Pres)){
@@ -716,13 +716,39 @@ AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
 
-Covar selection to start:
+Covar selection to start:Temp0Lag56 
+                          Temp700
+                          Sal0Lag21
+                          Sal700
+                          VelMag0Lag28
+                          VelMag700Lag14
+                          VelAsp0
+                          VelAsp700Lag21
+                          SSH0
+                          Chl0
+                          FSLE0Lag14
+                          GSLatLag28
+
 
 
 
 ```{r plotCovars}
 # Fill in smoothVarList based on selection made above
-smoothVarList = c()
+smoothVarList = c("Temp0Lag56",
+                  "Temp700",
+                  "Sal0Lag21",
+                  "Sal700",
+                  "VelMag0Lag28",
+                  "VelMag700Lag14",
+                  "VelAsp0",
+                  "VelAsp700Lag21",
+                  "SSH0",
+                  "Chl0",
+                  "FSLE0Lag14",
+                  "GSLatLag28",
+                  "GSDist",
+                  "Slope",
+                  "Aspect")
 
  pres = which(data$Pres>0)
   presDF = data[pres,]
@@ -758,3 +784,143 @@ for (i in 1:length(smoothVarList)){
 }
 
 ```
+Looks like there may be a trend: Temp0Lag56, Temp700, Sal0Lag21, Sal700, VelMag0Lag28, 
+  VelMag700Lag14, VelAsp, VelAsp700Lag21, SSH0, Chl0, FSLE0Lag14, GSDist, Slope, Aspect
+
+Looks like no trend: GSLatLag28
+
+
+```{r checkVIF}
+# calculate VIF for each of the variables desired in the full model
+colMod = glm(Pres~Temp0Lag56
+             +Temp700
+             +Sal0Lag21
+             # +Sal700
+             +VelMag0Lag28
+             +VelMag700Lag14
+             +VelAsp0
+             +VelAsp700Lag21
+             # +SSH0
+             +Chl0
+             +FSLE0Lag14
+             # +GSLatLag28
+             # +GSDist
+             +Slope
+             +Aspect,
+             family=poisson,
+             data=data)
+
+VIFvals = vif(colMod)
+VIFvals
+# remove vars in stepwise fashion as necessary
+```
+SSH, GSDist collinear with temp and sal at surface and 700
+Temp700 and Sal700 collinear, remove one
+```{r smooth vs linear}
+
+# Test whether continuous covars should be included in model as linear or smooth terms
+
+startTime = Sys.time()
+smoothVarList = c("Temp0Lag42",
+             "Temp700Lag7",
+             "Sal0Lag21",
+             "VelMag0Lag28" ,
+             "VelMag700Lag7",
+             "VelAsp0Lag14" ,
+             "VelAsp700Lag28",
+             "SSH0",
+             "Chl0Lag7",
+             "FSLE0",
+             "GSLatLag14",
+             "GSDist",
+             "Slope",
+             "Aspect")
+
+termVote = matrix(ncol=length(smoothVarList),nrow=1)
+
+for (i in 1:length(smoothVarList)){
+  
+  linMod = geeglm(Pres~data[[smoothVarList[i]]],data=data,family=poisson,id=GroupID,corstr="ar1")
+  
+   smoothMod = geeglm(Pres~mSpline(data[[smoothVarList[i]]],
+                                   knots=quantile(data[[smoothVarList[i]]],probs=c(0.275,0.5,0.725)),
+                                   Boundary.knots=c(min(data[[smoothVarList[i]]]),max(data[[smoothVarList[i]]]))),
+                      data=data,
+                      family=poisson,
+                      id=GroupID,
+                      corstr="ar1")
+  
+  QIC_vals = c(QIC(linMod)[[1]],QIC(smoothMod)[[1]])
+  colnames(QIC_vals) = c("linMod","smoothMod")
+  
+  termVote[1,i] = colnames(QIC_vals)[which.min(QIC_vals)]
+}
+
+endTime = Sys.time()
+endTime-startTime
+
+
+```
+
+
+```{r fullModel}
+# Run full model and check autocorrelation of residuals, revise grouping variable if necessary
+
+smoothVarList = c("Temp0Lag42",
+             "Temp700Lag7",
+             "Sal0Lag21",
+             "VelMag0Lag28" ,
+             "VelMag700Lag7",
+             "VelAsp0Lag14" ,
+             "VelAsp700Lag28",
+             "SSH0",
+             "Chl0Lag7",
+             "FSLE0",
+             "GSLatLag14",
+             "GSDist",
+             "Slope",
+             "Aspect")
+
+smoothNameList = character()
+
+for (i in 1:length(smoothVarList)){
+  
+  eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVararList[i],',knots=quantile(data$',smoothVarList[i],',probs=c(0.275, 0.5, 0.725)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')))',sep="")))
+  
+  smoothNameList = c(smoothNameList,paste('S_',smoothVarList[i],sep=""))
+}
+ thisForm = formula(paste('Pres~',paste(smoothNameList,collapse="+"),sep=""))
+
+colMod = geeglm(thisForm,
+             family=poisson,
+             data=data,
+             id=GroupID,
+            corstr="ar1")
+
+modACF = acf(residuals(colMod),lag.max=180)
+
+```
+
+
+Changing the grouping variable doesn't have any effect at all on the residual autocorrelation, which is already quite minimal. Going with the most conservative grouping variable of 126 days.
+
+
+```{r checkPV}
+ #Add interaction term and run full model
+thisForm = formula(paste('Pres~',paste(smoothNameList,collapse="+"),'+S_VelAsp700Lag28:Aspect',sep=""))
+
+fullMod = geeglm(thisForm,
+             family=poisson,
+             data=data,
+             id=GroupID,
+            corstr="independence")
+
+# Get p-values
+getPvalues(fullMod)
+
+
+```
+
+
+
+

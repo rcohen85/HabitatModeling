@@ -108,7 +108,7 @@ for (i in seq_along(fileList)) {
       annotate("text",label=as.character(time_temp),x=-79,y=39,color="white",size=6)
 
   # Save this map as a jpeg
-  saveName = paste(outDir,'FSLE_frontalPosition_',fileDate,'.jpeg',sep="")
+  saveName = paste(outDir,'frontalPosition_',fileDate,'.jpeg',sep="")
   ggsave(saveName, device="jpeg",width=4,height=2.5,units="in",scale=2.5)
   # mapPlot(coastlineWorld, proj='+proj=moll', col='lightgrey')
   # mapPoints(frontalLon,frontalLat,pch=20,cex=2/3,col='red')
