@@ -849,10 +849,10 @@ for (i in 1:length(smoothVarList)){
 }
 
 ```
-Plots that look like there might be a preference: Temp700Lag42?, Sal700Lag42?, VelMag700Lag42?, VelAsp700Lag56?, SSH0Lag28,
-  GSDist?,
+Plots that look like there might be a preference: Temp0?, Temp700Lag42?, Sal0Lag56, Sal700Lag42?, VelMag0Lag42,
+  VelMag700Lag42?, VelAsp0, VelAsp700Lag56?, SSH0Lag28, Chl0Lag14, GSDist?, Slope, Aspect
 
-Plots that look like no preference: Temp0, Sal0Lag56, VelMag0Lag42, VelAsp0, Chl0Lag14, FSLE0Lag56, GSLatLag7, Slope, Aspect
+Plots that look like no preference: VelAsp0, Chl0Lag14, FSLE0Lag56, GSLatLag7
 
 
 
@@ -864,12 +864,12 @@ colMod = glm(Pres~Temp0
              # +Sal700Lag42
              +VelMag0Lag42 
              +VelMag700Lag42
-             +VelAsp0 
-             +VelAsp700Lag56
-             # +SSH0Lag28
-             +Chl0Lag14
-             +FSLE0Lag56
-             +GSLatLag7
+             # +VelAsp0 
+             +VelAsp700Lag56,
+             +SSH0Lag28
+             # +Chl0Lag14
+             # +FSLE0Lag56
+             # +GSLatLag7
              # +GSDist
              +Slope
              +Aspect,
@@ -883,8 +883,8 @@ VIFvals
 
 
 Removing Salinity at 700m bc. highly collinear w Temp at 700m
-Removing GSDist because highly collinear with Aspect
-Removing SSH because collinear with temp
+Removing GSDist because highly collinear with Temp700, Sal700, SSH
+Removing Sal700 because collinear with Temp700 and SSH
 
 ```{r smooth vs linear}
 
