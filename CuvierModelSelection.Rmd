@@ -134,11 +134,8 @@ for (j in 1:length(sites)){
   
   if (sum(data$Pres[siteInd]>0)>50){
     
-    # plotDF = data.frame()
     plotDF = data.frame(Pres = rollmean(data$Pres[siteInd],k=3,fill=NA),
                         Date = as.Date(rollmean(data$Date[siteInd],k=3,fill=NA),origin="1970-01-01"))
-    # plotDF = data.frame(Pres = data$Pres[siteInd],
-    #                     Date = as.Date(data$Date[siteInd],origin="1970-01-01"))
     
     for (m in 1:(length(dateMarks)-1)){ # for each year
       
@@ -156,7 +153,6 @@ for (j in 1:length(sites)){
       
       for (i in 1:length(covarList)){ # plot surface covars in this year
         
-        # plotDF$Covar = rollmean(data[[covarList[i]]][siteInd],k=7,fill=NA)
         plotDF$Covar = rollmean(data[[covarList[i]]][siteInd],k=3,fill=NA)
         
         plotList[[covarList[i]]] = ggplot(plotDF,aes(x=Date)
@@ -201,12 +197,6 @@ for (j in 1:length(sites)){
           
           plotList[[profileName]] = ggplot(profileDF,aes(x=x,y=y,z=z) # plot profile for this year
           )+geom_contour_filled(
-            # )+scale_fill_discrete(rainbow(8)
-            # )+scale_color_gradientn(
-            # palette=my_colors,
-            #       breaks=seq(0,315,45),
-            #       label=direction_labeller(seq(0,315,45)),
-            #       limits=c(0,359)
           )+scale_fill_manual(
             values=my_colors,
             guide=NULL
@@ -216,12 +206,6 @@ for (j in 1:length(sites)){
           )+ggtitle(profileName
           )+labs(x=NULL,y=NULL
           )+theme(plot.margin=margin(c(0,0,0,0),unit="pt"))
-                  # legend.position="right",
-                  # legend.title=element_text(size=0),
-                  # legend.text=element_text(size=5),
-                  # legend.key.size=unit(0.3,'lines'),
-                  # legend.direction="vertical",
-                  # legend.margin=margin(0))
           
           hues_df = data.frame(degree = 0:359) %>%
             mutate(
@@ -246,9 +230,10 @@ for (j in 1:length(sites)){
                             y=4.5,
                             label=label)) 
           
-          grid.arrange(plotList$Pres,plotList[[profileName]],plotList[["ColorLegend"]],ncol=12,nrow=3,top=paste('Cuvier at',sites[j]),layout_matrix=rbind(c(rep(1,11),NA),
-                                                                                                                        c(rep(2,11),NA),
-                                                                                                                        c(rep(2,11),3)))
+          grid.arrange(plotList$Pres,plotList[[profileName]],plotList[["ColorLegend"]],
+                       ncol=12,nrow=3,top=paste('Cuvier at',sites[j]),layout_matrix=rbind(c(rep(1,11),NA),
+                                                                                          c(rep(2,11),NA),
+                                                                                          c(rep(2,11),3)))
           
         } else {
           
@@ -275,11 +260,10 @@ for (j in 1:length(sites)){
                   legend.direction="vertical",
                   legend.margin=margin(0))
           
-          #plotList[["ColorLegend"]] = ggplot()
-          
-          grid.arrange(plotList$Pres,plotList[[profileName]],ncol=12,nrow=3,top=paste('Cuvier at',sites[j]),layout_matrix=rbind(c(rep(1,12)),
-                                                                                                c(rep(2,12)),
-                                                                                                c(rep(2,12))))
+          grid.arrange(plotList$Pres,plotList[[profileName]],
+                       ncol=12,nrow=3,top=paste('Cuvier at',sites[j]),layout_matrix=rbind(c(rep(1,12)),
+                                                                                          c(rep(2,12)),
+                                                                                          c(rep(2,12))))
         }
       }
     }
@@ -292,9 +276,9 @@ for (j in 1:length(sites)){
 At WC presence peaks kind of correspond to high surface salinity, lower surface temp, 
 
 Covar selection to start: Sal0
-Temp0
-Slope
-Aspect
+                          Temp0
+                          Slope
+                          Aspect
 
 
 
