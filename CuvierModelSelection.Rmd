@@ -14,9 +14,13 @@ library(tidyverse)
 library(car)
 library(splines2)
 library(ggplot2)
+library(gridExtra)
+library(zoo)
+library(pracma)
+library(mgcv)
 source("getPvalues.R")
 
-data = data.frame(read.csv('E:/ModelingCovarData/Master_DFs/Cuvier_masterDF.csv'))
+data = data.frame(read.csv('J:/Chpt_3/ModelData/Cuvier_masterDF.csv'))
 lagID = 41 
 numClust = length(data$Pres)/(lagID-1)
 if (numClust<length(data$Pres)){
@@ -31,805 +35,301 @@ data$GroupID = clustID
 data$Pres = round(data$Pres)
 ```
 
-# Test temperature at several time lags
+# Plot covar and presence time series to identify trends
+```{r plot pres vs covars, fig.width=15, fig.height=10}
 
-```{r temp0Lags}
+startDate = as.Date("2016-05-01",origin="1970-01-01")
+endDate = as.Date("2019-04-30",origin="1970-01-01")
+covarList = c("Chl0",
+              "SSH0",
+              "FSLE0",
+              "GSLat",
+              "GSDist")
 
-colInd = which(!is.na(str_match(colnames(data),"Temp0")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
+profileDir = 'J:/Chpt_3/CovarTS'
+profileList = dir(profileDir,pattern="Profiles_ES.Rdata",full.names=TRUE)
+sites = unique(data$Site)
 
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
+for (j in 1:length(sites)){
+  
+  plotList = list()
+  plotDF = data.frame()
+  siteInd = which(!is.na(str_match(data$Site,sites[j])))
+  
+  if (sum(data$Pres[siteInd]>0)>7){
+    
+    plotDF = data.frame(Pres = rollmean(data$Pres[siteInd],k=7,fill=NA),
+                        Date = as.Date(rollmean(data$Date[siteInd],k=7,fill=NA),origin="1970-01-01"))
+    
+    plotList[['Pres']] = ggplot(plotDF,aes(x=Date)
+    )+geom_line(aes(y=Pres)
+    )+scale_x_continuous(breaks=c(seq.Date(from=startDate,to=endDate,by="quarter"))
+    )+ggtitle('Presence'
+    )+labs(x=NULL,y=NULL
+    )+theme(plot.margin=margin(c(0,43,0,0),unit="pt"))
+    
+    for (i in 1:length(covarList)){ # plot surface covars
+      
+      plotDF$Covar = rollmean(data[[covarList[i]]][siteInd],k=7,fill=NA)
+      plotList[[covarList[i]]] = ggplot(plotDF,aes(x=Date)
+      )+geom_line(aes(y=Covar)
+      )+scale_x_continuous(breaks=c(seq.Date(from=startDate,to=endDate,by="quarter"))
+      )+coord_cartesian(xlim=c(startDate,endDate)
+      )+ggtitle(covarList[i]
+      )+labs(x=NULL,y=NULL
+      )+theme(plot.margin=margin(c(0,43,0,0),unit="pt"))
+    }
+    
+    for (i in 1:length(profileList)){ # plot profiles of covars with multiple depth layers
+      load(profileList[i])
+      profileName = str_remove(str_remove(profileList[i],'_Profiles_ES.Rdata'),paste(profileDir,'/',sep=""))
+      profileDF = data.frame(z=stack(data.frame(eval(parse(text=paste(sites[j],'Profile',sep="")))))[,1],
+                             y=rep(depths,times=dim(eval(parse(text=paste(sites[j],'Profile',sep=""))))[2]),
+                             x=rep(as.Date(masterData.Time,origin="1970-01-01"),each=length(depths)))
+      
+      plotList[[profileName]] = ggplot(profileDF,aes(x=x,y=y,z=z)
+      )+geom_contour_filled(
+      )+coord_cartesian(xlim=c(startDate,endDate)
+      )+scale_x_continuous(breaks=c(seq.Date(from=startDate,to=endDate,by="quarter"))
+      )+scale_y_reverse(
+      )+ggtitle(profileName
+      )+labs(x=NULL,y=NULL
+      )+theme(plot.margin=margin(c(0,0,0,0),unit="pt"),
+              legend.position="right",
+              legend.title=element_text(size=0),
+              legend.text=element_text(size=5),
+              legend.key.size=unit(0.3,'lines'),
+              legend.direction="vertical",
+              legend.margin=margin(0))
+      
+    }
+    
+    grid.arrange(grobs=plotList,ncol=1,nrow=length(covarList)+length(profileList)+1,top=paste('Cuvier at',sites[j]))
+    
+  }
 }
 
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r temp100Lags}
 
-colInd = which(!is.na(str_match(colnames(data),"Temp100")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
 
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r temp200Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"Temp200")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r temp300Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"Temp300")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r temp400Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"Temp400")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r temp500Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"Temp500")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r temp600Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"Temp600")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r temp700Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"Temp700")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
 ```
 
+# Plot pres vs. covars by year
+```{r plot by year, fig.width=15, fig.height=8}
 
-# Test salinity at different time lags
+startDate = as.Date("2016-05-01",origin="1970-01-01")
+endDate = as.Date("2019-04-30",origin="1970-01-01")
+dateMarks = c(seq.Date(startDate,endDate,by="year"),endDate)
+covarList = c("Chl0",
+              "SSH0",
+              "FSLE0")
 
-```{r salinity0Lags}
+profileDir = 'J:/Chpt_3/CovarTS'
+profileList = dir(profileDir,pattern="Profiles_ES.Rdata",full.names=TRUE)
+sites = c("HZ","WC","HAT")
 
-colInd = which(!is.na(str_match(colnames(data),"Sal0")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
+for (j in 1:length(sites)){
+  
+  siteInd = which(!is.na(str_match(data$Site,sites[j])))
+  
+  
+  if (sum(data$Pres[siteInd]>0)>50){
+    
+    # plotDF = data.frame()
+    plotDF = data.frame(Pres = rollmean(data$Pres[siteInd],k=3,fill=NA),
+                        Date = as.Date(rollmean(data$Date[siteInd],k=3,fill=NA),origin="1970-01-01"))
+    # plotDF = data.frame(Pres = data$Pres[siteInd],
+    #                     Date = as.Date(data$Date[siteInd],origin="1970-01-01"))
+    
+    for (m in 1:(length(dateMarks)-1)){ # for each year
+      
+      plotList = list()
+      st = dateMarks[m]
+      ed = dateMarks[m+1]
+      
+      plotList[['Pres']] = ggplot(plotDF,aes(x=Date) # plot presence in this year
+      )+geom_line(aes(y=Pres)
+      )+scale_x_continuous(breaks=c(seq.Date(from=st,to=ed,by="quarter"))
+      )+coord_cartesian(xlim=c(st,ed)
+      )+ggtitle('Presence'
+      )+labs(x=NULL,y=NULL
+      )+theme(plot.margin=margin(c(0,43,0,0),unit="pt"))
+      
+      for (i in 1:length(covarList)){ # plot surface covars in this year
+        
+        # plotDF$Covar = rollmean(data[[covarList[i]]][siteInd],k=7,fill=NA)
+        plotDF$Covar = rollmean(data[[covarList[i]]][siteInd],k=3,fill=NA)
+        
+        plotList[[covarList[i]]] = ggplot(plotDF,aes(x=Date)
+        )+geom_line(aes(y=Covar)
+        )+scale_x_continuous(breaks=c(seq.Date(from=st,to=ed,by="quarter"))
+        )+coord_cartesian(xlim=c(st,ed)
+        )+ggtitle(covarList[i]
+        )+labs(x=NULL,y=NULL
+        )+theme(plot.margin=margin(c(0,43,0,0),unit="pt"))
+      }
+      
+      grid.arrange(grobs=plotList,ncol=1,nrow=length(covarList)+1,top=paste('Cuvier at',sites[j]))
+      
+    }
+    
+    
+    for (i in 1:length(profileList)){ # for profiles of covars with multiple depth layers
+      
+      load(profileList[i])
+      profileName = str_remove(str_remove(profileList[i],'_Profiles_ES.Rdata'),paste(profileDir,'/',sep=""))
+      profileDF = data.frame(z=stack(data.frame(eval(parse(text=paste(sites[j],'Profile',sep="")))))[,1],
+                             y=rep(depths,times=dim(eval(parse(text=paste(sites[j],'Profile',sep=""))))[2]),
+                             x=rep(as.Date(masterData.Time,origin="1970-01-01"),each=length(depths)))
+      
+      for (m in 1:(length(dateMarks)-1)){
+        st = dateMarks[m]
+        ed = dateMarks[m+1]
+        
+        if (str_detect(profileName,"Asp")){
+          
+        plotList[['Pres']] = ggplot(plotDF,aes(x=Date) # plot presence in this year
+        )+geom_line(aes(y=Pres)
+        )+scale_x_continuous(breaks=c(seq.Date(from=st,to=ed,by="quarter"))
+        )+coord_cartesian(xlim=c(st,ed)
+        )+ggtitle('Presence'
+        )+labs(x=NULL,y=NULL
+        )+theme(plot.margin=margin(c(0,0,0,0),unit="pt"))
+          
+          direction_labeller <- function(x){
+            ifelse(x %% 45 == 0, c('E','NE','N','NW','W','SW','S','SE')[1+(as.integer(x/45) %% 8)], '')}
+          my_colors=c("#2E22EA","#9E3DFB","#F86BE2","#FCCE7B","#C4E416","#4BBA0F","#447D87","#2C24E9")
+          
+          plotList[[profileName]] = ggplot(profileDF,aes(x=x,y=y,z=z) # plot profile for this year
+          )+geom_contour_filled(
+            # )+scale_fill_discrete(rainbow(8)
+            # )+scale_color_gradientn(
+            # palette=my_colors,
+            #       breaks=seq(0,315,45),
+            #       label=direction_labeller(seq(0,315,45)),
+            #       limits=c(0,359)
+          )+scale_fill_manual(
+            values=my_colors,
+            guide=NULL
+          )+coord_cartesian(xlim=c(st,ed)
+          )+scale_x_continuous(breaks=c(seq.Date(from=st,to=ed,by="quarter"))
+          )+scale_y_reverse(
+          )+ggtitle(profileName
+          )+labs(x=NULL,y=NULL
+          )+theme(plot.margin=margin(c(0,0,0,0),unit="pt"))
+                  # legend.position="right",
+                  # legend.title=element_text(size=0),
+                  # legend.text=element_text(size=5),
+                  # legend.key.size=unit(0.3,'lines'),
+                  # legend.direction="vertical",
+                  # legend.margin=margin(0))
+          
+          hues_df = data.frame(degree = 0:359) %>%
+            mutate(
+              label=direction_labeller(degree+90 %% 360),
+              colors = colorRampPalette(my_colors)(360))
+          
+          plotList[["ColorLegend"]] = ggplot(hues_df
+            )+geom_rect(aes(ymin=3,
+                            ymax=4,
+                            xmin=degree-0.5,
+                            xmax=degree+0.5,
+                            color=colors,
+                            fill=colors)
+            )+coord_polar(direction=-1,
+                          start=0
+            )+scale_color_identity(
+            )+scale_fill_identity(
+            )+guides(fill=FALSE,color=FALSE
+            )+theme_void(
+            )+ylim(c(1,4.5)
+            )+geom_text(aes(x=degree,
+                            y=4.5,
+                            label=label)) 
+          
+          grid.arrange(plotList$Pres,plotList[[profileName]],plotList[["ColorLegend"]],ncol=12,nrow=3,top=paste('Cuvier at',sites[j]),layout_matrix=rbind(c(rep(1,11),NA),
+                                                                                                                        c(rep(2,11),NA),
+                                                                                                                        c(rep(2,11),3)))
+          
+        } else {
+          
+        plotList[['Pres']] = ggplot(plotDF,aes(x=Date) # plot presence in this year
+        )+geom_line(aes(y=Pres)
+        )+scale_x_continuous(breaks=c(seq.Date(from=st,to=ed,by="quarter"))
+        )+coord_cartesian(xlim=c(st,ed)
+        )+ggtitle('Presence'
+        )+labs(x=NULL,y=NULL
+        )+theme(plot.margin=margin(c(0,40,0,0),unit="pt"))
+                  
+          plotList[[profileName]] = ggplot(profileDF,aes(x=x,y=y,z=z) # plot profile for this year
+          )+geom_contour_filled(
+          )+coord_cartesian(xlim=c(st,ed)
+          )+scale_x_continuous(breaks=c(seq.Date(from=st,to=ed,by="quarter"))
+          )+scale_y_reverse(
+          )+ggtitle(profileName
+          )+labs(x=NULL,y=NULL
+          )+theme(plot.margin=margin(c(0,0,0,0),unit="pt"),
+                  legend.position="right",
+                  legend.title=element_text(size=0),
+                  legend.text=element_text(size=7),
+                  legend.key.size=unit(0.5,'lines'),
+                  legend.direction="vertical",
+                  legend.margin=margin(0))
+          
+          #plotList[["ColorLegend"]] = ggplot()
+          
+          grid.arrange(plotList$Pres,plotList[[profileName]],ncol=12,nrow=3,top=paste('Cuvier at',sites[j]),layout_matrix=rbind(c(rep(1,12)),
+                                                                                                c(rep(2,12)),
+                                                                                                c(rep(2,12))))
+        }
+      }
+    }
+  }
 }
 
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r salinity100Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"Sal100")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r salinity200Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"Sal200")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r salinity300Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"Sal300")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r salinity400Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"Sal400")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r salinity500Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"Sal500")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r salinity600Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"Sal600")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r salinity700Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"Sal700")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-
-
-# Test velocity magnitude at different depths
-```{r velMag0Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"VelMag0")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r velMag100Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"VelMag100")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r velMag200Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"VelMag200")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r velMag300Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"VelMag300")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r velMag400Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"VelMag400")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r velMag500Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"VelMag500")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r velMag600Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"VelMag600")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r velMag700Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"VelMag700")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-
-
-# Test velocity aspect at different depths
-```{r velAsp0Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"VelAsp0")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r velAsp100Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"VelAsp100")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r velAsp200Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"VelAsp200")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r velAsp300Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"VelAsp300")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r velAsp400Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"VelAsp400")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r velAsp500Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"VelAsp500")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r velAsp600Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"VelAsp600")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r velAsp700Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"VelAsp700")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-
-
-# Try SSH at 0m
-```{r SSH0Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"SSH0")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-
-
-# Try Chl at 0m
-```{r Chl0Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"Chl0")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-
-
-# Try FSLE at 0m
-```{r FSLE0Lags}
-
-colInd = which(!is.na(str_match(colnames(data),"FSLE0")))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-# AIC_comp = cbind(AIC(Lag0)[[1]],AIC(Lag7)[[1]],AIC(Lag14)[[1]],AIC(Lag21)[[1]],AIC(Lag28)[[1]],AIC(Lag42)[[1]],AIC(Lag56)[[1]])
-# colnames(AIC_comp) = c("Lag0","Lag7","Lag14","Lag21","Lag28","Lag42","Lag56")
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-
-
-Try GSLat at 0m
-```{r GSLatLags}
-# Test GSLat at several time lags
-var = "GSLat"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
 ```
 
 ## Covar selection to start:
+At WC presence peaks kind of correspond to high surface salinity, lower surface temp, 
 
-Covar selection to start: Temp0Lag0
-                          Temp700Lag42
-                          Sal0Lag56
-                          Sal700Lag42
-                          VelMag0Lag42 
-                          VelMag700mLag42
-                          VelAsp0mLag0
-                          VelAsp700mLag56
-                          SSH0Lag28
-                          Chl0Lag14
-                          FSLE0Lag56
-                          GSLatLag7
-                          GSDist
-                          Slope
-                          Aspect
-                          VelAsp700Lag56:Aspect
+Covar selection to start: Sal0
+Temp0
+Slope
+Aspect
 
 
-## THE FOLLOWING IS COPIED AND PASTED FROM BLAINVILLE'S, MODIFY FOR CUVIER'S BEFORE RUNNING
 
+
+# Plot scatterplots and histograms
 ```{r plotCovars}
 # Fill in smoothVarList based on selection made above
-smoothVarList = c("Temp0",
-             "Temp700Lag42",
-             "Sal0Lag56",
-             "Sal700Lag42",
-             "VelMag0Lag42" ,
-             "VelMag700Lag42",
-             "VelAsp0" ,
-             "VelAsp700Lag56",
-             "SSH0Lag28",
-             "Chl0Lag14",
-             "FSLE0Lag56",
-             "GSLatLag7",
-             "GSDist",
-             "Slope",
-             "Aspect")
+smoothVarList = c("SSH0",
+                  "FSLE0",
+                  "Sal0",
+                  "Temp0",
+                  "Temp700",
+                  "VelMag700",
+                  "VelAsp700",
+                  "Sal700",
+                  "GSLat",
+                  "GSDist",
+                  "Slope",
+                  "Aspect")
 
- pres = which(data$Pres>0)
-  presDF = data[pres,]
+pres = which(data$Pres>0)
+presDF = data[pres,]
+sites = unique(data$Site)
 
- 
 for (i in 1:length(smoothVarList)){
   
-   # Plot presence bins across all data for each covar
+  # Plot presence bins across all data versus this covar
   edges = seq(min(data[[smoothVarList[i]]]),max(data[[smoothVarList[i]]]),length.out=50)
   binDiff = diff(edges[1:2])
   plotDF = data.frame(Obs=histc(data[[smoothVarList[i]]],edges=edges)$cnt/dim(data)[1],
-                    Pres=histc(presDF[[smoothVarList[i]]],edges=edges)$cnt/dim(presDF)[1],
-                    BinCenter=seq(min(data[[smoothVarList[i]]])+(0.5*binDiff),
-                                  max(data[[smoothVarList[i]]])+(0.5*binDiff),
-                                  by=binDiff))
-
+                      Pres=histc(presDF[[smoothVarList[i]]],edges=edges)$cnt/dim(presDF)[1],
+                      BinCenter=seq(min(data[[smoothVarList[i]]])+(0.5*binDiff),
+                                    max(data[[smoothVarList[i]]])+(0.5*binDiff),
+                                    by=binDiff))
+  
   print(ggplot(plotDF
   )+geom_col(aes(x=BinCenter,y=Obs),
              fill='#bfbfbf',
@@ -840,39 +340,41 @@ for (i in 1:length(smoothVarList)){
   ) + labs(y="Normalized Counts",x=NULL,title=smoothVarList[i]
   ) + theme_minimal())
   
-  print(ggplot(data
-  )+geom_point(aes(x=.data[[smoothVarList[i]]],y=Pres)
-  )+geom_smooth(aes(x=.data[[smoothVarList[i]]],y=Pres),
-                method="loess"
-  )+labs(title=smoothVarList[i]))
-
+  # print(ggplot(data
+  # )+geom_point(aes(x=.data[[smoothVarList[i]]],y=Pres)
+  # )+geom_smooth(aes(x=.data[[smoothVarList[i]]],y=Pres),
+  #               method="loess"
+  # )+labs(title=smoothVarList[i]))
+  
+  
+  # Plot presence bins at each site versus this covar
+  for (j in 1:length(sites)){
+    siteInd = which(!is.na(str_match(data$Site,sites[j])))
+    if (length(siteInd)>7){
+      print(ggplot(data[siteInd,]
+      )+geom_point(aes(x=.data[[smoothVarList[i]]],y=Pres)
+      )+geom_smooth(aes(x=.data[[smoothVarList[i]]],y=Pres),
+                    method="loess"
+      )+labs(title=paste(smoothVarList[i],'at',sites[j])))
+    }
+  }
+  
 }
 
 ```
-Plots that look like there might be a preference: Temp0, Temp700Lag42, Sal0Lag56, Sal700Lag42, VelMag0Lag42,
-  VelMag700Lag42, VelAsp0, VelAsp700Lag56, SSH0Lag28, Chl0Lag14, GSDist, Slope, Aspect
-
-Plots that look like no preference: VelAsp0, Chl0Lag14, FSLE0Lag56, GSLatLag7
 
 
-
+# Check VIF values
 ```{r checkVIF}
 # calculate VIF for each of the variables desired in the full model
-colMod = glm(Pres~Temp0
-             +Temp700Lag42
-             +Sal0Lag56
-             # +Sal700Lag42
-             +VelMag0Lag42 
-             +VelMag700Lag42
-             # +VelAsp0 
-             +VelAsp700Lag56,
-             +SSH0Lag28
-             # +Chl0Lag14
-             # +FSLE0Lag56
-             # +GSLatLag7
+colMod = glm(Pres~Sal0
+             +Temp0
+             +Sal700
+             +GSLat
              # +GSDist
              +Slope
-             +Aspect,
+             +Aspect
+             +VelAsp700:Aspect,
              family=poisson,
              data=data)
 
@@ -882,53 +384,53 @@ VIFvals
 ```
 
 
-Removing Salinity at 700m bc. highly collinear w Temp at 700m
-Removing GSDist because highly collinear with Temp700, Sal700, SSH
-Removing Sal700 because collinear with Temp700 and SSH
-
-```{r smooth vs linear}
+Removing GSDist bc collinear w Aspect
 
 # Test whether continuous covars should be included in model as linear or smooth terms
 
-startTime = Sys.time()
-smoothVarList = c("Temp0Lag42",
-             "Temp700Lag7",
-             "Sal0Lag21",
-             "VelMag0Lag28" ,
-             "VelMag700Lag7",
-             "VelAsp0Lag14" ,
-             "VelAsp700Lag28",
-             "SSH0",
-             "Chl0Lag7",
-             "FSLE0",
-             "GSLatLag14",
-             "GSDist",
-             "Slope",
-             "Aspect")
+```{r smooth vs linear}
 
-termVote = matrix(ncol=length(smoothVarList),nrow=1)
+startTime = Sys.time()
+smoothVarList = c("Temp0",
+                  "Sal700",
+                  "Sal0",
+                  "VelAsp700",
+                  "GSLat",
+                  "Slope",
+                  "Aspect")
+
+modOpts = c("linMod","smoothMod")
+AIC_votes = matrix(nrow=length(smoothVarList),ncol=3)
 
 for (i in 1:length(smoothVarList)){
   
-  linMod = geeglm(Pres~data[[smoothVarList[i]]],data=data,family=poisson,id=GroupID,corstr="ar1")
+  # linMod = geeglm(Pres~data[[smoothVarList[i]]],data=data,family=poisson,id=GroupID,corstr="ar1")
+  # 
+  # smoothMod = geeglm(Pres~mSpline(data[[smoothVarList[i]]],
+  #                                 knots=quantile(data[[smoothVarList[i]]],probs=c(0.275,0.5,0.725)),
+  #                                 Boundary.knots=c(min(data[[smoothVarList[i]]]),max(data[[smoothVarList[i]]]))),
+  #                    data=data,
+  #                    family=poisson,
+  #                    id=GroupID,
+  #                    corstr="ar1")
   
-   smoothMod = geeglm(Pres~mSpline(data[[smoothVarList[i]]],
-                                   knots=quantile(data[[smoothVarList[i]]],probs=c(0.275,0.5,0.725)),
-                                   Boundary.knots=c(min(data[[smoothVarList[i]]]),max(data[[smoothVarList[i]]]))),
-                      data=data,
-                      family=poisson,
-                      id=GroupID,
-                      corstr="ar1")
+  modelCall = paste('gam(Pres~data$',smoothVarList[i],',data=data,family=poisson)',sep="")
+  # modelCall = paste('geeglm(Pres~data$',smoothVarList[i],',data=data,family=poisson,id=GroupID,corstr="ar1")',sep="")
+  linMod = eval(parse(text=modelCall))
   
-  QIC_vals = c(QIC(linMod)[[1]],QIC(smoothMod)[[1]])
-  colnames(QIC_vals) = c("linMod","smoothMod")
+  modelCall = paste('gam(Pres~s(data$',smoothVarList[i],',bs="cr"),data=data,family=poisson)',sep="")
+  # modelCall = paste('geeglm(Pres~mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=c(0.275,0.5,0.725)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],'))),data=data,family=poisson,id=GroupID,corstr=\"ar1\")',sep="")
+  smoothMod = eval(parse(text=modelCall))
   
-  termVote[1,i] = colnames(QIC_vals)[which.min(QIC_vals)]
+  AIC_votes[i,1:2] = c(AIC(linMod)[[1]],AIC(smoothMod)[[1]])
+  AIC_votes[i,3] = modOpts[which.min(AIC_votes[i,1:2])]
 }
 
 endTime = Sys.time()
 endTime-startTime
-
+colnames(AIC_votes) = c(modOpts,"Best")
+rownames(AIC_votes) = smoothVarList
+AIC_votes
 
 ```
 
@@ -936,36 +438,33 @@ endTime-startTime
 ```{r fullModel}
 # Run full model and check autocorrelation of residuals, revise grouping variable if necessary
 
-smoothVarList = c("Temp0Lag42",
-             "Temp700Lag7",
-             "Sal0Lag21",
-             "VelMag0Lag28" ,
-             "VelMag700Lag7",
-             "VelAsp0Lag14" ,
-             "VelAsp700Lag28",
-             "SSH0",
-             "Chl0Lag7",
-             "FSLE0",
-             "GSLatLag14",
-             "GSDist",
-             "Slope",
-             "Aspect")
+smoothVarList = c("Temp0",
+                  "Sal700",
+                  "Sal0",
+                  "VelAsp700",
+                  "GSLat",
+                  "Slope",
+                  "Aspect")
 
 smoothNameList = character()
 
 for (i in 1:length(smoothVarList)){
   
-  eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVararList[i],',knots=quantile(data$',smoothVarList[i],',probs=c(0.275, 0.5, 0.725)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')))',sep="")))
+  if (str_detect(smoothVarList[i],"Asp")){
+    eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=c(0.275, 0.5, 0.725)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')),periodic=TRUE)',sep="")))
+  } else {
+    eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=c(0.275, 0.5, 0.725)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')))',sep="")))
+  }
   
   smoothNameList = c(smoothNameList,paste('S_',smoothVarList[i],sep=""))
 }
- thisForm = formula(paste('Pres~',paste(smoothNameList,collapse="+"),sep=""))
+thisForm = formula(paste('Pres~',paste(smoothNameList,collapse="+"),sep=""))
 
 colMod = geeglm(thisForm,
-             family=poisson,
-             data=data,
-             id=GroupID,
-            corstr="ar1")
+                family=poisson,
+                data=data,
+                id=GroupID,
+                corstr="ar1")
 
 modACF = acf(residuals(colMod),lag.max=180)
 
@@ -976,14 +475,14 @@ Changing the grouping variable doesn't have any effect at all on the residual au
 
 
 ```{r checkPV}
- #Add interaction term and run full model
-thisForm = formula(paste('Pres~',paste(smoothNameList,collapse="+"),'+S_VelAsp700Lag28:Aspect',sep=""))
+#Add interaction term and run full model
+thisForm = formula(paste('Pres~',paste(smoothNameList,collapse="+"),'+S_VelAsp700:Aspect',sep=""))
 
 fullMod = geeglm(thisForm,
-             family=poisson,
-             data=data,
-             id=GroupID,
-            corstr="independence")
+                 family=poisson,
+                 data=data,
+                 id=GroupID,
+                 corstr="independence")
 
 # Get p-values
 getPvalues(fullMod)
