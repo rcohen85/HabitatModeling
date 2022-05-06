@@ -22,7 +22,7 @@ library(SimDesign)
 library(multitaper)
 source("getPvalues.R")
 
-data = data.frame(read.csv('J:/Chpt_3/ModelData/Cuvier_masterDF.csv'))
+data = data.frame(read.csv('E:/ModelingCovarData/Master_DFs/Cuvier_masterDF.csv'))
 lagID = 41 
 numClust = length(data$Pres)/(lagID-1)
 if (numClust<length(data$Pres)){
@@ -45,10 +45,16 @@ endDate = as.Date("2019-04-30",origin="1970-01-01")
 covarList = c("Chl0",
               "SSH0",
               "FSLE0",
+              "Sal0",
+              "Sal700",
+              "Temp0",
+              "Temp700",
               "GSLat",
-              "GSDist")
+              "GSDist",
+              "Slope",
+              "Aspect")
 
-profileDir = 'J:/Chpt_3/CovarTS'
+profileDir = 'E:/ModelingCovarData/Profiles'
 profileList = dir(profileDir,pattern="Profiles_ES.Rdata",full.names=TRUE)
 sites = unique(data$Site)
 
@@ -126,9 +132,17 @@ endDate = as.Date("2019-04-30",origin="1970-01-01")
 dateMarks = c(seq.Date(startDate,endDate,by="year"),endDate)
 covarList = c("Chl0",
               "SSH0",
-              "FSLE0")
+              "FSLE0",
+              "Sal0",
+              "Sal700",
+              "Temp0",
+              "Temp700",
+              "GSLat",
+              "GSDist",
+              "Slope",
+              "Aspect")
 
-profileDir = 'J:/Chpt_3/CovarTS'
+profileDir = 'E:/ModelingCovarData/Profiles'
 profileList = dir(profileDir,pattern="Profiles_ES.Rdata",full.names=TRUE)
 sites = c("HZ","WC","HAT")
 k=7
@@ -300,6 +314,13 @@ Covar selection to start: SSH0
 smoothVarList = c("SSH0",
                   "Sal0",
                   "Temp0",
+                  "Sal700",
+                  "Temp700",
+                  "VelMag0",
+                  "VelMag700",
+                  "VelAsp0",
+                  "VelAsp700",
+                  "FSLE0",
                   "GSLat",
                   "GSDist",
                   "Slope",
@@ -360,28 +381,10 @@ for (i in 1:length(smoothVarList)){
 }
 
 ```
-
+Significant covars: SSH, Sal0, Temp0, Sal700, Temp700, VelMag0, VelMag700, VelAsp0, VelAsp700, FSLE0, GSDist, Slope, Aspect
 Slightly different relationships btwn pres and Sal0 at HZ, WC, & HAT?
 Including VelAsp700 so that VelAsp700:Aspect interaction can be included
 
-<!-- # Check VIF values -->
-<!-- ```{r checkVIF} -->
-<!-- # calculate VIF for each of the variables desired in the full model -->
-<!-- colMod = glm(Pres~SSH0 -->
-<!--              +Sal0 -->
-<!--              +Temp0 -->
-<!--              +GSLat -->
-<!--              #+GSDist -->
-<!--              +Slope -->
-<!--              +Aspect -->
-<!--              +VelAsp700, -->
-<!--              family=poisson, -->
-<!--              data=data) -->
-
-<!-- VIFvals = vif(colMod) -->
-<!-- VIFvals -->
-<!-- # remove vars in stepwise fashion as necessary -->
-<!-- ``` -->
 
 # Test whether continuous covars should be included in model as linear or smooth terms
 ```{r smooth vs linear}
@@ -389,12 +392,16 @@ Including VelAsp700 so that VelAsp700:Aspect interaction can be included
 startTime = Sys.time()
 smoothVarList = c("SSH0",
                   "Sal0",
+                  "Sal700",
                   "Temp0",
+                  "Temp700",
+                  "VelMag700",
+                  "VelAsp0",
                   "VelAsp700",
-                  "GSLat",
                   "GSDist",
                   "Slope",
-                  "Aspect")
+                  "Aspect",
+                  "FSLE0")
 
 modOpts = c("linMod","threeKnots","fourKnots","fiveKnots")
 QIC_votes = matrix(nrow=length(smoothVarList),ncol=5)
@@ -414,9 +421,18 @@ for (i in 1:(length(smoothVarList)-2)){
   
   modelCall = paste('geeglm(Pres~mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=c(0.275,0.5,0.725)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],'))),data=data,family=poisson,id=GroupID,corstr=\"ar1\")',sep="")
   smoothMod3 = eval(parse(text=modelCall))
-  
-  QIC_votes[i,1:4] = c(QIC(linMod)[[1]],QIC(smoothMod1)[[1]],QIC(smoothMod2)[[1]],QIC(smoothMod3)[[1]])
-  QIC_votes[i,5] = modOpts[which.min(QIC_votes[i,1:2])]
+
+  # colInd = c(1,2,4)
+  # QIC_votes[i,colInd] = c(QIC(linMod)[[1]],
+  #                         QIC(smoothMod1)[[1]],
+  #                         # QIC(smoothMod2)[[1]])
+  #                         QIC(smoothMod3)[[1]])
+  QIC_votes[i,1:4] = c(QIC(linMod)[[1]],
+                          QIC(smoothMod1)[[1]],
+                          QIC(smoothMod2)[[1]],
+                          QIC(smoothMod3)[[1]])
+  # QIC_votes[i,5] = modOpts[colInd[which.min(QIC_votes[i,colInd])]]
+  QIC_votes[i,5] = modOpts[[which.min(QIC_votes[i,1:4])]]
 }
 
 endTime = Sys.time()
@@ -425,15 +441,59 @@ colnames(QIC_votes) = c(modOpts,"Best")
 rownames(QIC_votes) = smoothVarList
 QIC_votes
 ```
+SSH0 can't run with 4 knots, 
+Sal0 can't run with 3/4/5 knots, 
+Sal700 can't run with 5 knots, 
+Temp0 can't run with lnMod, 3 knots,
+Temp700 can't run with linMod, 5 knots,
+VelMag0 can't run with any, remove
+VelMag700 can't run with 3/4 knots
+VelAsp0 can't run with 3/4 knots
+VelAsp700 can run with all!
+FSLE can't run w 3/4 knots, didn't bother w 5
+GSDist can't run with 5 knots
+Slope can run with all!
+Aspect can't run with linMod
 
+
+          linMod              threeKnots             fourKnots           fiveKnots           Best        
+SSH0      "-23363.1987986272" "-106574.047448352"    NA                  "-112148.04295224"  "fiveKnots" 
+Sal0      "-25147.0131351195" NA                     NA                  NA                  "linMod"    
+Sal700    "-28077.4488754393" "7.44500413122416e+64" "-48335.3526526465" NA                  "fourKnots" 
+Temp0     NA                  NA                     "-30829.2742646987" "-30779.6751465789" "fourKnots" 
+Temp700   NA                  "-77858.0716283516"    "-77213.6551944503" NA                  "threeKnots"
+VelMag700 "-2074.08075885525" NA                     NA                  "-100091.239316228" "fiveKnots" 
+VelAsp0   "-25033.4427642791" NA                     NA                  "-24641.3652492107" "linMod"    
+VelAsp700 "-24010.0173908052" "-23880.6034783294"    "-23812.8179582324" "-23770.5013623897" "linMod"    
+GSDist    "-23638.5815461714" "-116397.033158128"    "-54935.2825382918" NA                  "threeKnots"
+Slope     "-2074.08075885525" "-95055.3829807589"    "-92431.0243650548" "-93107.520604658"  "threeKnots"
+Aspect    NA                  NA                     "-86962.332100215"  "-100091.239316228" "fiveKnots" 
 
 # Make smooth terms, add interaction term, run full model and check collinearity
 ```{r fullModel}
 
-smoothVarList = c()
+smoothVarList = c(#"Sal700",
+                  "Temp0",
+                  "Temp700",
+                 #"GSDist",
+                  "Slope",
+                #"Aspect",
+                  "VelAsp0",
+               "VelAsp700")
 
-linVarList = c()
-knotList = c()
+linVarList = c("Sal0",
+               "VelMag700",
+               "FSLE0")
+
+knotList = c(c(0.5),
+             c(0.333,0.666),
+             c(0.333,0.666),
+             c(0.5),
+             c(0.5),
+             c(0.5),
+             c(0.333,0.666),
+             c(0.333,0.666),
+             c(0.333,0.666))
 smoothNameList = character()
 
 for (i in 1:length(smoothVarList)){
@@ -446,24 +506,25 @@ for (i in 1:length(smoothVarList)){
   
   smoothNameList = c(smoothNameList,paste('S_',smoothVarList[i],sep=""))
 }
-thisForm = formula(paste('Pres~',paste(c(smoothNameList,linVarList),collapse="+"),'+S_VelAsp700:S_Aspect',sep=""))
+thisForm = formula(paste('Pres~',paste(c(smoothNameList,linVarList),collapse="+"),sep=""))
 
-colMod = geeglm(thisForm,
+fullMod = geeglm(thisForm,
                 family=poisson,
                 data=data,
                 id=GroupID,
                 corstr="ar1")
 
-VIFvals = vif(colMod)
+VIFvals = vif(fullMod)
 VIFvals = cbind(VIFvals,(VIFvals[,3])^2)
 colnames(VIFvals)[4] = "LOOK AT ME"
 VIFvals
 # remove vars in stepwise fashion as necessary
 ```
+Removed SSH, GSDist, Sal700, Aspect (& int w. VelAsp)
 
 # Check autocorrelation of residuals, revise grouping variable if necessary
 ```{r}
-modACF = acf(residuals(colMod),lag.max=180)
+modACF = acf(residuals(fullMod),lag.max=180)
 
 ```
 
@@ -472,7 +533,7 @@ modACF = acf(residuals(colMod),lag.max=180)
 ```{r fullMod}
 
 # Get p-values
-getPvalues(colMod)
+getPvalues(fullMod)
 
 
 ```
