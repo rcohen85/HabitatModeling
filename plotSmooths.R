@@ -6,7 +6,7 @@ plotSmooths = function(mod,covar,coefInd,k,periodic,site,title){
             c(0.2,0.4,0.6,0.8))
   quant.func<- function(x){quantile(x, probs=c(0.0275,0.975))}
   
-  if (!is.null(site)){
+  if (!is.na(site)){
     ind = which(!is.na(str_match(data$Site,site)))
   } else {
     ind = 1:dim(data)[1]

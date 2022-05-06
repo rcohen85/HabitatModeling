@@ -2,7 +2,7 @@ plotLinears = function(mod,covar,coefInd,site,title){
   
   quant.func<- function(x){quantile(x, probs=c(0.0275,0.975))}
   
-  if (!is.null(site)){
+  if (!is.na(site)){
     ind = which(!is.na(str_match(data$Site,site)))
   } else {
     ind = 1:dim(data)[1]

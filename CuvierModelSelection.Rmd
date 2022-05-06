@@ -485,13 +485,9 @@ linVarList = c("Sal0",
                "VelMag700",
                "FSLE0")
 
-knotList = c(c(0.5),
-             c(0.333,0.666),
-             c(0.333,0.666),
+knotList = c(c(0.333,0.666),
              c(0.5),
              c(0.5),
-             c(0.5),
-             c(0.333,0.666),
              c(0.333,0.666),
              c(0.333,0.666))
 smoothNameList = character()
@@ -541,32 +537,37 @@ getPvalues(fullMod)
 
 #Remove non-significant terms, re-run model, check p-values
 ```{r fullMod}
-smoothVarList = c()
 
-linVarList = c()
-knotList = c()
-smoothNameList = character()
+ badVars = PV$Variable[(PV[[site]]$'p-value'>=0.05)]
+  redMod<-eval(parse(text=paste("update(fullMod, . ~ . - ", paste(badVars,collapse="-"), ")", sep="")))
+   PVred = getPvalues(redMod)
 
-for (i in 1:length(smoothVarList)){
-  
-  if (str_detect(smoothVarList[i],"Asp")){
-    eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=unlist(knotList[i])),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')),periodic=TRUE)',sep="")))
-  } else {
-    eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=unlist(knotList[i])),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')))',sep="")))
-  }
-  
-  smoothNameList = c(smoothNameList,paste('S_',smoothVarList[i],sep=""))
-}
-thisForm = formula(paste('Pres~',paste(c(smoothNameList,linVarList),collapse="+"),sep=""))
-
-reducedMod = geeglm(thisForm,
-                 family=poisson,
-                 data=data,
-                 id=GroupID,
-                 corstr="ar1")
-
-# Get p-values
-getPvalues(reducedMod)
+# smoothVarList = c()
+# 
+# linVarList = c()
+# knotList = c()
+# smoothNameList = character()
+# 
+# for (i in 1:length(smoothVarList)){
+#   
+#   if (str_detect(smoothVarList[i],"Asp")){
+#     eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=unlist(knotList[i])),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')),periodic=TRUE)',sep="")))
+#   } else {
+#     eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=unlist(knotList[i])),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')))',sep="")))
+#   }
+#   
+#   smoothNameList = c(smoothNameList,paste('S_',smoothVarList[i],sep=""))
+# }
+# thisForm = formula(paste('Pres~',paste(c(smoothNameList,linVarList),collapse="+"),sep=""))
+# 
+# reducedMod = geeglm(thisForm,
+#                  family=poisson,
+#                  data=data,
+#                  id=GroupID,
+#                  corstr="ar1")
+# 
+# # Get p-values
+# getPvalues(reducedMod)
 
 
 ```
@@ -574,14 +575,20 @@ getPvalues(reducedMod)
 ```{r plot regional model}
 
 source("plotSmooths.R")
-terms = names(fullMod$model)[2:length(names(fullMod$model))]
-terms = str_remove(terms,"S_")
-k=5
+source("plotLinears.R")
+terms = names(reducedMod$model)[2:length(names(reducedMod$model))]
+k=list(4,3,3,4,4)
 
 for (i in 1:length(terms)){
-  coefInd = which(str_detect(names(fullMod$coefficients),terms[i]))
-  if (str_detect(terms[i],"Asp")){periodic=TRUE} else {periodic=FALSE}
-  print(plotSmooths(fullMod,terms[i],coefInd,k,periodic))
+  if (str_detect(terms[i],"S_")){ # plot smooth terms
+    term = str_remove(terms[i],"S_")
+  coefInd = which(str_detect(names(reducedMod$coefficients),term))
+  if (str_detect(term,"Asp")){periodic=TRUE} else {periodic=FALSE}
+  print(plotSmooths(reducedMod,term,coefInd,k[i],periodic,title=NULL))
+  } else { # plot linear terms
+  coefInd = which(str_detect(names(reducedMod$coefficients),terms[i]))
+  print(plotLinears(reducedMod,term,coefInd,title=NULL))
+  }
 }
 
 ```

@@ -22,7 +22,7 @@ library(SimDesign)
 library(multitaper)
 source("getPvalues.R")
 
-data = data.frame(read.csv('J:/Chpt_3/ModelData/UD28_masterDF.csv'))
+data = data.frame(read.csv('E:/ModelingCovarData/Master_DFs/UD28_masterDF.csv'))
 lagID = 126
 numClust = length(data$Pres)/(lagID-1)
 if (numClust<length(data$Pres)){
@@ -143,9 +143,9 @@ covarList = c("Chl0",
               "SSH0",
               "FSLE0")
 
-profileDir = 'J:/Chpt_3/CovarTS'
+profileDir = 'E:/ModelingCovarData/Profiles'
 profileList = dir(profileDir,pattern="Profiles_ES.Rdata",full.names=TRUE)
-sites = c("HZ","BC","NFC","BS")
+sites = c("HZ","OC","NC","BC","WC","NFC","HAT","GS","BP","BS")
 k=7
 
 for (j in 1:length(sites)){
@@ -558,7 +558,7 @@ reducedMod = geeglm(thisForm,
                  corstr="ar1")
 
 # Get p-values
-getPvalues(reducedMod)
+# getPvalues(reducedMod)
 
 
 ```
@@ -582,10 +582,11 @@ for (i in 1:length(terms)){
     term = str_remove(terms[i],"S_")
   coefInd = which(str_detect(names(reducedMod$coefficients),term))
   if (str_detect(term,"Asp")){periodic=TRUE} else {periodic=FALSE}
-  print(plotSmooths(reducedMod,term,coefInd,k,periodic,title=NULL))
+  print(plotSmooths(reducedMod,term,coefInd,k,periodic,site=NA,title=NULL))
   } else { # plot linear terms
-  coefInd = which(str_detect(names(reducedMod$coefficients),terms[i]))
-  print(plotLinears(reducedMod,term,coefInd,title=NULL))
+    term=terms[i]
+  coefInd = which(str_detect(names(reducedMod$coefficients),term))
+  print(plotLinears(reducedMod,term,coefInd,site=NA,title=NULL))
   }
 }
 
@@ -595,7 +596,7 @@ for (i in 1:length(terms)){
 # Don't include slope or aspect because they're only a single value for each site
 ```{r site-specific models}
 
-sites = c("HZ","BC","WC","BS")
+sites = c("HZ","OC","NC","BC","WC","NFC","HAT","GS","BP","BS")
 smoothVarList = c("Chl0",
                   "Sal0",
                   "Sal200",
@@ -701,54 +702,7 @@ for (i in 1:length(siteModList)){
 
 print(pValListRed)
 
-# sites = c("HZ","BC","WC","BS")
-# smoothVarList = list(c("Chl0","Sal200","FSLE0"),
-#                       c("Chl0","Sal0","Sal200","FSLE0"),
-#                       c("Chl0","Sal0","Sal200","FSLE0"),
-#                       c("Chl0","Sal200","FSLE0"))
-# knotList = list(c(0.5,0.5,0.5),
-#                       c(0.5,0.5,0.5,0.5),
-#                       c(0.5,0.5,0.5,0.5),
-#                       c(0.5,0.5,0.5))
-# linVarList = list(c(),
-#                    c("Temp0"),
-#                    c("Temp0"),
-#                    c("SSH0",
-#                      "Temp0"))
-# siteModList = list()
-# pValList = list()
-# 
-# 
-# for (j in 1:length(sites)){
-#   siteInd = which(!is.na(str_match(data$Site,sites[j])))
-#   modDF = data[siteInd,]
-#   
-#   smoothNameList = character()
-#   
-#   for (i in 1:length(unlist(smoothVarList[j]))){
-#     
-#     if (str_detect(unlist(smoothVarList[j])[i],"Asp")){
-#       eval(parse(text=paste('S_',unlist(smoothVarList[j])[i],'= mSpline(modDF$',unlist(smoothVarList[j])[i],',knots=quantile(modDF$',unlist(smoothVarList[j])[i],',probs=unlist(knotList[j])[i]),Boundary.knots=c(min(modDF$',unlist(smoothVarList[j])[i],'),max(modDF$',unlist(smoothVarList[j])[i],')),periodic=TRUE)',sep="")))
-#     } else {
-#       eval(parse(text=paste('S_',unlist(smoothVarList[j])[i],'= mSpline(modDF$',unlist(smoothVarList[j])[i],',knots=quantile(modDF$',unlist(smoothVarList[j])[i],',probs=unlist(smoothVarList[j])[i]),Boundary.knots=c(min(modDF$',unlist(smoothVarList[j])[i],'),max(modDF$',unlist(smoothVarList[j])[i],')))',sep="")))
-#     }
-#     
-#     smoothNameList = c(smoothNameList,paste('S_',unlist(smoothVarList[j])[i],sep=""))
-#   }
-#   
-#   thisForm = formula(paste('Pres~',paste(c(smoothNameList,unlist(linVarList[j])),collapse="+"),sep=""))
-#   
-#   siteModList[[sites[j]]] = geeglm(thisForm,
-#                                   family=poisson,
-#                                   data=modDF,
-#                                   id=GroupID,
-#                                   corstr="ar1")
-#   
-#   pValList[[sites[j]]] = getPvalues(siteModList[[sites[j]]])
-# 
-# }
-# 
-# print(pValList)
+
 
 ```
 $HZ
@@ -796,49 +750,7 @@ for (i in 1:length(siteModListRed)){
 
 print(pValListRed)
 
-# sites = c("HZ","BC","WC","BS")
-# smoothVarList = list(c("Temp0"),
-#                       c("Chl0","Sal0","Temp0"),
-#                       c("Chl0","Sal0","Temp0"),
-#                       c("Chl0","Sal0","Temp0"))
-# linVarList = list(c("SSH0"),
-#                    c(),
-#                    c(),
-#                    c("SSH0"))
-# siteModList = list()
-# pValList = list()
-# 
-# 
-# for (j in 1:length(sites)){
-#   siteInd = which(!is.na(str_match(data$Site,sites[j])))
-#   modDF = data[siteInd,]
-#   
-#   smoothNameList = character()
-#   
-#   for (i in 1:length(unlist(smoothVarList[j]))){
-#     
-#     if (str_detect(unlist(smoothVarList[j])[i],"Asp")){
-#       eval(parse(text=paste('S_',unlist(smoothVarList[j])[i],'= mSpline(modDF$',unlist(smoothVarList[j])[i],',knots=quantile(modDF$',unlist(smoothVarList[j])[i],',probs=c(0.275, 0.5, 0.725)),Boundary.knots=c(min(modDF$',unlist(smoothVarList[j])[i],'),max(modDF$',unlist(smoothVarList[j])[i],')),periodic=TRUE)',sep="")))
-#     } else {
-#       eval(parse(text=paste('S_',unlist(smoothVarList[j])[i],'= mSpline(modDF$',unlist(smoothVarList[j])[i],',knots=quantile(modDF$',unlist(smoothVarList[j])[i],',probs=c(0.275, 0.5, 0.725)),Boundary.knots=c(min(modDF$',unlist(smoothVarList[j])[i],'),max(modDF$',unlist(smoothVarList[j])[i],')))',sep="")))
-#     }
-#     
-#     smoothNameList = c(smoothNameList,paste('S_',unlist(smoothVarList[j])[i],sep=""))
-#   }
-#   
-#   thisForm = formula(paste('Pres~',paste(c(smoothNameList,unlist(linVarList[j])),collapse="+"),sep=""))
-#   
-#   siteModList[[sites[j]]] = geeglm(thisForm,
-#                                   family=poisson,
-#                                   data=modDF,
-#                                   id=GroupID,
-#                                   corstr="ar1")
-#   
-#   pValList[[sites[j]]] = getPvalues(siteModList[[sites[j]]])
-# 
-# }
-# 
-# print(pValList)
+
 
 ```
 $HZ
@@ -888,7 +800,7 @@ for (j in 1:length(siteModListRed)){
       print(plotSmooths(siteModListRed[[j]],term,coefInd,k,periodic,site=siteName,title=siteName))
     } else { # plot linear terms
       term=terms[i]
-      coefInd = which(str_detect(names(siteModListRed[[j]]$coefficients),terms[i]))
+      coefInd = which(str_detect(names(siteModListRed[[j]]$coefficients),term))
       print(plotLinears(siteModListRed[[j]],term,coefInd,site=siteName,title=siteName))
     }
   }
