@@ -1,4 +1,4 @@
-plotSmooths = function(mod,covar,coefInd,k,periodic,title){
+plotSmooths = function(mod,covar,coefInd,k,periodic,site,title){
   
   probs = list(c(0.5),
             c(0.333,0.666),
@@ -6,11 +6,17 @@ plotSmooths = function(mod,covar,coefInd,k,periodic,title){
             c(0.2,0.4,0.6,0.8))
   quant.func<- function(x){quantile(x, probs=c(0.0275,0.975))}
   
-  minVal = min(data[[covar]])
-  maxVal = max(data[[covar]])
+  if (!is.null(site)){
+    ind = which(!is.na(str_match(data$Site,site)))
+  } else {
+    ind = 1:dim(data)[1]
+  }
+  
+  minVal = min(data[[covar]][ind])
+  maxVal = max(data[[covar]][ind])
   varSeq = seq(minVal,maxVal,length.out=1000)
   varBasis = mSpline(varSeq,
-                     knots=quantile(data[[covar]],probs=unlist(probs[k-2])),
+                     knots=quantile(data[[covar]][ind],probs=unlist(probs[k-2])),
                      Boundary.knots=c(minVal,maxVal),
                      periodic=periodic)
   
@@ -30,9 +36,9 @@ plotSmooths = function(mod,covar,coefInd,k,periodic,title){
                   fill="#16A7CA",
                   alpha=0.2,
                   stat ="identity"
-  ) + geom_rug(data=data,
+  ) + geom_rug(data=data[ind,],
                inherit.aes=F,
-               aes(x=.data[[covar]]),
+               aes(x=.data[[covar]][ind]),
                sides="b"
   ) + labs(x = covar,
            # y = "Probability"

@@ -1,9 +1,15 @@
-plotLinears = function(mod,covar,coefInd,title){
+plotLinears = function(mod,covar,coefInd,site,title){
   
   quant.func<- function(x){quantile(x, probs=c(0.0275,0.975))}
   
-  minVal = min(data[[covar]])
-  maxVal = max(data[[covar]])
+  if (!is.null(site)){
+    ind = which(!is.na(str_match(data$Site,site)))
+  } else {
+    ind = 1:dim(data)[1]
+  }
+  
+  minVal = min(data[[covar]][ind])
+  maxVal = max(data[[covar]][ind])
   varSeq = seq(minVal,maxVal,length.out=1000)
   
   Fit = varSeq*coef(mod)[coefInd]
@@ -22,9 +28,9 @@ plotLinears = function(mod,covar,coefInd,title){
                   fill="#16A7CA",
                   alpha=0.2,
                   stat ="identity"
-  ) + geom_rug(data=data,
+  ) + geom_rug(data=data[ind,],
                inherit.aes=F,
-               aes(x=.data[[covar]]),
+               aes(x=.data[[covar]][ind]),
                sides="b"
   ) + labs(x = covar,
            y = 'log(Presence)'
