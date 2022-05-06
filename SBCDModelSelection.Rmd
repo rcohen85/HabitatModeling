@@ -19,6 +19,7 @@ library(zoo)
 library(pracma)
 library(mgcv)
 library(SimDesign)
+library(multitaper)
 source("getPvalues.R")
 
 data = data.frame(read.csv('J:/Chpt_3/ModelData/UD28_masterDF.csv'))
@@ -116,6 +117,22 @@ for (j in 1:length(sites)){
 
 
 
+
+```{r}
+site = "BC"
+siteInd = which(!is.na(str_match(data$Site,site)))
+thisTS = ts(data$Pres[siteInd],start=data$Date[siteInd[1]],end=data$Date[siteInd[length(siteInd)]],deltat=1/7)
+spec.mtm(thisTS)
+
+spectrum(data$Pres[siteInd])
+spec.pgram(data$Pres[siteInd])
+spec.ar(data$Pres[siteInd])
+I <- abs(fft(data$Pres[siteInd]))^2/length(siteInd)
+P <- (4/240)*I[1:120]
+f <- 0:119/240
+plot(f[-1],P[-1], type="l", xlab="Frequency", ylab="Power")
+```
+
 # Plot pres vs. covars by year
 ```{r plot by year, fig.width=15, fig.height=10}
 
@@ -128,7 +145,8 @@ covarList = c("Chl0",
 
 profileDir = 'J:/Chpt_3/CovarTS'
 profileList = dir(profileDir,pattern="Profiles_ES.Rdata",full.names=TRUE)
-sites = c("HZ","BC","WC","BS")
+sites = c("HZ","BC","NFC","BS")
+k=7
 
 for (j in 1:length(sites)){
   
@@ -137,8 +155,8 @@ for (j in 1:length(sites)){
   
   if (sum(data$Pres[siteInd]>0)>50){
     
-    plotDF = data.frame(Pres = rollmean(data$Pres[siteInd],k=3,fill=NA),
-                        Date = as.Date(rollmean(data$Date[siteInd],k=3,fill=NA),origin="1970-01-01"))
+    plotDF = data.frame(Pres = rollmean(data$Pres[siteInd],k=k,fill=NA),
+                        Date = as.Date(rollmean(data$Date[siteInd],k=k,fill=NA),origin="1970-01-01"))
     
     for (m in 1:(length(dateMarks)-1)){ # for each year
       
@@ -156,7 +174,7 @@ for (j in 1:length(sites)){
       
       for (i in 1:length(covarList)){ # plot surface covars in this year
         
-        plotDF$Covar = rollmean(data[[covarList[i]]][siteInd],k=3,fill=NA)
+        plotDF$Covar = rollmean(data[[covarList[i]]][siteInd],k=k,fill=NA)
         
         plotList[[covarList[i]]] = ggplot(plotDF,aes(x=Date)
         )+geom_line(aes(y=Covar)
@@ -293,6 +311,7 @@ smoothVarList = c("SSH0",
                   "Sal0",
                   "Temp0",
                   "Sal200",
+                  "FSLE0",
                   "GSLat",
                   "Slope",
                   "Aspect")
@@ -303,10 +322,16 @@ sites = c("HZ","BC","WC","BS")
 
 for (i in 1:length(smoothVarList)){
   
+  # Bootstrap the covar to produce a sample of the same size as pres
+  refDist = sample(data[[smoothVarList[i]]],size=length(pres),replace=TRUE)
+  
+  # Compare empirical cumulative distribution functions with a Kolomogorov Smirnov test
+  KS.out = ks.test(presDF[[smoothVarList[i]]],refDist,simulate.p.value=TRUE)
+  
   # Plot presence bins across all data versus this covar
   edges = seq(min(data[[smoothVarList[i]]]),max(data[[smoothVarList[i]]]),length.out=50)
   binDiff = diff(edges[1:2])
-  plotDF = data.frame(Obs=histc(data[[smoothVarList[i]]],edges=edges)$cnt/dim(data)[1],
+  plotDF = data.frame(Obs=histc(refDist,edges=edges)$cnt/length(refDist),
                       Pres=histc(presDF[[smoothVarList[i]]],edges=edges)$cnt/dim(presDF)[1],
                       BinCenter=seq(min(data[[smoothVarList[i]]])+(0.5*binDiff),
                                     max(data[[smoothVarList[i]]])+(0.5*binDiff),
@@ -319,7 +344,9 @@ for (i in 1:length(smoothVarList)){
   )+geom_col(aes(x=BinCenter,y=Pres),
              fill='#66B2FF',
              alpha=0.5
-  ) + labs(y="Normalized Counts",x=NULL,title=smoothVarList[i]
+  ) + labs(y="Normalized Counts",
+           x=NULL,
+           title=paste(smoothVarList[i],', p = ',as.character(KS.out$p.value),sep="")
   ) + theme_minimal())
   
   # print(ggplot(data
@@ -327,7 +354,6 @@ for (i in 1:length(smoothVarList)){
   # )+geom_smooth(aes(x=.data[[smoothVarList[i]]],y=Pres),
   #               method="loess"
   # )+labs(title=smoothVarList[i]))
-  
   
   # Plot presence bins at each site versus this covar
   if (!str_detect(smoothVarList[i],"Slope") & !str_detect(smoothVarList[i],"Aspect")){
@@ -348,33 +374,14 @@ for (i in 1:length(smoothVarList)){
 ```
 
 Starting covar list: "SSH0",
-"Chl0",
-"Sal0",
-"Temp0",
-"Sal200",
-"GSLat",
-"Slope",
-"Aspect"
-
-# Check collinearity
-```{r checkVIF}
-# calculate VIF for each of the variables desired in the full model
-colMod = glm(Pres~Sal0
-             +SSH0
-             +Chl0
-             +Temp0
-             +Sal200
-             +GSLat
-             +Slope
-             +Aspect,
-             family=poisson,
-             data=data)
-
-VIFvals = vif(colMod)
-VIFvals
-# remove vars in stepwise fashion as necessary
-```
-SSH and Sal200 are collinear, removing Sal200 because it's less convincing (despite our hypotheses..)
+                    "Chl0",
+                    "Sal0",
+                    "Sal200",
+                    "Temp0",
+                    "Sal200",
+                    "FSLE0",
+                    "Slope",
+                    "Aspect"
 
 # Test for how a term should be included in the model
 ```{r smooth vs linear}
@@ -383,115 +390,67 @@ SSH and Sal200 are collinear, removing Sal200 because it's less convincing (desp
 
 startTime = Sys.time()
 smoothVarList = c("SSH0",
-                  "Chl0",
-                  "Sal0",
-                  "Temp0",
-                  "GSLat",
-                  "Slope",
-                  "Aspect")
+                    "Chl0",
+                    "Sal0",
+                    "Sal200",
+                    "Temp0",
+                    "Sal200",
+                    "FSLE0",
+                    "Slope",
+                    "Aspect")
 
-modOpts = c("linMod","smoothMod")
-AIC_votes = matrix(nrow=length(smoothVarList),ncol=3)
+modOpts = c("linMod","threeKnots","fourKnots","fiveKnots")
+QIC_votes = matrix(nrow=length(smoothVarList),ncol=5)
 
-for (i in 1:length(smoothVarList)){
+for (i in 1:(length(smoothVarList)-2)){
+
   
-  # linMod = geeglm(Pres~data[[smoothVarList[i]]],data=data,family=poisson,id=GroupID,corstr="ar1")
-  # 
-  # smoothMod = geeglm(Pres~mSpline(data[[smoothVarList[i]]],
-  #                                 knots=quantile(data[[smoothVarList[i]]],probs=c(0.275,0.5,0.725)),
-  #                                 Boundary.knots=c(min(data[[smoothVarList[i]]]),max(data[[smoothVarList[i]]]))),
-  #                    data=data,
-  #                    family=poisson,
-  #                    id=GroupID,
-  #                    corstr="ar1")
-  
-  modelCall = paste('gam(Pres~data$',smoothVarList[i],',data=data,family=poisson)',sep="")
-  # modelCall = paste('geeglm(Pres~data$',smoothVarList[i],',data=data,family=poisson,id=GroupID,corstr="ar1")',sep="")
+  # modelCall = paste('gam(Pres~data$',smoothVarList[i],',data=data,family=poisson)',sep="")
+  modelCall = paste('geeglm(Pres~data$',smoothVarList[i],',data=data,family=poisson,id=GroupID,corstr="ar1")',sep="")
   linMod = eval(parse(text=modelCall))
   
-  modelCall = paste('gam(Pres~s(data$',smoothVarList[i],',bs="cr"),data=data,family=poisson)',sep="")
-  # modelCall = paste('geeglm(Pres~mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=c(0.275,0.5,0.725)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],'))),data=data,family=poisson,id=GroupID,corstr=\"ar1\")',sep="")
-  smoothMod = eval(parse(text=modelCall))
+  # modelCall = paste('gam(Pres~s(data$',smoothVarList[i],',bs="cr"),data=data,family=poisson)',sep="")
+  modelCall = paste('geeglm(Pres~mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=c(0.5)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],'))),data=data,family=poisson,id=GroupID,corstr=\"ar1\")',sep="")
+  smoothMod1 = eval(parse(text=modelCall))
   
-  AIC_votes[i,1:2] = c(AIC(linMod)[[1]],AIC(smoothMod)[[1]])
-  AIC_votes[i,3] = modOpts[which.min(AIC_votes[i,1:2])]
+  modelCall = paste('geeglm(Pres~mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=c(0.333,0.666)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],'))),data=data,family=poisson,id=GroupID,corstr=\"ar1\")',sep="")
+  smoothMod2 = eval(parse(text=modelCall))
+  
+  modelCall = paste('geeglm(Pres~mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=c(0.275,0.5,0.725)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],'))),data=data,family=poisson,id=GroupID,corstr=\"ar1\")',sep="")
+  smoothMod3 = eval(parse(text=modelCall))
+  
+  QIC_votes[i,1:4] = c(QIC(linMod)[[1]],QIC(smoothMod1)[[1]],QIC(smoothMod2)[[1]],QIC(smoothMod3)[[1]])
+  QIC_votes[i,5] = modOpts[which.min(QIC_votes[i,1:2])]
 }
 
 endTime = Sys.time()
 endTime-startTime
-colnames(AIC_votes) = c(modOpts,"Best")
-rownames(AIC_votes) = smoothVarList
-AIC_votes
+colnames(QIC_votes) = c(modOpts,"Best")
+rownames(QIC_votes) = smoothVarList[]
+QIC_votes
 ```
+Can't run Temp0 w 3 knots, Slope w 4 knots, or Aspect as smooth terms, gets stuck thinking forever
 
-
+# Make smooth terms, run full model and check collinearity
 ```{r fullModel}
-# Make smooth terms, run full model and check autocorrelation of residuals, revise grouping variable if necessary
 
-smoothVarList = c("SSH0",
-                  "Chl0",
+smoothVarList = c("Chl0",
                   "Sal0",
-                  "Temp0",
-                  "GSLat",
-                  "Slope",
-                  "Aspect")
+                  "Sal200")
 
-linVarList = c()
+linVarList = c("SSH0",
+                "Temp0",
+                "Slope",
+                "Aspect")
+knotList = rep(0.5,length(smoothVarList))
 smoothNameList = character()
 
 for (i in 1:length(smoothVarList)){
   
   if (str_detect(smoothVarList[i],"Asp")){
-    eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=c(0.275, 0.5, 0.725)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')),periodic=TRUE)',sep="")))
+    eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=unlist(knotList[i])),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')),periodic=TRUE)',sep="")))
   } else {
-    eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=c(0.275, 0.5, 0.725)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')))',sep="")))
-  }
-  
-  smoothNameList = c(smoothNameList,paste('S_',smoothVarList[i],sep=""))
-}
-thisForm = formula(paste('Pres~',paste(c(smoothNameList,linVarList),collapse="+"),sep=""))
-
-colMod = geeglm(thisForm,
-                family=poisson,
-                data=data,
-                id=GroupID,
-                corstr="ar1")
-
-modACF = acf(residuals(colMod),lag.max=180)
-
-```
-
-
-Changing the grouping variable doesn't have any effect at all on the residual autocorrelation, which is already quite minimal. Going with the most conservative grouping variable of 126 days.
-
-#Check term significance
-```{r fullMod}
-
-# Get p-values
-getPvalues(colMod)
-
-
-```
-
-Removing GSLat because not significant
-Removing Slope & Aspect because we can't justify them ecologically
-
-#Remove non-significant terms, re-run model, check p-values
-```{r fullMod}
-smoothVarList = c("SSH0",
-                  "Chl0",
-                  "Sal0",
-                  "Temp0")
-
-linVarList = c()
-smoothNameList = character()
-
-for (i in 1:length(smoothVarList)){
-  
-  if (str_detect(smoothVarList[i],"Asp")){
-    eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=c(0.275, 0.5, 0.725)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')),periodic=TRUE)',sep="")))
-  } else {
-    eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=c(0.275, 0.5, 0.725)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')))',sep="")))
+    eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=unlist(knotList[i])),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')))',sep="")))
   }
   
   smoothNameList = c(smoothNameList,paste('S_',smoothVarList[i],sep=""))
@@ -499,10 +458,30 @@ for (i in 1:length(smoothVarList)){
 thisForm = formula(paste('Pres~',paste(c(smoothNameList,linVarList),collapse="+"),sep=""))
 
 fullMod = geeglm(thisForm,
-                 family=poisson,
-                 data=data,
-                 id=GroupID,
-                 corstr="ar1")
+                family=poisson,
+                data=data,
+                id=GroupID,
+                corstr="ar1")
+
+VIFvals = vif(fullMod)
+VIFvals = cbind(VIFvals,(VIFvals[,3])^2)
+colnames(VIFvals)[4] = "LOOK AT ME"
+VIFvals
+# remove vars in stepwise fashion as necessary
+```
+Everything looks good
+
+# Check autocorrelation of residuals, revise grouping variable if necessary
+```{r}
+modACF = acf(residuals(fullMod),lag.max=180)
+
+```
+Super autocorrelated!
+
+But changing the grouping variable doesn't have any effect at all on the residual autocorrelation. Going with the most conservative grouping variable of 126 days.
+
+#Check term significance
+```{r fullMod}
 
 # Get p-values
 getPvalues(fullMod)
@@ -510,31 +489,73 @@ getPvalues(fullMod)
 
 ```
 
+Removing Sal0, Sal200, Slope, and Aspect because not significant
+
+#Remove non-significant terms, re-run model, check p-values
+```{r fullMod}
+smoothVarList = c("Chl0")
+
+linVarList = c("SSH0")
+knotList = rep(0.5,length(smoothVarList))
+smoothNameList = character()
+
+for (i in 1:length(smoothVarList)){
+  
+  if (str_detect(smoothVarList[i],"Asp")){
+    eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=unlist(knotList[i])),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')),periodic=TRUE)',sep="")))
+  } else {
+    eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=unlist(knotList[i])),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')))',sep="")))
+  }
+  
+  smoothNameList = c(smoothNameList,paste('S_',smoothVarList[i],sep=""))
+}
+thisForm = formula(paste('Pres~',paste(c(smoothNameList,linVarList),collapse="+"),sep=""))
+
+reducedMod = geeglm(thisForm,
+                 family=poisson,
+                 data=data,
+                 id=GroupID,
+                 corstr="ar1")
+
+# Get p-values
+getPvalues(reducedMod)
+
+
+```
+Took out Temp0, not significant
+
 # Plot terms from regional model
 ```{r plot regional}
 
 source("plotSmooths.R")
-terms = names(fullMod$model)[2:length(names(fullMod$model))]
-terms = str_remove(terms,"S_")
-k=5
+source("plotLinears.R")
+terms = names(reducedMod$model)[2:length(names(reducedMod$model))]
+k=3
 
 for (i in 1:length(terms)){
-  coefInd = which(str_detect(names(fullMod$coefficients),terms[i]))
-  if (str_detect(terms[i],"Asp")){periodic=TRUE} else {periodic=FALSE}
-  print(plotSmooths(fullMod,terms[i],coefInd,k,periodic,title=NULL))
+  if (str_detect(terms[i],"S_")){ # plot smooth terms
+    term = str_remove(terms[i],"S_")
+  coefInd = which(str_detect(names(reducedMod$coefficients),term))
+  if (str_detect(term,"Asp")){periodic=TRUE} else {periodic=FALSE}
+  print(plotSmooths(reducedMod,term,coefInd,k,periodic,title=NULL))
+  } else { # plot linear terms
+  coefInd = which(str_detect(names(reducedMod$coefficients),terms[i]))
+  print(plotLinears(reducedMod,term,coefInd,title=NULL))
+  }
 }
 
 ```
 
-
+# Create site-specific models
 ```{r site-specific models}
 
 sites = c("HZ","BC","WC","BS")
-smoothVarList = c("SSH0",
-                  "Chl0",
-                  "Sal0",
-                  "Temp0")
-linVarList = c()
+smoothVarList = c("Chl0",
+                  "Sal0")
+
+linVarList = c("SSH0",
+                "Temp0")
+knotList = rep(0.5,length(smoothVarList))
 siteModList = list()
 pValList = list()
 
@@ -548,9 +569,9 @@ for (j in 1:length(sites)){
   for (i in 1:length(smoothVarList)){
     
     if (str_detect(smoothVarList[i],"Asp")){
-      eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(modDF$',smoothVarList[i],',knots=quantile(modDF$',smoothVarList[i],',probs=c(0.275, 0.5, 0.725)),Boundary.knots=c(min(modDF$',smoothVarList[i],'),max(modDF$',smoothVarList[i],')),periodic=TRUE)',sep="")))
+      eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(modDF$',smoothVarList[i],',knots=quantile(modDF$',smoothVarList[i],',probs=unlist(knotList[i])),Boundary.knots=c(min(modDF$',smoothVarList[i],'),max(modDF$',smoothVarList[i],')),periodic=TRUE)',sep="")))
     } else {
-      eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(modDF$',smoothVarList[i],',knots=quantile(modDF$',smoothVarList[i],',probs=c(0.275, 0.5, 0.725)),Boundary.knots=c(min(modDF$',smoothVarList[i],'),max(modDF$',smoothVarList[i],')))',sep="")))
+      eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(modDF$',smoothVarList[i],',knots=quantile(modDF$',smoothVarList[i],',probs=unlist(knotList[i])),Boundary.knots=c(min(modDF$',smoothVarList[i],'),max(modDF$',smoothVarList[i],')))',sep="")))
     }
     
     smoothNameList = c(smoothNameList,paste('S_',smoothVarList[i],sep=""))
@@ -572,22 +593,129 @@ print(pValList)
 
 ```
 
+# Remove non-significant terms and rerun
+```{r site-specific models}
 
+sites = c("HZ","BC","WC","BS")
+smoothVarList = list(c("Chl0","Sal0"),
+                      c("Chl0","Sal0","Temp0"),
+                      c("Chl0","Sal0","Temp0"),
+                      c("Chl0","Sal0","Temp0"))
+knotList = c()
+linVarList = list(c("SSH0"),
+                   c(),
+                   c(),
+                   c("SSH0"))
+siteModList = list()
+pValList = list()
+
+
+for (j in 1:length(sites)){
+  siteInd = which(!is.na(str_match(data$Site,sites[j])))
+  modDF = data[siteInd,]
+  
+  smoothNameList = character()
+  
+  for (i in 1:length(unlist(smoothVarList[j]))){
+    
+    if (str_detect(unlist(smoothVarList[j])[i],"Asp")){
+      eval(parse(text=paste('S_',unlist(smoothVarList[j])[i],'= mSpline(modDF$',unlist(smoothVarList[j])[i],',knots=quantile(modDF$',unlist(smoothVarList[j])[i],',probs=c(0.275, 0.5, 0.725)),Boundary.knots=c(min(modDF$',unlist(smoothVarList[j])[i],'),max(modDF$',unlist(smoothVarList[j])[i],')),periodic=TRUE)',sep="")))
+    } else {
+      eval(parse(text=paste('S_',unlist(smoothVarList[j])[i],'= mSpline(modDF$',unlist(smoothVarList[j])[i],',knots=quantile(modDF$',unlist(smoothVarList[j])[i],',probs=c(0.275, 0.5, 0.725)),Boundary.knots=c(min(modDF$',unlist(smoothVarList[j])[i],'),max(modDF$',unlist(smoothVarList[j])[i],')))',sep="")))
+    }
+    
+    smoothNameList = c(smoothNameList,paste('S_',unlist(smoothVarList[j])[i],sep=""))
+  }
+  
+  thisForm = formula(paste('Pres~',paste(c(smoothNameList,unlist(linVarList[j])),collapse="+"),sep=""))
+  
+  siteModList[[sites[j]]] = geeglm(thisForm,
+                                  family=poisson,
+                                  data=modDF,
+                                  id=GroupID,
+                                  corstr="ar1")
+  
+  pValList[[sites[j]]] = getPvalues(siteModList[[sites[j]]])
+
+}
+
+print(pValList)
+
+```
+
+# Again, remove non-significant terms and rerun
+```{r site-specific models}
+
+sites = c("HZ","BC","WC","BS")
+smoothVarList = list(c("Temp0"),
+                      c("Chl0","Sal0","Temp0"),
+                      c("Chl0","Sal0","Temp0"),
+                      c("Chl0","Sal0","Temp0"))
+linVarList = list(c("SSH0"),
+                   c(),
+                   c(),
+                   c("SSH0"))
+siteModList = list()
+pValList = list()
+
+
+for (j in 1:length(sites)){
+  siteInd = which(!is.na(str_match(data$Site,sites[j])))
+  modDF = data[siteInd,]
+  
+  smoothNameList = character()
+  
+  for (i in 1:length(unlist(smoothVarList[j]))){
+    
+    if (str_detect(unlist(smoothVarList[j])[i],"Asp")){
+      eval(parse(text=paste('S_',unlist(smoothVarList[j])[i],'= mSpline(modDF$',unlist(smoothVarList[j])[i],',knots=quantile(modDF$',unlist(smoothVarList[j])[i],',probs=c(0.275, 0.5, 0.725)),Boundary.knots=c(min(modDF$',unlist(smoothVarList[j])[i],'),max(modDF$',unlist(smoothVarList[j])[i],')),periodic=TRUE)',sep="")))
+    } else {
+      eval(parse(text=paste('S_',unlist(smoothVarList[j])[i],'= mSpline(modDF$',unlist(smoothVarList[j])[i],',knots=quantile(modDF$',unlist(smoothVarList[j])[i],',probs=c(0.275, 0.5, 0.725)),Boundary.knots=c(min(modDF$',unlist(smoothVarList[j])[i],'),max(modDF$',unlist(smoothVarList[j])[i],')))',sep="")))
+    }
+    
+    smoothNameList = c(smoothNameList,paste('S_',unlist(smoothVarList[j])[i],sep=""))
+  }
+  
+  thisForm = formula(paste('Pres~',paste(c(smoothNameList,unlist(linVarList[j])),collapse="+"),sep=""))
+  
+  siteModList[[sites[j]]] = geeglm(thisForm,
+                                  family=poisson,
+                                  data=modDF,
+                                  id=GroupID,
+                                  corstr="ar1")
+  
+  pValList[[sites[j]]] = getPvalues(siteModList[[sites[j]]])
+
+}
+
+print(pValList)
+
+```
+
+# Plot terms from site-specific models
 ```{r plot sites specific models}
 
 source("plotSmooths.R")
+source("plotLinears.R")
 
 for (j in 1:length(siteModList)){
   
   terms = names(siteModList[[j]]$model)[2:length(names(siteModList[[j]]$model))]
-  terms = str_remove(terms,"S_")
+  # terms = str_remove(terms,"S_")
   k=5
   siteName = names(siteModList)[j]
   
   for (i in 1:length(terms)){
-    coefInd = which(str_detect(names(siteModList[[j]]$coefficients),terms[i]))
-    if (str_detect(terms[i],"Asp")){periodic=TRUE} else {periodic=FALSE}
-    print(plotSmooths(siteModList[[j]],terms[i],coefInd,k,periodic,title=siteName))
+    if (str_detect(terms[i],"S_")){ # plot smooth terms
+      term = str_remove(terms[i],"S_")
+      coefInd = which(str_detect(names(siteModList[[j]]$coefficients),term))
+      if (str_detect(term,"Asp")){periodic=TRUE} else {periodic=FALSE}
+      print(plotSmooths(siteModList[[j]],term,coefInd,k,periodic,title=siteName))
+    } else { # plot linear terms
+      coefInd = which(str_detect(names(siteModList[[j]]$coefficients),terms[i]))
+      print(plotLinears(siteModList[[j]],term,coefInd,title=siteName))
+    }
   }
 }
+
 ```
