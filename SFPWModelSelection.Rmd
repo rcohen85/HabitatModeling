@@ -512,7 +512,8 @@ colnames(VIFvals)[4] = "LOOK AT ME"
 VIFvals
 # remove vars in stepwise fashion as necessary
 ```
-Remove Temp700 because v collinear with Sal700, remove Aspect bc collinear with something
+all is good, no collinearity
+
 # Check autocorrelation of residuals, revise grouping variable if necessary
 ```{r}
 modACF = acf(residuals(fullMod),lag.max=180)
@@ -526,9 +527,9 @@ But changing the grouping variable doesn't have any effect at all on the residua
 #Check term significance
 ```{r fullMod}
 
-# Get p-values
-getPvalues(fullMod)
-
+if (fullMod$geese$error==1){
+  print("Model did not converge")
+} else {PV = getPvalues(fullMod)}
 
 ```
 Variable    p-value
@@ -543,39 +544,16 @@ Temp0	        0.269613
 Removing SSH0, Temp0 because not significant
 
 #Remove non-significant terms, re-run model, check p-values
-```{r fullMod}
-smoothVarList = c("Chl0",
-                  "Sal0",
-                  "Sal200",
-                "Slope")
+```{r redMod}
 
-linVarList = c("SSH0",
-                "Temp0")
-knotList = list(c(0.5),
-             c(0.5),
-             c(0.5))
-smoothNameList = character()
-
-for (i in 1:length(smoothVarList)){
-  
-  if (str_detect(smoothVarList[i],"Asp")){
-    eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=unlist(knotList[i])),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')),periodic=TRUE)',sep="")))
-  } else {
-    eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=unlist(knotList[i])),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')))',sep="")))
-  }
-  
-  smoothNameList = c(smoothNameList,paste('S_',smoothVarList[i],sep=""))
-}
-thisForm = formula(paste('Pres~',paste(c(smoothNameList,linVarList),collapse="+"),sep=""))
-
-reducedMod = geeglm(thisForm,
-                 family=poisson,
-                 data=data,
-                 id=GroupID,
-                 corstr="ar1")
-
-# Get p-values
-# getPvalues(reducedMod)
+PV$'p-value'[PV$'p-value'=="<0.0001"] = 0.0001
+badVars = PV$Variable[(PV$'p-value'>=0.05)]
+redMod<-eval(parse(text=paste("update(fullMod, . ~ . - ", paste(badVars,collapse="-"), ")", sep="")))
+if (redMod$geese$error==1){
+  print("Model did not converge")
+} else {PVred = getPvalues(redMod)
+PVred$'p-value'[PVred$'p-value'=="<0.0001"] = 0.0001
+PVred}
 
 
 ```
@@ -613,20 +591,29 @@ for (i in 1:length(terms)){
 # Don't include slope or aspect because they're only a single value for each site
 ```{r site-specific models}
 
-sites = c("HZ","OC","NC","BC","WC","NFC","HAT","GS","BP","BS")
-smoothVarList = c("Chl0",
+sites = c("HZ","NFC","HAT")
+smoothVarList = c("SSH0",
+                  "Chl0",
                   "Sal0",
-                  "Sal200",
-                  "FSLE0")
+                  "Sal700",
+                  "Temp0",
+                  "VelMag0",
+                  "VelMag700",
+                  "VelAsp0",
+                  "VelAsp700")
 
-linVarList = c("SSH0",
-                "Temp0")
+linVarList = c("FSLE0")
+
 knotList = list(c(0.5),
              c(0.5),
              c(0.5),
-             c(0.5),
-             c(0.5),
-             c(0.275,0.5,0.725))
+             c(0.333,0.666),
+             c(0.333,0.666),
+             c(0.333,0.666),
+             c(0.333,0.666),
+             c(0.333,0.666),
+             c(0.333,0.666))
+
 siteModList = list()
 pValList = list()
 
@@ -656,13 +643,35 @@ for (j in 1:length(sites)){
                                   id=GroupID,
                                   corstr="ar1")
   
+  if (siteModList[[sites[j]]]$geese$error!=1){
   pValList[[sites[j]]] = getPvalues(siteModList[[sites[j]]])
-
+  pValList[[sites[j]]]$'p-value'[pValList[[sites[j]]]$'p-value'=="<0.0001"] = 0.0001
+  } else {pValList[[sites[j]]]="NC"}
+  
 }
 
 print(pValList)
 
 ```
+[1] "Getting marginal p-values"
+$HZ
+[1] "NC"
+
+$NFC
+      Variable  p-value
+1       S_SSH0  0.04898
+2       S_Chl0    1e-04
+3       S_Sal0 0.843692
+4     S_Sal700 0.020474
+5      S_Temp0    1e-04
+6    S_VelMag0 0.070477
+7  S_VelMag700 0.639311
+8    S_VelAsp0 0.509724
+9  S_VelAsp700 0.073302
+10       FSLE0 0.201931
+
+$HAT
+[1] "NC"
 
 # Remove non-significant terms and rerun
 ```{r site-specific models}
@@ -671,50 +680,28 @@ siteModListRed = list()
 pValListRed = list()
 for (i in 1:length(siteModList)){
   site = names(siteModList)[i]
-  badVars = pValList[[site]]$Variable[(pValList[[site]]$'p-value'>=0.05)]
+  if (is.list(pValList[[site]])){
+  badVars = pValList[[site]]$Variable[as.numeric(pValList[[site]]$'p-value')>=0.05]
     if (!isempty(badVars)){
   siteModListRed[[site]]<-eval(parse(text=paste("update(siteModList[[site]], . ~ . - ", paste(badVars,collapse="-"), ")", sep="")))
-   pValListRed[[site]] = getPvalues(siteModListRed[[site]])
+   if (siteModListRed[[site]]$geese$error!=1){
+  pValListRed[[site]] = getPvalues(siteModListRed[[site]])
+  pValListRed[[site]]$'p-value'[pValListRed[[site]]$'p-value'=="<0.0001"] = 0.0001
+  } else {pValListRed[[site]]="NC"}
     } else {
       siteModListRed[[site]] = siteModList[[site]]
       pValListRed[[site]] = pValList[[site]]
     }
+  } else {
+    siteModListRed[[site]] = list()
+      pValListRed[[site]] = "NC"
+  }
 }
 
+
 print(pValListRed)
-
-
-
 ```
-$HZ
-  Variable  p-value
-1   S_Chl0  <0.0001
-2 S_Sal200 0.393403
-3  S_FSLE0  0.00125
 
-$BC
-  Variable  p-value
-1   S_Chl0  <0.0001
-2   S_Sal0 0.230803
-3 S_Sal200 0.000241
-4  S_FSLE0 0.002192
-5    Temp0  <0.0001
-
-$WC
-  Variable  p-value
-1   S_Chl0  <0.0001
-2   S_Sal0 0.230803
-3 S_Sal200 0.000241
-4  S_FSLE0 0.002192
-5    Temp0  <0.0001
-
-$BS
-  Variable  p-value
-1   S_Chl0  <0.0001
-2 S_Sal200 0.002245
-3  S_FSLE0 0.002806
-4     SSH0 0.007039
-5    Temp0  <0.0001
 
 # Again, remove non-significant terms and rerun
 ```{r site-specific models}

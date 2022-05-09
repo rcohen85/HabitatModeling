@@ -601,18 +601,14 @@ sites = c("HZ","NFC","HAT","BS")
 smoothVarList = c("Chl0",
                   "Sal0",
                   "Sal200",
-                  "FSLE0",
-                "Slope",
-                "Aspect")
+                  "FSLE0")
 
 linVarList = c("SSH0",
                 "Temp0")
 knotList = list(c(0.5),
              c(0.5),
              c(0.5),
-             c(0.5),
-             c(0.5),
-             c(0.333,0.666))
+             c(0.5))
 siteModList = list()
 pValList = list()
 
@@ -651,39 +647,40 @@ print(pValList)
 ```
 $HZ
   Variable  p-value
-1   S_Chl0  0.02094
-2   S_Sal0 0.192018
+1   S_Chl0 0.014425
+2   S_Sal0 0.104414
 3 S_Sal200  <0.0001
 4  S_FSLE0  <0.0001
-5     SSH0 0.140846
-6    Temp0 0.241479
+5     SSH0  0.10084
+6    Temp0  0.30424
 
-$BC
-  Variable  p-value
-1   S_Chl0 0.000915
-2   S_Sal0  <0.0001
-3 S_Sal200  <0.0001
-4  S_FSLE0 0.016447
-5     SSH0 0.076101
-6    Temp0  <0.0001
-
-$WC
+$NFC
   Variable  p-value
 1   S_Chl0  <0.0001
 2   S_Sal0  <0.0001
-3 S_Sal200  <0.0001
-4  S_FSLE0 0.004491
-5     SSH0 0.595285
+3 S_Sal200 0.091687
+4  S_FSLE0 0.026442
+5     SSH0 0.601288
 6    Temp0  <0.0001
+
+$HAT
+  Variable  p-value
+1   S_Chl0 0.000746
+2   S_Sal0 0.324834
+3 S_Sal200 0.548274
+4  S_FSLE0 0.338056
+5     SSH0  0.93081
+6    Temp0 0.429074
 
 $BS
   Variable  p-value
-1   S_Chl0  <0.0001
-2   S_Sal0  0.08879
-3 S_Sal200 0.002441
-4  S_FSLE0 0.001336
-5     SSH0 0.008824
+1   S_Chl0 0.053801
+2   S_Sal0 0.207846
+3 S_Sal200 0.817674
+4  S_FSLE0 0.392849
+5     SSH0  0.04303
 6    Temp0  <0.0001
+
 
 
 # Remove non-significant terms and rerun
