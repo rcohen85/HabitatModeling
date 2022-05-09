@@ -23,7 +23,7 @@ library(multitaper)
 source("getPvalues.R")
 
 data = data.frame(read.csv('E:/ModelingCovarData/Master_DFs/UD28_masterDF.csv'))
-lagID = 126
+lagID = 40
 numClust = length(data$Pres)/(lagID-1)
 if (numClust<length(data$Pres)){
   clustID = rep(1:ceiling(numClust),each=lagID)
@@ -145,7 +145,7 @@ covarList = c("Chl0",
 
 profileDir = 'E:/ModelingCovarData/Profiles'
 profileList = dir(profileDir,pattern="Profiles_ES.Rdata",full.names=TRUE)
-sites = c("HZ","OC","NC","BC","WC","NFC","HAT","GS","BP","BS")
+sites = c("HZ","NFC","HAT","BS")
 k=7
 
 for (j in 1:length(sites)){
@@ -458,7 +458,7 @@ knotList = list(c(0.5),
              c(0.5),
              c(0.5),
              c(0.5),
-             c(0.275,0.5,0.725))
+             c(0.333,0.666))
 smoothNameList = character()
 
 for (i in 1:length(smoothVarList)){
@@ -497,14 +497,14 @@ Temp0     3.067752  1        1.751500   3.067752
 
 Everything looks good
 
-# Check autocorrelation of residuals, revise grouping variable if necessary
+# Check autocorrelation of residuals, revise grouping variable if necessary, lagID=40
 ```{r}
 modACF = acf(residuals(fullMod),lag.max=180)
 
 ```
 Super autocorrelated!
 
-But changing the grouping variable doesn't have any effect at all on the residual autocorrelation. Going with the most conservative grouping variable of 126 days.
+But changing the grouping variable doesn't have any effect at all on the residual autocorrelation. Going with the most conservative grouping variable of 40 days.
 
 #Check term significance
 ```{r fullMod}
@@ -558,16 +558,17 @@ reducedMod = geeglm(thisForm,
                  corstr="ar1")
 
 # Get p-values
-# getPvalues(reducedMod)
+getPvalues(reducedMod)
 
 
 ```
-Variable    p-value
-S_Chl0    	0.000131			
-S_Sal0    	0.009037			
-S_Slope	    0.00045			
-SSH0	      0.026629			
-Temp0	      0.020526
+
+Variable p-value
+S_Chl0  	<0.0001			
+S_Sal0  	0.002131			
+S_Slope  	<0.0001			
+SSH0    	0.000834			
+Temp0	   <0.0001
 
 # Plot terms from regional model
 ```{r plot regional}
@@ -596,11 +597,13 @@ for (i in 1:length(terms)){
 # Don't include slope or aspect because they're only a single value for each site
 ```{r site-specific models}
 
-sites = c("HZ","OC","NC","BC","WC","NFC","HAT","GS","BP","BS")
+sites = c("HZ","NFC","HAT","BS")
 smoothVarList = c("Chl0",
                   "Sal0",
                   "Sal200",
-                  "FSLE0")
+                  "FSLE0",
+                "Slope",
+                "Aspect")
 
 linVarList = c("SSH0",
                 "Temp0")
@@ -609,7 +612,7 @@ knotList = list(c(0.5),
              c(0.5),
              c(0.5),
              c(0.5),
-             c(0.275,0.5,0.725))
+             c(0.333,0.666))
 siteModList = list()
 pValList = list()
 

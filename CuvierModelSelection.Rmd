@@ -23,7 +23,7 @@ library(multitaper)
 source("getPvalues.R")
 
 data = data.frame(read.csv('E:/ModelingCovarData/Master_DFs/Cuvier_masterDF.csv'))
-lagID = 41 
+lagID = 44 
 numClust = length(data$Pres)/(lagID-1)
 if (numClust<length(data$Pres)){
   clustID = rep(1:ceiling(numClust),each=lagID)
@@ -597,12 +597,10 @@ for (i in 1:length(terms)){
 ```{r site-specific models}
 
 sites = c("HZ","WC","HAT")
-smoothVarList = c("SSH0",
-                  "Temp0",
-                  "Sal0",
-                  "VelAsp700",
-                  "GSLat")
+smoothVarList = c()
+
 linVarList = c()
+knotList = list()
 siteModList = list()
 pValList = list()
 
@@ -616,9 +614,9 @@ for (j in 1:length(sites)){
   for (i in 1:length(smoothVarList)){
     
     if (str_detect(smoothVarList[i],"Asp")){
-      eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(modDF$',smoothVarList[i],',knots=quantile(modDF$',smoothVarList[i],',probs=c(0.275, 0.5, 0.725)),Boundary.knots=c(min(modDF$',smoothVarList[i],'),max(modDF$',smoothVarList[i],')),periodic=TRUE)',sep="")))
+      eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(modDF$',smoothVarList[i],',knots=quantile(modDF$',smoothVarList[i],',probs=unlist(knotList[i])),Boundary.knots=c(min(modDF$',smoothVarList[i],'),max(modDF$',smoothVarList[i],')),periodic=TRUE)',sep="")))
     } else {
-      eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(modDF$',smoothVarList[i],',knots=quantile(modDF$',smoothVarList[i],',probs=c(0.275, 0.5, 0.725)),Boundary.knots=c(min(modDF$',smoothVarList[i],'),max(modDF$',smoothVarList[i],')))',sep="")))
+      eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(modDF$',smoothVarList[i],',knots=quantile(modDF$',smoothVarList[i],',probs=unlist(knotList[i])),Boundary.knots=c(min(modDF$',smoothVarList[i],'),max(modDF$',smoothVarList[i],')))',sep="")))
     }
     
     smoothNameList = c(smoothNameList,paste('S_',smoothVarList[i],sep=""))
@@ -637,6 +635,7 @@ for (j in 1:length(sites)){
 }
 
 print(pValList)
+
 
 ```
 
