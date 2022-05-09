@@ -4,21 +4,25 @@ author: "RC + LB"
 date: "4/22/2022"
 output: html_document
 ---
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(geepack)
 library(splines2)
 library(lubridate)
 library(tidyverse)
-library(pracma)
 library(car)
 library(splines2)
 library(ggplot2)
+library(gridExtra)
+library(zoo)
+library(pracma)
+library(mgcv)
+library(SimDesign)
+library(multitaper)
 source("getPvalues.R")
 
 data = data.frame(read.csv('E:/ModelingCovarData/Master_DFs/UD26_masterDF.csv'))
-lagID = 126
+lagID = 77
 numClust = length(data$Pres)/(lagID-1)
 if (numClust<length(data$Pres)){
   clustID = rep(1:ceiling(numClust),each=lagID)
@@ -32,743 +36,301 @@ data$GroupID = clustID
 data$Pres = round(data$Pres)
 ```
 
-```{r temp0Lags}
-# Test surface temperature at several time lags
-var = "Temp0"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
+# Plot covar and presence time series to identify trends
+```{r plot pres vs covars, fig.width=15, fig.height=10}
 
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
+startDate = as.Date("2016-05-01",origin="1970-01-01")
+endDate = as.Date("2019-04-30",origin="1970-01-01")
+covarList = c("Chl0",
+              "SSH0",
+              "GSLat",
+              "GSDist",
+              "FSLE0")
+
+profileDir = 'E:/ModelingCovarData/Profiles'
+profileList = dir(profileDir,pattern="Profiles_ES.Rdata",full.names=TRUE)
+sites = unique(data$Site)
+
+for (j in 1:length(sites)){
+  
+  plotList = list()
+  plotDF = data.frame()
+  siteInd = which(!is.na(str_match(data$Site,sites[j])))
+  
+  if (sum(data$Pres[siteInd]>0)>7){
+    
+    plotDF = data.frame(Pres = rollmean(data$Pres[siteInd],k=7,fill=NA),
+                        Date = as.Date(rollmean(data$Date[siteInd],k=7,fill=NA),origin="1970-01-01"))
+    
+    plotList[['Pres']] = ggplot(plotDF,aes(x=Date)
+    )+geom_line(aes(y=Pres)
+    )+scale_x_continuous(breaks=c(seq.Date(from=startDate,to=endDate,by="quarter"))
+    )+ggtitle('Presence'
+    )+labs(x=NULL,y=NULL
+    )+theme(plot.margin=margin(c(0,43,0,0),unit="pt"))
+    
+    for (i in 1:length(covarList)){ # plot surface covars
+      
+      plotDF$Covar = rollmean(data[[covarList[i]]][siteInd],k=7,fill=NA)
+      plotList[[covarList[i]]] = ggplot(plotDF,aes(x=Date)
+      )+geom_line(aes(y=Covar)
+      )+scale_x_continuous(breaks=c(seq.Date(from=startDate,to=endDate,by="quarter"))
+      )+coord_cartesian(xlim=c(startDate,endDate)
+      )+ggtitle(covarList[i]
+      )+labs(x=NULL,y=NULL
+      )+theme(plot.margin=margin(c(0,43,0,0),unit="pt"))
+    }
+    
+    for (i in 1:length(profileList)){ # plot profiles of covars with multiple depth layers
+      load(profileList[i])
+      profileName = str_remove(str_remove(profileList[i],'_Profiles_ES.Rdata'),paste(profileDir,'/',sep=""))
+      profileDF = data.frame(z=stack(data.frame(eval(parse(text=paste(sites[j],'Profile',sep="")))))[,1],
+                             y=rep(depths,times=dim(eval(parse(text=paste(sites[j],'Profile',sep=""))))[2]),
+                             x=rep(as.Date(masterData.Time,origin="1970-01-01"),each=length(depths)))
+      
+      plotList[[profileName]] = ggplot(profileDF,aes(x=x,y=y,z=z)
+      )+geom_contour_filled(
+      )+coord_cartesian(xlim=c(startDate,endDate)
+      )+scale_x_continuous(breaks=c(seq.Date(from=startDate,to=endDate,by="quarter"))
+      )+scale_y_reverse(
+      )+ggtitle(profileName
+      )+labs(x=NULL,y=NULL
+      )+theme(plot.margin=margin(c(0,0,0,0),unit="pt"),
+              legend.position="right",
+              legend.title=element_text(size=0),
+              legend.text=element_text(size=5),
+              legend.key.size=unit(0.3,'lines'),
+              legend.direction="vertical",
+              legend.margin=margin(0))
+      
+    }
+    
+    grid.arrange(grobs=plotList,ncol=1,nrow=length(covarList)+length(profileList)+1,top=paste('SFPW at',sites[j]))
+    
+  }
 }
 
-colnames(AIC_comp) = names
 
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
 ```
-```{r temp100Lags}
-# Test temperature at 100m at several time lags
-var = "Temp100"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
 
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
+
+<!-- ```{r} -->
+<!-- site = "BC" -->
+<!-- siteInd = which(!is.na(str_match(data$Site,site))) -->
+<!-- thisTS = ts(data$Pres[siteInd],start=data$Date[siteInd[1]],end=data$Date[siteInd[length(siteInd)]],deltat=1/7) -->
+<!-- spec.mtm(thisTS) -->
+
+<!-- spectrum(data$Pres[siteInd]) -->
+<!-- spec.pgram(data$Pres[siteInd]) -->
+<!-- spec.ar(data$Pres[siteInd]) -->
+<!-- I <- abs(fft(data$Pres[siteInd]))^2/length(siteInd) -->
+<!-- P <- (4/240)*I[1:120] -->
+<!-- f <- 0:119/240 -->
+<!-- plot(f[-1],P[-1], type="l", xlab="Frequency", ylab="Power") -->
+<!-- ``` -->
+
+# Plot pres vs. covars by year
+```{r plot by year, fig.width=15, fig.height=10}
+
+startDate = as.Date("2016-05-01",origin="1970-01-01")
+endDate = as.Date("2019-04-30",origin="1970-01-01")
+dateMarks = c(seq.Date(startDate,endDate,by="year"),endDate)
+covarList = c("Chl0",
+              "SSH0",
+              "FSLE0")
+
+profileDir = 'E:/ModelingCovarData/Profiles'
+profileList = dir(profileDir,pattern="Profiles_ES.Rdata",full.names=TRUE)
+sites = c("HZ","BC","HAT","BS")
+k=7
+
+for (j in 1:length(sites)){
+  
+  siteInd = which(!is.na(str_match(data$Site,sites[j])))
+  
+  
+  if (sum(data$Pres[siteInd]>0)>50){
+    
+    plotDF = data.frame(Pres = rollmean(data$Pres[siteInd],k=k,fill=NA),
+                        Date = as.Date(rollmean(data$Date[siteInd],k=k,fill=NA),origin="1970-01-01"))
+    
+    for (m in 1:(length(dateMarks)-1)){ # for each year
+      
+      plotList = list()
+      st = dateMarks[m]
+      ed = dateMarks[m+1]
+      
+      plotList[['Pres']] = ggplot(plotDF,aes(x=Date) # plot presence in this year
+      )+geom_line(aes(y=Pres)
+      )+scale_x_continuous(breaks=c(seq.Date(from=st,to=ed,by="quarter"))
+      )+coord_cartesian(xlim=c(st,ed)
+      )+ggtitle('Presence'
+      )+labs(x=NULL,y=NULL
+      )+theme(plot.margin=margin(c(0,43,0,0),unit="pt"))
+      
+      for (i in 1:length(covarList)){ # plot surface covars in this year
+        
+        plotDF$Covar = rollmean(data[[covarList[i]]][siteInd],k=k,fill=NA)
+        
+        plotList[[covarList[i]]] = ggplot(plotDF,aes(x=Date)
+        )+geom_line(aes(y=Covar)
+        )+scale_x_continuous(breaks=c(seq.Date(from=st,to=ed,by="quarter"))
+        )+coord_cartesian(xlim=c(st,ed)
+        )+ggtitle(covarList[i]
+        )+labs(x=NULL,y=NULL
+        )+theme(plot.margin=margin(c(0,43,0,0),unit="pt"))
+      }
+      
+      grid.arrange(grobs=plotList,ncol=1,nrow=length(covarList)+1,top=paste('SFPW at',sites[j]))
+      
+    }
+    
+    
+    for (i in 1:length(profileList)){ # for profiles of covars with multiple depth layers
+      
+      load(profileList[i])
+      profileName = str_remove(str_remove(profileList[i],'_Profiles_ES.Rdata'),paste(profileDir,'/',sep=""))
+      profileDF = data.frame(z=stack(data.frame(eval(parse(text=paste(sites[j],'Profile',sep="")))))[,1],
+                             y=rep(depths,times=dim(eval(parse(text=paste(sites[j],'Profile',sep=""))))[2]),
+                             x=rep(as.Date(masterData.Time,origin="1970-01-01"),each=length(depths)))
+      
+      for (m in 1:(length(dateMarks)-1)){
+        st = dateMarks[m]
+        ed = dateMarks[m+1]
+        
+        if (str_detect(profileName,"Asp")){
+          
+          plotList[['Pres']] = ggplot(plotDF,aes(x=Date) # plot presence in this year
+          )+geom_line(aes(y=Pres)
+          )+scale_x_continuous(breaks=c(seq.Date(from=st,to=ed,by="quarter"))
+          )+coord_cartesian(xlim=c(st,ed)
+          )+ggtitle('Presence'
+          )+labs(x=NULL,y=NULL
+          )+theme(plot.margin=margin(c(0,0,0,0),unit="pt"))
+          
+          direction_labeller <- function(x){
+            ifelse(x %% 45 == 0, c('E','NE','N','NW','W','SW','S','SE')[1+(as.integer(x/45) %% 8)], '')}
+          my_colors=c("#2E22EA","#9E3DFB","#F86BE2","#FCCE7B","#C4E416","#4BBA0F","#447D87","#2C24E9")
+          
+          plotList[[profileName]] = ggplot(profileDF,aes(x=x,y=y,z=z) # plot profile for this year
+          )+geom_contour_filled(
+          )+scale_fill_manual(
+            values=my_colors,
+            guide=NULL
+          )+coord_cartesian(xlim=c(st,ed)
+          )+scale_x_continuous(breaks=c(seq.Date(from=st,to=ed,by="quarter"))
+          )+scale_y_reverse(
+          )+ggtitle(profileName
+          )+labs(x=NULL,y=NULL
+          )+theme(plot.margin=margin(c(0,0,0,0),unit="pt"))
+          
+          hues_df = data.frame(degree = 0:359) %>%
+            mutate(
+              label=direction_labeller(degree+90 %% 360),
+              colors = colorRampPalette(my_colors)(360))
+          
+          plotList[["ColorLegend"]] = ggplot(hues_df
+          )+geom_rect(aes(ymin=3,
+                          ymax=4,
+                          xmin=degree-0.5,
+                          xmax=degree+0.5,
+                          color=colors,
+                          fill=colors)
+          )+coord_polar(direction=-1,
+                        start=0
+          )+scale_color_identity(
+          )+scale_fill_identity(
+          )+guides(fill=FALSE,color=FALSE
+          )+theme_void(
+          )+ylim(c(1,4.5)
+          )+geom_text(aes(x=degree,
+                          y=4.5,
+                          label=label)) 
+          
+          grid.arrange(plotList$Pres,plotList[[profileName]],plotList[["ColorLegend"]],
+                       ncol=12,nrow=3,top=paste('SFPW at',sites[j]),layout_matrix=rbind(c(rep(1,11),NA),
+                                                                                                   c(rep(2,11),NA),
+                                                                                                   c(rep(2,11),3)))
+          
+        } else {
+          
+          plotList[['Pres']] = ggplot(plotDF,aes(x=Date) # plot presence in this year
+          )+geom_line(aes(y=Pres)
+          )+scale_x_continuous(breaks=c(seq.Date(from=st,to=ed,by="quarter"))
+          )+coord_cartesian(xlim=c(st,ed)
+          )+ggtitle('Presence'
+          )+labs(x=NULL,y=NULL
+          )+theme(plot.margin=margin(c(0,40,0,0),unit="pt"))
+          
+          plotList[[profileName]] = ggplot(profileDF,aes(x=x,y=y,z=z) # plot profile for this year
+          )+geom_contour_filled(
+          )+coord_cartesian(xlim=c(st,ed)
+          )+scale_x_continuous(breaks=c(seq.Date(from=st,to=ed,by="quarter"))
+          )+scale_y_reverse(
+          )+ggtitle(profileName
+          )+labs(x=NULL,y=NULL
+          )+theme(plot.margin=margin(c(0,0,0,0),unit="pt"),
+                  legend.position="right",
+                  legend.title=element_text(size=0),
+                  legend.text=element_text(size=7),
+                  legend.key.size=unit(0.5,'lines'),
+                  legend.direction="vertical",
+                  legend.margin=margin(0))
+          
+          
+          grid.arrange(plotList$Pres,plotList[[profileName]],
+                       ncol=12,nrow=3,top=paste('SFPW at',sites[j]),layout_matrix=rbind(c(rep(1,12)),
+                                                                                                   c(rep(2,12)),
+                                                                                                   c(rep(2,12))))
+        }
+      }
+    }
+  }
 }
 
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r temp200Lags}
-# Test temperature at 200m at several time lags
-var = "Temp200"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
 
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r temp300Lags}
-# Test temperature at 300m at several time lags
-var = "Temp300"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r temp400Lags}
-# Test temperature at 400m at several time lags
-var = "Temp400"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r temp500Lags}
-# Test temperature at 500m at several time lags
-var = "Temp500"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r temp600Lags}
-# Test temperature at 600m at several time lags
-var = "Temp600"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r temp700Lags}
-# Test temperature at 700m at several time lags
-var = "Temp700"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r Sal0Lags}
-# Test salinity at 0m at several time lags
-var = "Sal0"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r Sal100Lags}
-# Test salinity at 100m at several time lags
-var = "Sal100"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r Sal200Lags}
-# Test salinity at 200m at several time lags
-var = "Sal200"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r Sal300Lags}
-# Test salinity at 300m at several time lags
-var = "Sal300"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r Sal400Lags}
-# Test salinity at 400m at several time lags
-var = "Sal400"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r Sal500Lags}
-# Test salinity at 500m at several time lags
-var = "Sal500"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r Sal600Lags}
-# Test salinity at 600m at several time lags
-var = "Sal600"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r Sal700Lags}
-# Test salinity at 700m at several time lags
-var = "Sal700"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r VelMag0Lags}
-# Test velocity magnitude at 0m at several time lags
-var = "VelMag0"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r VelMag100Lags}
-# Test velocity magnitude at 100m at several time lags
-var = "VelMag100"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r VelMag200Lags}
-# Test velocity magnitude at 200m at several time lags
-var = "VelMag200"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r VelMag300Lags}
-# Test velocity magnitude at 300m at several time lags
-var = "VelMag300"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r VelMag400Lags}
-# Test velocity magnitude at 400m at several time lags
-var = "VelMag400"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r VelMag500Lags}
-# Test velocity magnitude at 500m at several time lags
-var = "VelMag500"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r VelMag600Lags}
-# Test velocity magnitude at 600m at several time lags
-var = "VelMag600"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r VelMag700Lags}
-# Test velocity magnitude at 700m at several time lags
-var = "VelMag700"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r VelAsp0Lags}
-# Test velocity aspect at 0m at several time lags
-var = "VelAsp0"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r VelAsp100Lags}
-# Test velocity aspect at 100m at several time lags
-var = "VelAsp100"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r VelAsp200Lags}
-# Test velocity aspect at 200m at several time lags
-var = "VelAsp200"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r VelAsp300Lags}
-# Test velocity aspect at 300m at several time lags
-var = "VelAsp300"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r VelAsp400Lags}
-# Test velocity aspect at 400m at several time lags
-var = "VelAsp400"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r VelAsp500Lags}
-# Test velocity aspect at 500m at several time lags
-var = "VelAsp500"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r VelAsp600Lags}
-# Test velocity aspect at 600m at several time lags
-var = "VelAsp600"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r VelAsp700Lags}
-# Test velocity aspect at 700m at several time lags
-var = "VelAsp700"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r SSH0Lags}
-# Test SSH at 0m at several time lags
-var = "SSH0"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r Chl0Lags}
-# Test Chl at 0m at several time lags
-var = "Chl0"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r FSLE0Lags}
-# Test FSLE at 0m at several time lags
-var = "FSLE0"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
-```
-```{r GSLatLags}
-# Test GSLat at several time lags
-var = "GSLat"
-colInd = which(!is.na(str_match(colnames(data),var)))
-AIC_comp = matrix(ncol=length(colInd),nrow=1)
-names = character()
-
-for (i in 1:length(colInd)){
-mod = glm(Pres~mSpline(data[,colInd[i]],knots=quantile(data[,colInd[i]],probs=c(0.275,0.5,0.725)),
-                           Boundary.knots=c(min(data[,colInd[i]]),max(data[,colInd[i]]))),
-              data=data,family=poisson)
-AIC_comp[1,i] = AIC(mod)[[1]]
-names = c(names,colnames(data)[colInd[i]])
-}
-
-colnames(AIC_comp) = names
-AIC_comp
-colnames(AIC_comp)[order(AIC_comp)]
 ```
 
-Covar selection to start: Temp0
-                          Temp700Lag28
-                          Sal0Lag56
-                          Sal700Lag7
-                          VelMag0Lag21 
-                          VelMag700mLag56
-                          VelAsp0Lag21 
-                          VelAsp700Lag7
-                          SSH0Lag7
-                          Chl0
-                          FSLE0Lag28
-                          GSLatLag28
-                          GSDist
-                          Slope
-                          Aspect
-                          VelAsp700Lag28:Aspect
 
-
+# Plot scatterplots and histograms
 ```{r plotCovars}
 # Fill in smoothVarList based on selection made above
-smoothVarList = c("Temp0",
-             "Temp700Lag28",
-             "Sal0Lag56",
-             "Sal700Lag7",
-             "VelMag0Lag21" ,
-             "VelMag700Lag56",
-             "VelAsp0Lag21" ,
-             "VelAsp700Lag7",
-             "SSH0Lag7",
-             "Chl0",
-             "FSLE0Lag28",
-             "GSLatLag28",
-             "GSDist",
-             "Slope",
-             "Aspect")
+smoothVarList = c("SSH0",
+                  "Chl0",
+                  "Sal0",
+                  "Temp0",
+                  "Temp700",
+                  "Sal700",
+                  "VelMag0",
+                  "VelMag700",
+                  "VelAsp0",
+                  "VelAsp700",
+                  "FSLE0",
+                  "GSLat",
+                  "Slope",
+                  "Aspect")
 
- pres = which(data$Pres>0)
-  presDF = data[pres,]
+pres = which(data$Pres>0)
+presDF = data[pres,]
+sites = c("HZ","BC","WC","BS")
 
- 
 for (i in 1:length(smoothVarList)){
   
-   # Plot presence bins across all data for each covar
+  # Bootstrap the covar to produce a sample of the same size as pres
+  refDist = sample(data[[smoothVarList[i]]],size=length(pres),replace=TRUE)
+  
+  # Compare empirical cumulative distribution functions with a Kolomogorov Smirnov test
+  KS.out = ks.test(presDF[[smoothVarList[i]]],refDist,simulate.p.value=TRUE)
+  
+  # Plot presence bins across all data versus this covar
   edges = seq(min(data[[smoothVarList[i]]]),max(data[[smoothVarList[i]]]),length.out=50)
   binDiff = diff(edges[1:2])
-  plotDF = data.frame(Obs=histc(data[[smoothVarList[i]]],edges=edges)$cnt/dim(data)[1],
-                    Pres=histc(presDF[[smoothVarList[i]]],edges=edges)$cnt/dim(presDF)[1],
-                    BinCenter=seq(min(data[[smoothVarList[i]]])+(0.5*binDiff),
-                                  max(data[[smoothVarList[i]]])+(0.5*binDiff),
-                                  by=binDiff))
-
+  plotDF = data.frame(Obs=histc(refDist,edges=edges)$cnt/length(refDist),
+                      Pres=histc(presDF[[smoothVarList[i]]],edges=edges)$cnt/dim(presDF)[1],
+                      BinCenter=seq(min(data[[smoothVarList[i]]])+(0.5*binDiff),
+                                    max(data[[smoothVarList[i]]])+(0.5*binDiff),
+                                    by=binDiff))
+  
   print(ggplot(plotDF
   )+geom_col(aes(x=BinCenter,y=Obs),
              fill='#bfbfbf',
@@ -776,153 +338,429 @@ for (i in 1:length(smoothVarList)){
   )+geom_col(aes(x=BinCenter,y=Pres),
              fill='#66B2FF',
              alpha=0.5
-  ) + labs(y="Normalized Counts",x=NULL,title=smoothVarList[i]
+  ) + labs(y="Normalized Counts",
+           x=NULL,
+           title=paste(smoothVarList[i],', p = ',as.character(KS.out$p.value),sep="")
   ) + theme_minimal())
   
-  print(ggplot(data
-  )+geom_point(aes(x=.data[[smoothVarList[i]]],y=Pres)
-  )+geom_smooth(aes(x=.data[[smoothVarList[i]]],y=Pres),
-                method="loess"
-  )+labs(title=smoothVarList[i]))
-
+  # print(ggplot(data
+  # )+geom_point(aes(x=.data[[smoothVarList[i]]],y=Pres)
+  # )+geom_smooth(aes(x=.data[[smoothVarList[i]]],y=Pres),
+  #               method="loess"
+  # )+labs(title=smoothVarList[i]))
+  
+  # Plot presence bins at each site versus this covar
+  if (!str_detect(smoothVarList[i],"Slope") & !str_detect(smoothVarList[i],"Aspect")){
+    for (j in 1:length(sites)){
+      siteInd = which(!is.na(str_match(data$Site,sites[j])))
+      if (length(siteInd)>7){
+        print(ggplot(data[siteInd,]
+        )+geom_point(aes(x=.data[[smoothVarList[i]]],y=Pres)
+        )+geom_smooth(aes(x=.data[[smoothVarList[i]]],y=Pres),
+                      method="loess"
+        )+labs(title=paste(smoothVarList[i],'at',sites[j])))
+      }
+    }
+  }
 }
 
+
 ```
-Looks like there is a trend: Temp0, SSH0Lag7, GSDist, VelAsp700Lag7, SSH0Lag7 Chl0, Slope, Aspect
 
-Looks like there is no trend: FSLE0Lag28, GSLatLag28
+Starting covar list: "SSH0",
+                    "Chl0",
+                    "Sal0",
+                    "Sal700",
+                    "Temp0",
+                    "Temp700",
+                    "VelMag0",
+                    "VelMag700",
+                    "VelAsp0",
+                    "VelAsp700",
+                    "FSLE0",
+                    "Slope",
+                    "Aspect"
 
-
-```{r checkVIF}
-# calculate VIF for each of the variables desired in the full model
-colMod = glm(Pres~Temp0
-             # +Temp700Lag28
-             # +Sal0Lag56
-             # +Sal700Lag7
-             # +VelMag0Lag21
-             # +VelMag700Lag56
-             # +VelAsp0Lag21
-             +VelAsp700Lag7
-             +SSH0Lag7
-             +Chl0
-             # +FSLE0Lag28
-             # +GSLatLag28
-             +GSDist,
-             +Slope
-             +Aspect,
-             family=poisson,
-             data=data)
-
-VIFvals = vif(colMod)
-VIFvals
-# remove vars in stepwise fashion as necessary
-```
-GSDist is pretty collinear with SSH, and a bit with Temp700 and Sal700
-SSH collinear with Temp700, Sal700, and slightly with Chl0
-Temp700 and Sal700 slightly collinear with each other, remove one
+# Test for how a term should be included in the model
 ```{r smooth vs linear}
 
 # Test whether continuous covars should be included in model as linear or smooth terms
 
 startTime = Sys.time()
-smoothVarList = c("Temp0Lag42",
-             "Temp700Lag7",
-             "Sal0Lag21",
-             "VelMag0Lag28" ,
-             "VelMag700Lag7",
-             "VelAsp0Lag14" ,
-             "VelAsp700Lag28",
-             "SSH0",
-             "Chl0Lag7",
-             "FSLE0",
-             "GSLatLag14",
-             "GSDist",
-             "Slope",
-             "Aspect")
+smoothVarList = c("SSH0",
+                    "Chl0",
+                    "Sal0",
+                    "Sal700",
+                    "Temp0",
+                    "Temp700",
+                    "VelMag0",
+                    "VelMag700",
+                    "VelAsp0",
+                    "VelAsp700",
+                    "FSLE0",
+                    "Slope",
+                    "Aspect")
 
-termVote = matrix(ncol=length(smoothVarList),nrow=1)
+modOpts = c("linMod","threeKnots","fourKnots","fiveKnots")
+QIC_votes = matrix(nrow=length(smoothVarList),ncol=5)
 
-for (i in 1:length(smoothVarList)){
-  
-  linMod = geeglm(Pres~data[[smoothVarList[i]]],data=data,family=poisson,id=GroupID,corstr="ar1")
-  
-   smoothMod = geeglm(Pres~mSpline(data[[smoothVarList[i]]],
-                                   knots=quantile(data[[smoothVarList[i]]],probs=c(0.275,0.5,0.725)),
-                                   Boundary.knots=c(min(data[[smoothVarList[i]]]),max(data[[smoothVarList[i]]]))),
-                      data=data,
-                      family=poisson,
-                      id=GroupID,
-                      corstr="ar1")
-  
-  QIC_vals = c(QIC(linMod)[[1]],QIC(smoothMod)[[1]])
-  colnames(QIC_vals) = c("linMod","smoothMod")
-  
-  termVote[1,i] = colnames(QIC_vals)[which.min(QIC_vals)]
+for (i in 1:(length(smoothVarList)-2)){
+
+
+  # modelCall = paste('gam(Pres~data$',smoothVarList[i],',data=data,family=poisson)',sep="")
+  modelCall = paste('geeglm(Pres~data$',smoothVarList[i],',data=data,family=poisson,id=GroupID,corstr="ar1")',sep="")
+  linMod = eval(parse(text=modelCall))
+
+  # modelCall = paste('gam(Pres~s(data$',smoothVarList[i],',bs="cr"),data=data,family=poisson)',sep="")
+  modelCall = paste('geeglm(Pres~mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=c(0.5)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],'))),data=data,family=poisson,id=GroupID,corstr=\"ar1\")',sep="")
+  smoothMod1 = eval(parse(text=modelCall))
+
+  modelCall = paste('geeglm(Pres~mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=c(0.333,0.666)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],'))),data=data,family=poisson,id=GroupID,corstr=\"ar1\")',sep="")
+  smoothMod2 = eval(parse(text=modelCall))
+
+  modelCall = paste('geeglm(Pres~mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=c(0.275,0.5,0.725)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],'))),data=data,family=poisson,id=GroupID,corstr=\"ar1\")',sep="")
+  smoothMod3 = eval(parse(text=modelCall))
+
+  QIC_votes[i,1:3] = c(QIC(linMod)[[1]],QIC(smoothMod1)[[1]],QIC(smoothMod2)[[1]])
+  QIC_votes[i,5] = modOpts[which.min(QIC_votes[i,1:4])]
 }
 
 endTime = Sys.time()
 endTime-startTime
-
-
+colnames(QIC_votes) = c(modOpts,"Best")
+rownames(QIC_votes) = smoothVarList[]
+QIC_votes
 ```
+1: SSH, can't run linMod
+2: Chl0, runs all
+3: Sal0, can't run linMod, 4/5 knots
+4: Sal700, runs all
+5: Temp0, runs all
+6: Temp700, runs all
+7: VelMag0, can't run linMod, 3 knots
+8: VelMag700, runs all
+9: VelAsp0- have to run as a smooth with 4 knots
+10: VelAsp700- have to run as a smooth with 4 knots
+11: FSLE, can't run 3/4 knots
+12: Slope, runs all
+13: Aspect - have to run as a smooth with 4 knots
+
+          linMod              threeKnots          fourKnots           fiveKnots Best        
+SSH0      NA                  "-82435.8893156986" "-78993.8358427893" NA        "threeKnots"
+Chl0      "-84857.8923776399" "-94457.9791434235" "-93981.8007170209" NA        "threeKnots"
+Sal0      NA                  "-82865.9015831767" NA                  NA        "threeKnots"
+Sal700    "-81746.6426414191" "-82264.4004839092" "-83126.8113453727" NA        "fourKnots" 
+Temp0     "-84233.4535931791" "-89994.1345613944" "-90406.6698744469" NA        "fourKnots" 
+Temp700   "-76805.8170220697" "-74754.2955293565" "-72765.4907938189" NA        "linMod"    
+VelMag0   NA                  NA                  "-77145.8672388482" NA        "fourKnots" 
+VelMag700 "-82539.9020540103" "-82278.5528243085" "-82627.0764345603" NA        "fourKnots" 
+VelAsp0   NA                  NA                  "-83931.9491831082" NA        "fourKnots" 
+VelAsp700 NA                  NA                  "-84888.7493917615" NA        "fourKnots" 
+FSLE0     "-85175.7099106443" NA                  NA                  NA        "linMod"    
+Slope     "-98428.7987635592" "-135433.464251"    "-139221.117799437" NA        "fourKnots" 
+Aspect    NA                  NA                  "-144500.912206499" NA        "fourKnots" 
 
 
+# Make smooth terms, run full model and check collinearity
 ```{r fullModel}
-# Run full model and check autocorrelation of residuals, revise grouping variable if necessary
 
-smoothVarList = c("Temp0Lag42",
-             "Temp700Lag7",
-             "Sal0Lag21",
-             "VelMag0Lag28" ,
-             "VelMag700Lag7",
-             "VelAsp0Lag14" ,
-             "VelAsp700Lag28",
-             "SSH0",
-             "Chl0Lag7",
-             "FSLE0",
-             "GSLatLag14",
-             "GSDist",
-             "Slope",
-             "Aspect")
+smoothVarList = c("SSH0",
+                  "Chl0",
+                  "Sal0",
+                  "Sal700",
+                  "Temp0",
+                  "VelMag0",
+                  "VelMag700",
+                  "VelAsp0",
+                  "VelAsp700",
+                  "Slope")
 
+linVarList = c("FSLE0")
+knotList = list(c(0.5),
+             c(0.5),
+             c(0.5),
+             c(0.333,0.666),
+             c(0.333,0.666),
+             c(0.333,0.666),
+             c(0.333,0.666),
+             c(0.333,0.666),
+             c(0.333,0.666),
+             c(0.333,0.666))
 smoothNameList = character()
 
 for (i in 1:length(smoothVarList)){
   
-  eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVararList[i],',knots=quantile(data$',smoothVarList[i],',probs=c(0.275, 0.5, 0.725)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')))',sep="")))
+  if (str_detect(smoothVarList[i],"Asp")){
+    eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=unlist(knotList[i])),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')),periodic=TRUE)',sep="")))
+  } else {
+    eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=unlist(knotList[i])),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')))',sep="")))
+  }
   
   smoothNameList = c(smoothNameList,paste('S_',smoothVarList[i],sep=""))
 }
- thisForm = formula(paste('Pres~',paste(smoothNameList,collapse="+"),sep=""))
+thisForm = formula(paste('Pres~',paste(c(smoothNameList,linVarList),collapse="+"),sep=""))
 
-colMod = geeglm(thisForm,
-             family=poisson,
-             data=data,
-             id=GroupID,
-            corstr="ar1")
+fullMod = geeglm(thisForm,
+                family=poisson,
+                data=data,
+                id=GroupID,
+                corstr="ar1")
 
-modACF = acf(residuals(colMod),lag.max=180)
+VIFvals = vif(fullMod)
+VIFvals = cbind(VIFvals,(VIFvals[,3])^2)
+colnames(VIFvals)[4] = "LOOK AT ME"
+VIFvals
+# remove vars in stepwise fashion as necessary
+```
+Remove Temp700 because v collinear with Sal700, remove Aspect bc collinear with something
+# Check autocorrelation of residuals, revise grouping variable if necessary
+```{r}
+modACF = acf(residuals(fullMod),lag.max=180)
 
 ```
 
+Super autocorrelated!
 
-Changing the grouping variable doesn't have any effect at all on the residual autocorrelation, which is already quite minimal. Going with the most conservative grouping variable of 126 days.
+But changing the grouping variable doesn't have any effect at all on the residual autocorrelation. Going with the most conservative grouping variable of 77 days.
 
-
-```{r checkPV}
- #Add interaction term and run full model
-thisForm = formula(paste('Pres~',paste(smoothNameList,collapse="+"),'+S_VelAsp700Lag28:Aspect',sep=""))
-
-fullMod = geeglm(thisForm,
-             family=poisson,
-             data=data,
-             id=GroupID,
-            corstr="independence")
+#Check term significance
+```{r fullMod}
 
 # Get p-values
 getPvalues(fullMod)
 
 
 ```
+Variable    p-value
+S_Chl0    	0.019283			
+S_Sal0    	0.093899			
+S_Sal200    	0.001178			
+S_FSLE0	    0.046086			
+S_Slope	    <0.0001			
+S_Aspect    	0.012006			
+SSH0        	0.554557			
+Temp0	        0.269613	
+Removing SSH0, Temp0 because not significant
 
+#Remove non-significant terms, re-run model, check p-values
+```{r fullMod}
+smoothVarList = c("Chl0",
+                  "Sal0",
+                  "Sal200",
+                "Slope")
+
+linVarList = c("SSH0",
+                "Temp0")
+knotList = list(c(0.5),
+             c(0.5),
+             c(0.5))
+smoothNameList = character()
+
+for (i in 1:length(smoothVarList)){
+  
+  if (str_detect(smoothVarList[i],"Asp")){
+    eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=unlist(knotList[i])),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')),periodic=TRUE)',sep="")))
+  } else {
+    eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=unlist(knotList[i])),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')))',sep="")))
+  }
+  
+  smoothNameList = c(smoothNameList,paste('S_',smoothVarList[i],sep=""))
+}
+thisForm = formula(paste('Pres~',paste(c(smoothNameList,linVarList),collapse="+"),sep=""))
+
+reducedMod = geeglm(thisForm,
+                 family=poisson,
+                 data=data,
+                 id=GroupID,
+                 corstr="ar1")
+
+# Get p-values
+# getPvalues(reducedMod)
+
+
+```
+Variable    p-value
+S_Chl0    	0.000131			
+S_Sal0    	0.009037			
+S_Slope	    0.00045			
+SSH0	      0.026629			
+Temp0	      0.020526
+
+# Plot terms from regional model
+```{r plot regional}
+
+source("plotSmooths.R")
+source("plotLinears.R")
+terms = names(reducedMod$model)[2:length(names(reducedMod$model))]
+k=3
+
+for (i in 1:length(terms)){
+  if (str_detect(terms[i],"S_")){ # plot smooth terms
+    term = str_remove(terms[i],"S_")
+  coefInd = which(str_detect(names(reducedMod$coefficients),term))
+  if (str_detect(term,"Asp")){periodic=TRUE} else {periodic=FALSE}
+  print(plotSmooths(reducedMod,term,coefInd,k,periodic,site=NA,title=NULL))
+  } else { # plot linear terms
+    term=terms[i]
+  coefInd = which(str_detect(names(reducedMod$coefficients),term))
+  print(plotLinears(reducedMod,term,coefInd,site=NA,title=NULL))
+  }
+}
+
+```
+
+# Create site-specific models
+# Don't include slope or aspect because they're only a single value for each site
+```{r site-specific models}
+
+sites = c("HZ","OC","NC","BC","WC","NFC","HAT","GS","BP","BS")
+smoothVarList = c("Chl0",
+                  "Sal0",
+                  "Sal200",
+                  "FSLE0")
+
+linVarList = c("SSH0",
+                "Temp0")
+knotList = list(c(0.5),
+             c(0.5),
+             c(0.5),
+             c(0.5),
+             c(0.5),
+             c(0.275,0.5,0.725))
+siteModList = list()
+pValList = list()
+
+
+for (j in 1:length(sites)){
+  siteInd = which(!is.na(str_match(data$Site,sites[j])))
+  modDF = data[siteInd,]
+  
+  smoothNameList = character()
+  
+  for (i in 1:length(smoothVarList)){
+    
+    if (str_detect(smoothVarList[i],"Asp")){
+      eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(modDF$',smoothVarList[i],',knots=quantile(modDF$',smoothVarList[i],',probs=unlist(knotList[i])),Boundary.knots=c(min(modDF$',smoothVarList[i],'),max(modDF$',smoothVarList[i],')),periodic=TRUE)',sep="")))
+    } else {
+      eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(modDF$',smoothVarList[i],',knots=quantile(modDF$',smoothVarList[i],',probs=unlist(knotList[i])),Boundary.knots=c(min(modDF$',smoothVarList[i],'),max(modDF$',smoothVarList[i],')))',sep="")))
+    }
+    
+    smoothNameList = c(smoothNameList,paste('S_',smoothVarList[i],sep=""))
+  }
+  
+  thisForm = formula(paste('Pres~',paste(c(smoothNameList,linVarList),collapse="+"),sep=""))
+  
+  siteModList[[sites[j]]] = geeglm(thisForm,
+                                  family=poisson,
+                                  data=modDF,
+                                  id=GroupID,
+                                  corstr="ar1")
+  
+  pValList[[sites[j]]] = getPvalues(siteModList[[sites[j]]])
+
+}
+
+print(pValList)
+
+```
+
+# Remove non-significant terms and rerun
+```{r site-specific models}
+
+siteModListRed = list()
+pValListRed = list()
+for (i in 1:length(siteModList)){
+  site = names(siteModList)[i]
+  badVars = pValList[[site]]$Variable[(pValList[[site]]$'p-value'>=0.05)]
+    if (!isempty(badVars)){
+  siteModListRed[[site]]<-eval(parse(text=paste("update(siteModList[[site]], . ~ . - ", paste(badVars,collapse="-"), ")", sep="")))
+   pValListRed[[site]] = getPvalues(siteModListRed[[site]])
+    } else {
+      siteModListRed[[site]] = siteModList[[site]]
+      pValListRed[[site]] = pValList[[site]]
+    }
+}
+
+print(pValListRed)
+
+
+
+```
+$HZ
+  Variable  p-value
+1   S_Chl0  <0.0001
+2 S_Sal200 0.393403
+3  S_FSLE0  0.00125
+
+$BC
+  Variable  p-value
+1   S_Chl0  <0.0001
+2   S_Sal0 0.230803
+3 S_Sal200 0.000241
+4  S_FSLE0 0.002192
+5    Temp0  <0.0001
+
+$WC
+  Variable  p-value
+1   S_Chl0  <0.0001
+2   S_Sal0 0.230803
+3 S_Sal200 0.000241
+4  S_FSLE0 0.002192
+5    Temp0  <0.0001
+
+$BS
+  Variable  p-value
+1   S_Chl0  <0.0001
+2 S_Sal200 0.002245
+3  S_FSLE0 0.002806
+4     SSH0 0.007039
+5    Temp0  <0.0001
+
+# Again, remove non-significant terms and rerun
+```{r site-specific models}
+
+
+for (i in 1:length(siteModListRed)){
+  site = names(siteModListRed)[i]
+  badVars = pValListRed[[site]]$Variable[(pValListRed[[site]]$'p-value'>=0.05)]
+  if (!isempty(badVars)){
+  siteModListRed[[site]]<-eval(parse(text=paste("update(siteModListRed[[site]], . ~ . - ", paste(badVars,collapse="-"), ")", sep="")))
+   pValListRed[[site]] = getPvalues(siteModListRed[[site]])
+  }
+}
+
+print(pValListRed)
+
+
+
+```
+
+
+# Plot terms from site-specific models
+```{r plot sites specific models}
+
+source("plotSmooths.R")
+source("plotLinears.R")
+
+for (j in 1:length(siteModListRed)){
+  
+  terms = names(siteModListRed[[j]]$model)[2:length(names(siteModListRed[[j]]$model))]
+  k=3
+  siteName = names(siteModListRed)[j]
+  
+  for (i in 1:length(terms)){
+    if (str_detect(terms[i],"S_")){ # plot smooth terms
+      term = str_remove(terms[i],"S_")
+      coefInd = which(str_detect(names(siteModListRed[[j]]$coefficients),term))
+      if (str_detect(term,"Asp")){periodic=TRUE} else {periodic=FALSE}
+      print(plotSmooths(siteModListRed[[j]],term,coefInd,k,periodic,site=siteName,title=siteName))
+    } else { # plot linear terms
+      term=terms[i]
+      coefInd = which(str_detect(names(siteModListRed[[j]]$coefficients),term))
+      print(plotLinears(siteModListRed[[j]],term,coefInd,site=siteName,title=siteName))
+    }
+  }
+}
+
+```
 
