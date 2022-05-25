@@ -12,7 +12,7 @@ inDir = 'J:/Chpt_3/CovarTS'
 outDir = 'J:/Chpt_3/CovarPlots'
 
 fileList = dir(inDir,pattern=".Rdata")
-lags = c(7,14,21,28,42,56)
+# lags = c(7,14,21,28,42,56)
 
 ## Clean FSLE data -------------------------
 # Aviso FSLE is daily at 1/25the (0.04) degree spatial resolution, re-gridded to 0.08deg
@@ -56,21 +56,21 @@ for (i in 2:12){
   FSLE[skippedBins,i] = missFSLE
 }
 
-# Create time lagged vectors
-startInd = which(FSLE$Time==as.Date('2016-05-01',origin="1970-01-01"))
-fullLength = length(FSLE$Time)
-for (i in 2:12){
-  for (k in lags){
-    lagInd = startInd-k
-    eval(parse(text=paste('FSLE$',sites[i],'Lag',as.character(k),' = NA',sep="")))
-    eval(parse(text=paste('FSLE$',sites[i],'Lag',as.character(k),'[startInd:',fullLength,'] = FSLE$',sites[i],'[lagInd:(',fullLength,'-',as.character(k),')]',sep="")))
-  }
-}
+# # Create time lagged vectors
+# startInd = which(FSLE$Time==as.Date('2016-05-01',origin="1970-01-01"))
+# fullLength = length(FSLE$Time)
+# for (i in 2:12){
+#   for (k in lags){
+#     lagInd = startInd-k
+#     eval(parse(text=paste('FSLE$',sites[i],'Lag',as.character(k),' = NA',sep="")))
+#     eval(parse(text=paste('FSLE$',sites[i],'Lag',as.character(k),'[startInd:',fullLength,'] = FSLE$',sites[i],'[lagInd:(',fullLength,'-',as.character(k),')]',sep="")))
+#   }
+# }
 write.csv(FSLE,file=paste(inDir,'/','FSLE_TS.csv',sep=""),row.names=FALSE)
 
 ## Clean HYCOM data --------------------------------
 # Downloaded HYCOM data are daily at 2/25th (0.08) degrees irregular spatial resolution, re-gridded to 0.08deg
-vars = c('SSH','Salinity','Temperature','VelocityMag','VelocityAsp')
+vars = c('SSH','Salinity','Temperature','VelocityMag','VelocityAsp','EKE')
 lon = "ES"
 
 for (j in 1:length(vars)){
@@ -114,25 +114,25 @@ for (j in 1:length(vars)){
       eval(parse(text=paste('fullSSH$',sites[i],' = (approx(x=masterData.Time[datBins],y=SSHDF[datBins,i],xout=fullSSH[,1],method="linear"))$y',sep="")))
     }
     
-    # Create time lagged vectors
-    startInd = which(fullSSH$Time==as.Date('2016-05-01',origin="1970-01-01"))
-    fullLength = length(fullSSH$Time)
-    for (i in 1:10){
-      for (k in lags){
-        lagInd = startInd-k
-        eval(parse(text=paste('fullSSH$',sites[i],'Lag',as.character(k),' = NA',sep="")))
-        eval(parse(text=paste('fullSSH$',sites[i],'Lag',as.character(k),'[startInd:',fullLength,'] = fullSSH$',sites[i],'[lagInd:(',fullLength,'-',as.character(k),')]',sep="")))
-      }
-    }
+    # # Create time lagged vectors
+    # startInd = which(fullSSH$Time==as.Date('2016-05-01',origin="1970-01-01"))
+    # fullLength = length(fullSSH$Time)
+    # for (i in 1:10){
+    #   for (k in lags){
+    #     lagInd = startInd-k
+    #     eval(parse(text=paste('fullSSH$',sites[i],'Lag',as.character(k),' = NA',sep="")))
+    #     eval(parse(text=paste('fullSSH$',sites[i],'Lag',as.character(k),'[startInd:',fullLength,'] = fullSSH$',sites[i],'[lagInd:(',fullLength,'-',as.character(k),')]',sep="")))
+    #   }
+    # }
     write.csv(fullSSH,file=paste(inDir,'/','SSH_TS.csv',sep=""),row.names=FALSE)
     
   } else { # Multi-depth Variables
     
     TSind = which(!is.na(str_match(fileList,paste(vars[j],'_Profiles',sep=""))) & !is.na(str_match(fileList,lon)))
     load(paste(inDir,'/',fileList[TSind],sep=""))
-    outDFs = c('fullSalinity','fullTemperature','fullVelocityMag','fullVelocityAsp')
+    outDFs = c('fullSalinity','fullTemperature','fullVelocityMag','fullVelocityAsp','fullEKE')
     depths = c(0,100,200,300,400,500,600,700,800) # desired depth layers
-    units = c("PPT",paste(intToUtf8(176),"C",sep=""),"m/s",paste(intToUtf8(176),"C",sep=""))
+    units = c("PPT",paste(intToUtf8(176),"C",sep=""),"m/s",intToUtf8(176),paste(expression('cm'^2),'/',expression('s'^2),sep=""))
     
     eval(parse(text=paste('full',vars[j],' = data.frame(Time=seq.Date(from=as.Date("2016-02-01",origin="1970-01-01"),to=as.Date("2019-04-30",origin="1970-01-01"),by=1))',sep="")))
     
@@ -202,17 +202,17 @@ for (j in 1:length(vars)){
       return('WARNING: SPURIOUS NEGATIVE VALUES CHECK DATA')
     }
     
-    # Create time lagged vectors
-    eval(parse(text=paste('startInd = which(full',vars[j],'$Time==as.Date("2016-05-01",origin="1970-01-01"))',sep="")))
-    eval(parse(text=paste('fullLength = length(full',vars[j],'$Time)',sep="")))
-    eval(parse(text=paste('fullColNames = colnames(full',vars[j],')',sep="")))
-    for (i in 2:length(fullColNames)){
-      for (k in lags){
-        lagInd = startInd-k
-        eval(parse(text=paste('full',vars[j],'$',fullColNames[i],'Lag',as.character(k),' = NA',sep="")))
-        eval(parse(text=paste('full',vars[j],'$',fullColNames[i],'Lag',as.character(k),'[startInd:',fullLength,'] = full',vars[j],'$',fullColNames[i],'[lagInd:(',fullLength,'-',as.character(k),')]',sep="")))
-      }
-    }
+    # # Create time lagged vectors
+    # eval(parse(text=paste('startInd = which(full',vars[j],'$Time==as.Date("2016-05-01",origin="1970-01-01"))',sep="")))
+    # eval(parse(text=paste('fullLength = length(full',vars[j],'$Time)',sep="")))
+    # eval(parse(text=paste('fullColNames = colnames(full',vars[j],')',sep="")))
+    # for (i in 2:length(fullColNames)){
+    #   for (k in lags){
+    #     lagInd = startInd-k
+    #     eval(parse(text=paste('full',vars[j],'$',fullColNames[i],'Lag',as.character(k),' = NA',sep="")))
+    #     eval(parse(text=paste('full',vars[j],'$',fullColNames[i],'Lag',as.character(k),'[startInd:',fullLength,'] = full',vars[j],'$',fullColNames[i],'[lagInd:(',fullLength,'-',as.character(k),')]',sep="")))
+    #   }
+    # }
     
     # Save data as .csv
     eval(parse(text=paste("write.csv(full",vars[j],",file=\"J:/Chpt_3/CovarTS/",vars[j],"_TS.csv\",row.names=FALSE)",sep="")))
@@ -259,16 +259,16 @@ for (i in 2:12){
   Chl[,i] = (approx(x=Chl[datBins,1],y=Chl[datBins,i],xout=Chl[,1],method="linear"))$y
 }
 
-# Create time lagged vectors
-startInd = which(Chl$Time==as.Date('2016-05-01',origin="1970-01-01"))
-fullLength = length(Chl$Time)
-for (i in 2:12){
-  for (k in lags){
-    lagInd = startInd-k
-    eval(parse(text=paste('Chl$',sites[i],'Lag',as.character(k),' = NA',sep="")))
-    eval(parse(text=paste('Chl$',sites[i],'Lag',as.character(k),'[startInd:',fullLength,'] = Chl$',sites[i],'[lagInd:(',fullLength,'-',as.character(k),')]',sep="")))
-  }
-}
+# # Create time lagged vectors
+# startInd = which(Chl$Time==as.Date('2016-05-01',origin="1970-01-01"))
+# fullLength = length(Chl$Time)
+# for (i in 2:12){
+#   for (k in lags){
+#     lagInd = startInd-k
+#     eval(parse(text=paste('Chl$',sites[i],'Lag',as.character(k),' = NA',sep="")))
+#     eval(parse(text=paste('Chl$',sites[i],'Lag',as.character(k),'[startInd:',fullLength,'] = Chl$',sites[i],'[lagInd:(',fullLength,'-',as.character(k),')]',sep="")))
+#   }
+# }
 write.csv(Chl,file=paste(inDir,'/','Chl_TS.csv',sep=""),row.names=FALSE)
 
 ## Make modeling csv files ---------------------------
