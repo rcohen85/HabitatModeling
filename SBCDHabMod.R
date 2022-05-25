@@ -24,176 +24,183 @@ library(gratia)
 # library(multitaper)
 
 ## GEEGAM approach ------------------------------------
-data = data.frame(read.csv('J:/Chpt_3/ModelData/UD28_masterDF.csv'))
-lagID = 40
-numClust = length(data$Pres)/(lagID-1)
-if (numClust<length(data$Pres)){
-  clustID = rep(1:ceiling(numClust),each=lagID)
-  clustID = clustID[1:length(data$Pres)]
-} else {
-  clustID = 1:length(data$Pres)
-}
-data$GroupID = clustID
-
-# Round presence to get Poisson dist
-data$Pres = round(data$Pres)
-
-# Test for how a term should be included in the model
-startTime = Sys.time()
-smoothVarList = c("SSH0",
-                  "Chl0",
-                  "Sal0",
-                  "Sal200",
-                  "Temp0",
-                  "FSLE0",
-                  "Slope",
-                  "Aspect")
-
-modOpts = c("linMod","threeKnots","fourKnots")
-QIC_votes = matrix(nrow=length(smoothVarList),ncol=4)
-
-for (i in 1:(length(smoothVarList)-1)){
-  
-  modelCall = paste('geeglm(Pres~data$',smoothVarList[i],',data=data,family=poisson,id=GroupID,corstr="ar1")',sep="")
-  linMod = eval(parse(text=modelCall))
-  
-  modelCall = paste('geeglm(Pres~mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=c(0.5)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],'))),data=data,family=poisson,id=GroupID,corstr=\"ar1\")',sep="")
-  smoothMod1 = eval(parse(text=modelCall))
-  
-  modelCall = paste('geeglm(Pres~mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=c(0.333,0.666)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],'))),data=data,family=poisson,id=GroupID,corstr=\"ar1\")',sep="")
-  smoothMod2 = eval(parse(text=modelCall))
-  
-  # modelCall = paste('geeglm(Pres~mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=c(0.275,0.5,0.725)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],'))),data=data,family=poisson,id=GroupID,corstr=\"ar1\")',sep="")
-  # smoothMod3 = eval(parse(text=modelCall))
-  
-  QIC_votes[i,1:3] = c(QIC(linMod)[[1]],QIC(smoothMod1)[[1]],QIC(smoothMod2)[[1]])
-  QIC_votes[i,4] = modOpts[which.min(QIC_votes[i,1:3])]
-}
-
-endTime = Sys.time()
-endTime-startTime
-colnames(QIC_votes) = c(modOpts,"Best")
-rownames(QIC_votes) = smoothVarList[]
-QIC_votes
-
-#           linMod              threeKnots          fourKnots           Best        
-# SSH0   "-2517357.26516939" "-2517391.09099838" "-2518046.60409154" "fourKnots" 
-# Chl0   "-2416276.46810609" "-2460154.55693961" "-2456293.7020221"  "threeKnots"
-# Sal0   "-2387459.7791835"  "-2401147.58143417" "-2401909.84094057" "fourKnots" 
-# Sal200 "-2381759.47681517" "-2398649.87305492" "-2397868.20940183" "threeKnots"
-# Temp0  "-2462457.4084357"  "-2503534.24879697" "-2500051.87320411" "threeKnots"
-# FSLE0  "-2384991.96877844" "-2385714.26032129" "-2385762.02799539" "fourKnots" 
-# Slope  "-2409405.0374478"  "-2532732.78179058" "-2533679.36650928" "fourKnots" 
-# Aspect NA                  NA                  NA                  NA
-
-# Make smooth terms, run full model and check collinearity
-smoothVarList = c("SSH0",
-                  "Chl0",
-                  "Sal0",
-                  # "Sal200",
-                  "Temp0",
-                  # "FSLE0",
-                  "Slope")
-                  # "Aspect")
-knotList = list(c(0.333,0.666),
-                c(0.5),
-                c(0.333,0.666),
-                # c(0.5),
-                c(0.5),
-                # c(0.333,0.666),
-                c(0.333,0.666))
-                # c(0.333,0.666))
-linVarList = list()
-smoothNameList = character()
-
-
-for (i in 1:length(smoothVarList)){
-  
-  if (str_detect(smoothVarList[i],"Asp")){
-    eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=unlist(knotList[i])),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')),periodic=TRUE)',sep="")))
-  } else {
-    eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=unlist(knotList[i])),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')))',sep="")))
-  }
-  
-  smoothNameList = c(smoothNameList,paste('S_',smoothVarList[i],sep=""))
-}
-thisForm = formula(paste('Pres~',paste(c(smoothNameList,linVarList),collapse="+"),sep=""))
-
-fullMod = geeglm(thisForm,
-                  family=poisson,
-                  data=data,
-                  id=GroupID,
-                  corstr="ar1")
-
-VIFvals = vif(fullMod)
-VIFvals = cbind(VIFvals,(VIFvals[,3])^2)
-colnames(VIFvals)[4] = "LOOK AT ME"
-VIFvals
-
-#             GVIF Df GVIF^(1/(2*Df)) LOOK AT ME
-# S_SSH0    61.084  5           1.509      2.276
-# S_Chl0    11.268  4           1.354      1.832
-# S_Sal0    22.547  5           1.366      1.865
-# S_Sal200  24.870  4           1.494      2.233
-# S_Temp0    8.658  4           1.310      1.715
-# S_FSLE0    5.355  5           1.183      1.399
-# S_Slope  138.236  5           1.637      2.680
-# S_Aspect  13.030  2           1.900      3.610
-
-# no collinearity, no need to remove any terms
-
-# check convergence
-fullMod$geese$error
-# 1 model didn't converge
-
-# run w. unstructured correlation
-fullMod = geeglm(thisForm,
-                 family=poisson,
-                 data=data,
-                 id=GroupID,
-                 corstr="unstructured")
-fullMod$geese$error
-# 0 model converged
-
-# check term significance
-PV = getPvalues(fullMod)
-
-# GETS STUCK THINKING FOREVER (>36HRS)
-
-#Remove non-significant terms, re-run model, check p-values
-PV$'p-value'[PV$'p-value'=="<0.0001"] = 0.0001
-badVars = PV$Variable[as.numeric(PV$'p-value')>=0.05]
-redMod<-eval(parse(text=paste("update(fullMod, . ~ . - ", paste(badVars,collapse="-"), ")", sep="")))
-if (redMod$geese$error==1){
-  print("Model did not converge")
-} else {PVred = getPvalues(redMod)
-PVred$'p-value'[PVred$'p-value'=="<0.0001"] = 0.0001
-PVred}
-
-# Get p-values
-PV = getPvalues(reducedMod)
-
-# Plot terms from regional model
-source("plotSmooths.R")
-source("plotLinears.R")
-terms = names(reducedMod$model)[2:length(names(reducedMod$model))]
-k=3
-
-for (i in 1:length(terms)){
-  if (str_detect(terms[i],"S_")){ # plot smooth terms
-    term = str_remove(terms[i],"S_")
-    coefInd = which(str_detect(names(reducedMod$coefficients),term))
-    if (str_detect(term,"Asp")){periodic=TRUE} else {periodic=FALSE}
-    print(plotSmooths(reducedMod,term,coefInd,k,periodic,site=NA,title=NULL))
-  } else { # plot linear terms
-    term=terms[i]
-    coefInd = which(str_detect(names(reducedMod$coefficients),term))
-    print(plotLinears(reducedMod,term,coefInd,site=NA,title=NULL))
-  }
-}
+# data = data.frame(read.csv('J:/Chpt_3/ModelData/UD28_masterDF.csv'))
+# lagID = 40
+# numClust = length(data$Pres)/(lagID-1)
+# if (numClust<length(data$Pres)){
+#   clustID = rep(1:ceiling(numClust),each=lagID)
+#   clustID = clustID[1:length(data$Pres)]
+# } else {
+#   clustID = 1:length(data$Pres)
+# }
+# data$GroupID = clustID
+# 
+# # Round presence to get Poisson dist
+# data$Pres = round(data$Pres)
+# 
+# # Test for how a term should be included in the model
+# startTime = Sys.time()
+# smoothVarList = c("SSH0",
+#                   "Chl0",
+#                   "Sal0",
+#                   "Sal200",
+#                   "Temp0",
+#                   "FSLE0",
+#                   "Slope",
+#                   "Aspect")
+# 
+# modOpts = c("linMod","threeKnots","fourKnots")
+# QIC_votes = matrix(nrow=length(smoothVarList),ncol=4)
+# 
+# for (i in 1:(length(smoothVarList)-1)){
+#   
+#   modelCall = paste('geeglm(Pres~data$',smoothVarList[i],',data=data,family=poisson,id=GroupID,corstr="ar1")',sep="")
+#   linMod = eval(parse(text=modelCall))
+#   
+#   modelCall = paste('geeglm(Pres~mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=c(0.5)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],'))),data=data,family=poisson,id=GroupID,corstr=\"ar1\")',sep="")
+#   smoothMod1 = eval(parse(text=modelCall))
+#   
+#   modelCall = paste('geeglm(Pres~mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=c(0.333,0.666)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],'))),data=data,family=poisson,id=GroupID,corstr=\"ar1\")',sep="")
+#   smoothMod2 = eval(parse(text=modelCall))
+#   
+#   # modelCall = paste('geeglm(Pres~mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=c(0.275,0.5,0.725)),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],'))),data=data,family=poisson,id=GroupID,corstr=\"ar1\")',sep="")
+#   # smoothMod3 = eval(parse(text=modelCall))
+#   
+#   QIC_votes[i,1:3] = c(QIC(linMod)[[1]],QIC(smoothMod1)[[1]],QIC(smoothMod2)[[1]])
+#   QIC_votes[i,4] = modOpts[which.min(QIC_votes[i,1:3])]
+# }
+# 
+# endTime = Sys.time()
+# endTime-startTime
+# colnames(QIC_votes) = c(modOpts,"Best")
+# rownames(QIC_votes) = smoothVarList[]
+# QIC_votes
+# 
+# #           linMod              threeKnots          fourKnots           Best        
+# # SSH0   "-2517357.26516939" "-2517391.09099838" "-2518046.60409154" "fourKnots" 
+# # Chl0   "-2416276.46810609" "-2460154.55693961" "-2456293.7020221"  "threeKnots"
+# # Sal0   "-2387459.7791835"  "-2401147.58143417" "-2401909.84094057" "fourKnots" 
+# # Sal200 "-2381759.47681517" "-2398649.87305492" "-2397868.20940183" "threeKnots"
+# # Temp0  "-2462457.4084357"  "-2503534.24879697" "-2500051.87320411" "threeKnots"
+# # FSLE0  "-2384991.96877844" "-2385714.26032129" "-2385762.02799539" "fourKnots" 
+# # Slope  "-2409405.0374478"  "-2532732.78179058" "-2533679.36650928" "fourKnots" 
+# # Aspect NA                  NA                  NA                  NA
+# 
+# # Make smooth terms, run full model and check collinearity
+# smoothVarList = c("SSH0",
+#                   "Chl0",
+#                   "Sal0",
+#                   # "Sal200",
+#                   "Temp0",
+#                   # "FSLE0",
+#                   "Slope")
+# # "Aspect")
+# knotList = list(c(0.333,0.666),
+#                 c(0.5),
+#                 c(0.333,0.666),
+#                 # c(0.5),
+#                 c(0.5),
+#                 # c(0.333,0.666),
+#                 c(0.333,0.666))
+# # c(0.333,0.666))
+# linVarList = list()
+# smoothNameList = character()
+# 
+# 
+# for (i in 1:length(smoothVarList)){
+#   
+#   if (str_detect(smoothVarList[i],"Asp")){
+#     eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=unlist(knotList[i])),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')),periodic=TRUE)',sep="")))
+#   } else {
+#     eval(parse(text=paste('S_',smoothVarList[i],'= mSpline(data$',smoothVarList[i],',knots=quantile(data$',smoothVarList[i],',probs=unlist(knotList[i])),Boundary.knots=c(min(data$',smoothVarList[i],'),max(data$',smoothVarList[i],')))',sep="")))
+#   }
+#   
+#   smoothNameList = c(smoothNameList,paste('S_',smoothVarList[i],sep=""))
+# }
+# thisForm = formula(paste('Pres~',paste(c(smoothNameList,linVarList),collapse="+"),sep=""))
+# 
+# fullMod = geeglm(thisForm,
+#                  family=poisson,
+#                  data=data,
+#                  id=GroupID,
+#                  corstr="ar1")
+# 
+# VIFvals = vif(fullMod)
+# VIFvals = cbind(VIFvals,(VIFvals[,3])^2)
+# colnames(VIFvals)[4] = "LOOK AT ME"
+# VIFvals
+# 
+# #             GVIF Df GVIF^(1/(2*Df)) LOOK AT ME
+# # S_SSH0    61.084  5           1.509      2.276
+# # S_Chl0    11.268  4           1.354      1.832
+# # S_Sal0    22.547  5           1.366      1.865
+# # S_Sal200  24.870  4           1.494      2.233
+# # S_Temp0    8.658  4           1.310      1.715
+# # S_FSLE0    5.355  5           1.183      1.399
+# # S_Slope  138.236  5           1.637      2.680
+# # S_Aspect  13.030  2           1.900      3.610
+# 
+# # no collinearity, no need to remove any terms
+# 
+# # check convergence
+# fullMod$geese$error
+# # 1 model didn't converge
+# 
+# # run w. unstructured correlation
+# fullMod = geeglm(thisForm,
+#                  family=poisson,
+#                  data=data,
+#                  id=GroupID,
+#                  corstr="unstructured")
+# fullMod$geese$error
+# # 0 model converged
+# 
+# # check term significance
+# PV = getPvalues(fullMod)
+# 
+# # GETS STUCK THINKING FOREVER (>36HRS)
+# 
+# #Remove non-significant terms, re-run model, check p-values
+# PV$'p-value'[PV$'p-value'=="<0.0001"] = 0.0001
+# badVars = PV$Variable[as.numeric(PV$'p-value')>=0.05]
+# redMod<-eval(parse(text=paste("update(fullMod, . ~ . - ", paste(badVars,collapse="-"), ")", sep="")))
+# if (redMod$geese$error==1){
+#   print("Model did not converge")
+# } else {PVred = getPvalues(redMod)
+# PVred$'p-value'[PVred$'p-value'=="<0.0001"] = 0.0001
+# PVred}
+# 
+# # Get p-values
+# PV = getPvalues(reducedMod)
+# 
+# # Plot terms from regional model
+# source("plotSmooths.R")
+# source("plotLinears.R")
+# terms = names(reducedMod$model)[2:length(names(reducedMod$model))]
+# k=3
+# 
+# for (i in 1:length(terms)){
+#   if (str_detect(terms[i],"S_")){ # plot smooth terms
+#     term = str_remove(terms[i],"S_")
+#     coefInd = which(str_detect(names(reducedMod$coefficients),term))
+#     if (str_detect(term,"Asp")){periodic=TRUE} else {periodic=FALSE}
+#     print(plotSmooths(reducedMod,term,coefInd,k,periodic,site=NA,title=NULL))
+#   } else { # plot linear terms
+#     term=terms[i]
+#     coefInd = which(str_detect(names(reducedMod$coefficients),term))
+#     print(plotLinears(reducedMod,term,coefInd,site=NA,title=NULL))
+#   }
+# }
 
 ## GAM approach ---------------------
 # Regional model
+spec = 'SBCD'
+outDir = "J:/Chpt_3/ModelOutput"
+
+  # if it doesn't already exist, create directory to save models and figures
+  if (!dir.exists(paste(outDir,'/',spec,sep=""))){
+    dir.create(paste(outDir,'/',spec,sep=""))
+  }
 
 data = data.frame(read.csv('J:/Chpt_3/ModelData/UD28_masterDF.csv'))
 # Round presence to get Poisson dist
@@ -310,10 +317,10 @@ redMod = gam(Pres ~ s(Chl0,bs="cs",k=5)
              # + s(VelAsp0,bs="cc",k=5)
              + s(Slope,bs="cc",k=5)
              + s(Aspect,bs="cc",k=5),
-              data=data,
-              family=poisson,
-              gamma=1.4,
-              na.action="na.fail")
+             data=data,
+             family=poisson,
+             gamma=1.4,
+             na.action="na.fail")
 
 
 # check concurvity of smooth terms
@@ -334,13 +341,14 @@ round(conCurv$estimate,digits=4)
 # Sal0 still quite explained by SSH & Temp0, but proceeding anyway
 
 modCompTable = dredge(redMod,
-              beta="none",
-              evaluate=TRUE,
-              trace=TRUE)
+                      beta="none",
+                      evaluate=TRUE,
+                      trace=TRUE)
 
 # run optimal model
 optMod = get.models(modCompTable,subset=1)
 optMod = optMod[[names(optMod)]]
+save(optMod,modCompTable,file=paste(outDir,'/',spec,'/','RegionalModel.Rdata',sep=""))
 
 # check p-values
 PV = summary(optMod)$s.pv
@@ -380,44 +388,80 @@ summary(optMod)
 
 
 # plot
-plot.gam(optMod$'256',all.terms=TRUE,rug=TRUE,pages=1)
+png(filename=paste(outDir,'/',spec,'/','SBCD_allSites.png',sep=""),width=600,height=600)
+plot.gam(optMod,all.terms=TRUE,rug=TRUE,pages=1)
+while (dev.cur()>1) {dev.off()}
 
 
 # Site-specific models ---------------
 sites = unique(data$Site)
-
+siteModList = list()
+pValList = list()
+siteModCompList = list()
 for (i in 1:length(sites)){
-
+  
   siteInd = which(!is.na(str_match(data$Site,sites[i])))
   siteData = data[siteInd,]
   
-redMod = gam(Pres ~ s(Chl0,bs="cs",k=5) # same terms as redMod from regional model, but no slope or aspect
-             + s(FSLE0,bs="cs",k=5)
-             + s(Sal0,bs="cs",k=4)
-             + s(EKE0,bs="cs",k=5)
-             + s(SSH0,bs="cs",k=5)
-             + s(Temp0,bs="cs",k=5),
-             data=siteData,
-             family=poisson,
-             gamma=1.4,
-             na.action="na.fail")
-
-siteModCompTable = dredge(redMod,
-                      beta="none",
-                      evaluate=TRUE,
-                      trace=TRUE)
-
-optSiteMod = get.models(siteModCompTable,subset=1)
-optSiteMod = optSiteMod[[names(optSiteMod)]]
-sitePV = summary(optSiteMod)$s.pv
-
-# get terms from formula as strings
-thisForm = optSiteMod$formula
-startSmooth = str_locate_all(thisForm,'s\\(')
-
-#Remove non-significant terms & re-run model iteratively until only signif covars remain
-badVars = allTerms[sitePV>=0.05]
-redMod<-eval(parse(text=paste("update(optSiteMod, . ~ . - ", paste(badVars,collapse="-"), ")", sep="")))
-PVred = getPvalues(redMod)
-
+  if (sum(siteData$Pres>0)>25){
+    
+    fullSiteMod = gam(Pres ~ s(Chl0,bs="cs",k=5) # same terms as redMod from regional model, but no slope or aspect
+                      + s(FSLE0,bs="cs",k=5)
+                      + s(Sal0,bs="cs",k=4)
+                      + s(EKE0,bs="cs",k=5)
+                      + s(SSH0,bs="cs",k=5)
+                      + s(Temp0,bs="cs",k=5),
+                      data=siteData,
+                      family=poisson,
+                      gamma=1.4,
+                      na.action="na.fail")
+    
+    siteModCompTable = dredge(fullSiteMod,
+                              beta="none",
+                              evaluate=TRUE,
+                              trace=TRUE)
+    siteModCompList[[sites[i]]] = siteModCompTable
+    
+    optSiteMod = get.models(siteModCompTable,subset=1)
+    optSiteMod = optSiteMod[[names(optSiteMod)]]
+    sitePV = summary(optSiteMod)$s.pv
+    
+    
+    if (any(sitePV>=0.05)){ # Remove non-significant terms & re-run model iteratively until only signif covars remain
+      flag = 1
+      while (flag==1){
+      # get terms from formula as strings
+      thisForm = as.character(optSiteMod$formula)[3]
+      startSmooth = str_locate_all(thisForm,'s\\(')[[1]][,1]
+      termInd = str_locate_all(thisForm,'\\+')[[1]][,1]
+      termInd = c(0,termInd,str_length(thisForm)+1)
+      allTerms = character()
+      for (j in 1:length(termInd)-1){
+        thisTerm = str_sub(thisForm,start=termInd[j]+1,end=termInd[j+1]-1)
+        allTerms = c(allTerms,thisTerm)
+      }
+      # identify which terms were non-significant
+      badVars = allTerms[sitePV>=0.05]
+      # update model
+      redMod<-eval(parse(text=paste("update(optSiteMod, . ~ . - ", paste(badVars,collapse="-"), ")", sep="")))
+      redSitePV = summary(redMod)$s.pv
+      if (!any(redSitePV>=0.05)){
+        siteModList[[sites[i]]] = redMod
+        pValList[[sites[i]]] = redSitePV
+        flag=0
+      }
+      }
+    } else {
+      siteModList[[sites[i]]] = optSiteMod
+      pValList[[sites[i]]] = sitePV
+    }
+    
+    png(filename=paste(outDir,'/',spec,'/','SBCD_',sites[i],'.png',sep=""),width=600,height=600)
+    plot.gam(siteModList[[sites[i]]],all.terms=TRUE,rug=TRUE,pages=1)
+    while (dev.cur()>1) {dev.off()}
+    
+  }
 }
+
+save(siteModList,pValList,siteModCompList,file=paste(outDir,'/',spec,'/','SiteSpecificModels.Rdata',sep=""))
+
