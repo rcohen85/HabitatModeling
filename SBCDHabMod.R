@@ -4,6 +4,7 @@ library(mgcv.helper)
 library(splines2)
 library(mgcv)
 library(MuMIn)
+library(gratia)
 
 
 # library(tidyverse)
@@ -192,6 +193,7 @@ for (i in 1:length(terms)){
 }
 
 ## GAM approach ---------------------
+# Regional model
 
 data = data.frame(read.csv('J:/Chpt_3/ModelData/UD28_masterDF.csv'))
 # Round presence to get Poisson dist
@@ -313,6 +315,7 @@ redMod = gam(Pres ~ s(Chl0,bs="cs",k=5)
               gamma=1.4,
               na.action="na.fail")
 
+
 # check concurvity of smooth terms
 conCurv = concurvity(redMod,full=FALSE)
 round(conCurv$estimate,digits=4)
@@ -337,9 +340,11 @@ modCompTable = dredge(redMod,
 
 # run optimal model
 optMod = get.models(modCompTable,subset=1)
+optMod = optMod[[names(optMod)]]
 
 # check p-values
-PV = summary(optMod$'256')
+PV = summary(optMod)$s.pv
+summary(optMod)
 
 # Family: poisson 
 # Link function: log 
@@ -375,7 +380,44 @@ PV = summary(optMod$'256')
 
 
 # plot
-plot.gam(optMod$'256',all.terms=TRUE)
+plot.gam(optMod$'256',all.terms=TRUE,rug=TRUE,pages=1)
 
 
+# Site-specific models ---------------
+sites = unique(data$Site)
 
+for (i in 1:length(sites)){
+
+  siteInd = which(!is.na(str_match(data$Site,sites[i])))
+  siteData = data[siteInd,]
+  
+redMod = gam(Pres ~ s(Chl0,bs="cs",k=5) # same terms as redMod from regional model, but no slope or aspect
+             + s(FSLE0,bs="cs",k=5)
+             + s(Sal0,bs="cs",k=4)
+             + s(EKE0,bs="cs",k=5)
+             + s(SSH0,bs="cs",k=5)
+             + s(Temp0,bs="cs",k=5),
+             data=siteData,
+             family=poisson,
+             gamma=1.4,
+             na.action="na.fail")
+
+siteModCompTable = dredge(redMod,
+                      beta="none",
+                      evaluate=TRUE,
+                      trace=TRUE)
+
+optSiteMod = get.models(siteModCompTable,subset=1)
+optSiteMod = optSiteMod[[names(optSiteMod)]]
+sitePV = summary(optSiteMod)$s.pv
+
+# get terms from formula as strings
+thisForm = optSiteMod$formula
+startSmooth = str_locate_all(thisForm,'s\\(')
+
+#Remove non-significant terms & re-run model iteratively until only signif covars remain
+badVars = allTerms[sitePV>=0.05]
+redMod<-eval(parse(text=paste("update(optSiteMod, . ~ . - ", paste(badVars,collapse="-"), ")", sep="")))
+PVred = getPvalues(redMod)
+
+}
