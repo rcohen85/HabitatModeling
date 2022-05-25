@@ -2,7 +2,7 @@
 library(pracma)
 inDir = 'J:/Chpt_3/CovarTS'
 fileList = dir(inDir)
-covar = "VelocityAsp"
+covar = "EKE"
 lon = "ES"
 depths=c(seq(0,100,by=10),seq(150,300,by=50),seq(400,800,by=100))
 

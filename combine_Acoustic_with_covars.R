@@ -12,19 +12,19 @@ presDir = 'J:/Chpt_2/TimeSeries_ScaledByEffortError'
 covarDir = 'J:/Chpt_3/CovarTS'
 outDir = 'J:/Chpt_3/ModelData'
 sites = c('HZ','OC','NC','BC','WC','NFC','HAT','GS','BP','BS')
-covarAbbrev = cbind(c("Chl","FSLE","Salinity","SSH","Temperature","VelocityAsp","VelocityMag"),
-                    c("Chl","FSLE","Sal","SSH","Temp","VelAsp","VelMag"))
-lags = c(7,14,21,28,42,56)
+covarAbbrev = cbind(c("Chl","FSLE","Salinity","SSH","Temperature","VelocityAsp","VelocityMag","EKE"),
+                    c("Chl","FSLE","Sal","SSH","Temp","VelAsp","VelMag","EKE"))
+# lags = c(7,14,21,28,42,56)
 OC_change = as_date('2018-05-01') # account for change in OC site location
 HAT_change = as_date('2017-05-01') # account for change in HAT location from site A to B
 ## ACTION ----------------------------------------------------------------------
 
 # Create a list of daily species presence files
-presFiles = list.files(presDir, pattern="_Daily.csv", full.names=TRUE)
+presFiles = list.files(presDir, pattern="_Daily.csv", full.names=TRUE,recursive=FALSE)
 goodFiles = c(1,2,4,8,11,13:15,17:19)
 
 # find covariate data
-varFiles = list.files(covarDir,pattern=".csv",full.names=TRUE)
+varFiles = list.files(covarDir,pattern=".csv",full.names=TRUE,recursive=FALSE)
 staticFiles = list.files(covarDir,pattern="Geo",full.names=TRUE)
 staticFiles = c(staticFiles,list.files(covarDir,pattern="Slope",full.names=TRUE))
 
@@ -62,9 +62,9 @@ for (i in goodFiles) {
   load(staticFiles[3])
   
   thisSpecies$GSLat = NA
-  for (j in 1:length(lags)){
-    eval(parse(text=paste('thisSpecies$GSLatLag',lags[j],' = NA',sep="")))
-  }
+  # for (j in 1:length(lags)){
+  #   eval(parse(text=paste('thisSpecies$GSLatLag',lags[j],' = NA',sep="")))
+  # }
   thisSpecies$GSDist = NA
   thisSpecies$Slope = NA
   thisSpecies$Aspect = NA
@@ -80,13 +80,17 @@ for (i in goodFiles) {
     thisSpecies$GSLat[siteInd[putWhere[!is.na(putWhere)]]] = GSLat$y[-which(is.na(putWhere))]
     thisSpecies$GSDist[siteInd[putWhere[!is.na(putWhere)]]] = GSdist$y[-which(is.na(putWhere))]
     
-    # Create time lagged GSLat vectors
+    # # Create time lagged GSLat vectors
+    # startInd = which(GSLat$x==as.Date('2016-05-01',origin="1970-01-01"))
+    # fullLength = length(siteInd)
+    #   for (k in lags){
+    #     lagInd = startInd-k
+    #     eval(parse(text=paste('thisSpecies$GSLatLag',as.character(k),'[siteInd] = GSLat$y[(lagInd):(lagInd+fullLength-1)]',sep="")))
+    #   }
+    
     startInd = which(GSLat$x==as.Date('2016-05-01',origin="1970-01-01"))
     fullLength = length(siteInd)
-      for (k in lags){
-        lagInd = startInd-k
-        eval(parse(text=paste('thisSpecies$GSLatLag',as.character(k),'[siteInd] = GSLat$y[(lagInd):(lagInd+fullLength-1)]',sep="")))
-      }
+    thisSpecies$GSLat[siteInd] = GSLat$y[startInd:startInd+fullLength-1]
     
     if (n!=2 & n!=7){
     thisSpecies$Slope[siteInd] = slopeMat[n,1]
@@ -116,14 +120,19 @@ for (i in goodFiles) {
     next
   } else if (i == 19) {  # If species is UD36, combine w Risso's
     thisSpecies = rbind(GgTemp,thisSpecies)
+    # thisSpecies = thisSpecies %>% group_by(Date,Site) %>% summarise(Pres=sum(Pres),
+    #                                                                 GSLat=mean(GSLat),
+    #                                                                 GSLatLag7=mean(GSLatLag7),
+    #                                                                 GSLatLag14=mean(GSLatLag14),
+    #                                                                 GSLatLag21=mean(GSLatLag21),
+    #                                                                 GSLatLag28=mean(GSLatLag28),
+    #                                                                 GSLatLag42=mean(GSLatLag42),
+    #                                                                 GSLatLag56=mean(GSLatLag56),
+    #                                                                 GSDist=mean(GSDist),
+    #                                                                 Slope=mean(Slope),
+    #                                                                 Aspect=mean(Aspect))
     thisSpecies = thisSpecies %>% group_by(Date,Site) %>% summarise(Pres=sum(Pres),
                                                                     GSLat=mean(GSLat),
-                                                                    GSLatLag7=mean(GSLatLag7),
-                                                                    GSLatLag14=mean(GSLatLag14),
-                                                                    GSLatLag21=mean(GSLatLag21),
-                                                                    GSLatLag28=mean(GSLatLag28),
-                                                                    GSLatLag42=mean(GSLatLag42),
-                                                                    GSLatLag56=mean(GSLatLag56),
                                                                     GSDist=mean(GSDist),
                                                                     Slope=mean(Slope),
                                                                     Aspect=mean(Aspect))
@@ -161,18 +170,29 @@ for (i in goodFiles) {
         eval(parse(text=paste('thisSpecies$',abbrev,as.character(depths[l]),
                               '[siteInd[putWhere[!is.na(putWhere)]]] = thisVar[-which(is.na(putWhere)),thisSiteDepth]',sep="")))
         
-        for (m in 1:length(lags)){
-          # find covar cols with data for this site & depth & lag
-          thisSiteDepth = which(!is.na(str_match(colnames(thisVar),
-                                                 paste(sites[k],as.character(depths[l]),sep=""))) 
-                                & str_detect(colnames(thisVar),paste('Lag',lags[m],sep="")))
+        # for (m in 1:length(lags)){
+          # # find covar cols with data for this site & depth & lag
+          # thisSiteDepth = which(!is.na(str_match(colnames(thisVar),
+          #                                        paste(sites[k],as.character(depths[l]),sep=""))) 
+          #                       & str_detect(colnames(thisVar),paste('Lag',lags[m],sep="")))
           
+        # find covar cols with data for this site & depth
+        thisSiteDepth = which(!is.na(str_match(colnames(thisVar),paste(sites[k],as.character(depths[l]),sep=""))))
+        
+        
           # add data to master data frame
-          if(k==1){
-          eval(parse(text=paste('thisSpecies$',abbrev,as.character(depths[l]),'Lag',lags[m],' = NA',sep="")))}
-          eval(parse(text=paste('thisSpecies$',abbrev,as.character(depths[l]),'Lag',
-                                lags[m],'[siteInd[putWhere[!is.na(putWhere)]]] = thisVar[-which(is.na(putWhere)),thisSiteDepth]',sep="")))
-        }
+          # if(k==1){
+          # eval(parse(text=paste('thisSpecies$',abbrev,as.character(depths[l]),'Lag',lags[m],' = NA',sep="")))}
+          # eval(parse(text=paste('thisSpecies$',abbrev,as.character(depths[l]),'Lag',
+          #                       lags[m],'[siteInd[putWhere[!is.na(putWhere)]]] = thisVar[-which(is.na(putWhere)),thisSiteDepth]',sep="")))
+        
+        # add data to master data frame
+        if(k==1){
+          eval(parse(text=paste('thisSpecies$',abbrev,as.character(depths[l]),' = NA',sep="")))}
+        eval(parse(text=paste('thisSpecies$',abbrev,as.character(depths[l]),
+                              '[siteInd[putWhere[!is.na(putWhere)]]] = thisVar[-which(is.na(putWhere)),thisSiteDepth]',sep="")))
+        
+        # }
       }
     }
   }

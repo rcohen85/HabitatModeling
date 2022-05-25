@@ -9,9 +9,10 @@ library(stringr)
 library(R.utils)
 
 Indir = 'J:/Chpt_3/HYCOM/0.08deg'
-# outDir = 'J:/Chpt_3/HYCOM/0.08deg/TS'
+outDir = 'J:/Chpt_3/CovarTS'
 sites = c('HZ','OC','NC','BC','WC','NFC','HAT','GS','BP','BS','JAX')
-depths = c(0,100,200,300,400,500,600,700,800)
+# depths = c(0,100,200,300,400,500,600,700,800)
+depths = c(seq(0,100,by=10),seq(150,300,by=50),seq(400,800,by=100))
 
 # waterU is eastward seawater velocity
 # waterV is northward seawater velocity
@@ -46,6 +47,7 @@ for (k in 1:length(depths)){
   # initialize arrays to hold data from all files matching sites
   masterData.Mag = double()
   masterData.Asp = double()
+  masterData.EKE = double()
   masterData.Lat = double()
   masterData.Lon = double()
   masterData.Time = double()
@@ -97,6 +99,9 @@ for (k in 1:length(depths)){
       # convert from radians to degrees
       velocityAsp = (velocityAsp*180)/pi
       
+      # calculate eddy kinetic energy
+      EKE = 0.5*((dataU^2)+(dataV^2))
+      
       # For Shiny
       # save magnitude, angle, lats, and lons in new file, one per day
 
@@ -106,12 +111,16 @@ for (k in 1:length(depths)){
       data = velocityAsp
       save(data,lats,lons,
            file=paste(Indir,'/','VelocityAsp_',as.character(depths[k]),'_',fileDate,'.Rdata',sep=""))
+      data = EKE
+      save(data,lats,lons,
+           file=paste(Indir,'/','EKE_',as.character(depths[k]),'_',fileDate,'.Rdata',sep=""))
       
       
       # For TS
-      # # initialize arrays to hold relevant data points from this file
+      # initialize arrays to hold relevant data points from this file
       thisFileMag = matrix(nrow=11,ncol=1)
       thisFileAsp = matrix(nrow=11,ncol=1)
+      thisFileEKE = matrix(nrow=11,ncol=1)
       thisFileLat = matrix(nrow=11,ncol=1)
       thisFileLon = matrix(nrow=11,ncol=1)
       
@@ -139,16 +148,18 @@ for (k in 1:length(depths)){
         }
         
         # grab data values at this HARP site
-        thisFileMag[m,1] = velocityMag[sitelat,sitelon]
-        thisFileAsp[m,1] = velocityAsp[sitelat,sitelon]
-        thisFileLat[m] = lats[sitelat]
-        thisFileLon[m] = lons[sitelon]
+        thisFileMag[m,1] = velocityMag[sitelat-1,sitelon+1]
+        thisFileAsp[m,1] = velocityAsp[sitelat-1,sitelon+1]
+        thisFileEKE[m,1] = EKE[sitelat-1,sitelon+1]
+        thisFileLat[m] = lats[sitelat-1]
+        thisFileLon[m] = lons[sitelon+1]
         
       }
       
       # add data points from all files to master data frame
       masterData.Mag = cbind(masterData.Mag, thisFileMag)
       masterData.Asp = cbind(masterData.Asp, thisFileAsp)
+      masterData.EKE = cbind(masterData.Asp, thisFileEKE)
       masterData.Lat = cbind(masterData.Lat,thisFileLat)
       masterData.Lon = cbind(masterData.Lon,thisFileLon)
       masterData.Time = cbind(masterData.Time,thisTime)
@@ -165,8 +176,11 @@ for (k in 1:length(depths)){
   # Save the time series
   masterData.Data = masterData.Mag
   save(masterData.Data,masterData.Lat,masterData.Lon,masterData.Time,
-       file=paste(Indir,'/','VelocityMag','_',as.character(depths[k]),'_TS.Rdata',sep="")) 
+       file=paste(outDir,'/','VelocityMag','_',as.character(depths[k]),'_TS_ES.Rdata',sep="")) 
   masterData.Data = masterData.Asp
   save(masterData.Data,masterData.Lat,masterData.Lon,masterData.Time,
-       file=paste(Indir,'/','VelocityAsp','_',as.character(depths[k]),'_TS.Rdata',sep="")) 
+       file=paste(outDir,'/','VelocityAsp','_',as.character(depths[k]),'_TS_ES.Rdata',sep="")) 
+  masterData.Data = masterData.EKE
+  save(masterData.Data,masterData.Lat,masterData.Lon,masterData.Time,
+       file=paste(outDir,'/','EKE','_',as.character(depths[k]),'_TS_ES.Rdata',sep="")) 
 }
