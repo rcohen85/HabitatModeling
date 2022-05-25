@@ -415,14 +415,6 @@ if (fullMod$geese$error==1){
 
 ```
 
-Variable    p-value
-S_SSH0    	0.085675			
-S_Sal0    	0.083111			
-S_Sal200  	0.219076			
-S_Temp0	    0.81514			
-S_FSLE0	    0.026302			
-S_Slope	    0.012714			
-S_Aspect    0.439454
 
 #Remove non-significant terms, re-run model, check p-values
 ```{r redMod}
@@ -438,9 +430,7 @@ PVred}
 
 
 ```
-Variable    p-value
-S_FSLE0	    <0.0001			
-S_Slope	    <0.0001
+
 
 # Plot terms from regional model
 ```{r plot regional}

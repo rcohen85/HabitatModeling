@@ -22,7 +22,7 @@ library(SimDesign)
 library(multitaper)
 source("getPvalues.R")
 
-data = data.frame(read.csv('E:/ModelingCovarData/Master_DFs/UD28_masterDF.csv'))
+data = data.frame(read.csv('J:/Chpt_3/ModelData/UD28_masterDF.csv'))
 lagID = 40
 numClust = length(data$Pres)/(lagID-1)
 if (numClust<length(data$Pres)){
@@ -143,9 +143,9 @@ covarList = c("Chl0",
               "SSH0",
               "FSLE0")
 
-profileDir = 'E:/ModelingCovarData/Profiles'
+profileDir = 'J:/Chpt_3/CovarTS'
 profileList = dir(profileDir,pattern="Profiles_ES.Rdata",full.names=TRUE)
-sites = c("HZ","NFC","HAT","BS")
+sites = c("HZ","NC","BC","NFC","GS","JAX")
 k=7
 
 for (j in 1:length(sites)){
@@ -191,8 +191,8 @@ for (j in 1:length(sites)){
     
     
     for (i in 1:length(profileList)){ # for profiles of covars with multiple depth layers
-      
-      load(profileList[i])
+
+          load(profileList[i])
       profileName = str_remove(str_remove(profileList[i],'_Profiles_ES.Rdata'),paste(profileDir,'/',sep=""))
       profileDF = data.frame(z=stack(data.frame(eval(parse(text=paste(sites[j],'Profile',sep="")))))[,1],
                              y=rep(depths,times=dim(eval(parse(text=paste(sites[j],'Profile',sep=""))))[2]),
@@ -264,7 +264,9 @@ for (j in 1:length(sites)){
           )+coord_cartesian(xlim=c(st,ed)
           )+ggtitle('Presence'
           )+labs(x=NULL,y=NULL
+          # )+theme(plot.margin=margin(c(0,75,0,0),unit="pt"))
           )+theme(plot.margin=margin(c(0,40,0,0),unit="pt"))
+
           
           plotList[[profileName]] = ggplot(profileDF,aes(x=x,y=y,z=z) # plot profile for this year
           )+geom_contour_filled(
@@ -273,6 +275,13 @@ for (j in 1:length(sites)){
           )+scale_y_reverse(
           )+ggtitle(profileName
           )+labs(x=NULL,y=NULL
+          # )+theme(plot.margin=margin(c(0,0,0,0),unit="pt"),
+          #         legend.position="right",
+          #         legend.title=element_text(size=0),
+          #         legend.text=element_text(size=10),
+          #         legend.key.size=unit(0.8,'lines'),
+          #         legend.direction="vertical",
+          #         legend.margin=margin(0))
           )+theme(plot.margin=margin(c(0,0,0,0),unit="pt"),
                   legend.position="right",
                   legend.title=element_text(size=0),
@@ -281,11 +290,12 @@ for (j in 1:length(sites)){
                   legend.direction="vertical",
                   legend.margin=margin(0))
           
-          
+          # png(file='J:/Chpt_3/FigsForLB/SBCD_v_Salin.png',width = 12, height = 9,units = "in",res=600)
           grid.arrange(plotList$Pres,plotList[[profileName]],
                        ncol=12,nrow=3,top=paste('Common Dolphins at',sites[j]),layout_matrix=rbind(c(rep(1,12)),
                                                                                                    c(rep(2,12)),
                                                                                                    c(rep(2,12))))
+          # while (dev.cur()>1) {dev.off()}
         }
       }
     }
@@ -318,7 +328,7 @@ smoothVarList = c("SSH0",
 
 pres = which(data$Pres>0)
 presDF = data[pres,]
-sites = c("HZ","BC","WC","BS")
+sites = c("HZ","NC","BC","NFC","GS","JAX")
 
 for (i in 1:length(smoothVarList)){
   
@@ -670,16 +680,6 @@ $HAT
 3 S_Sal200 0.548274
 4  S_FSLE0 0.338056
 5     SSH0  0.93081
-6    Temp0 0.429074
-
-$BS
-  Variable  p-value
-1   S_Chl0 0.053801
-2   S_Sal0 0.207846
-3 S_Sal200 0.817674
-4  S_FSLE0 0.392849
-5     SSH0  0.04303
-6    Temp0  <0.0001
 
 
 
@@ -708,32 +708,25 @@ print(pValListRed)
 $HZ
   Variable  p-value
 1   S_Chl0  <0.0001
-2 S_Sal200 0.393403
-3  S_FSLE0  0.00125
+2 S_Sal200 0.983495
+3  S_FSLE0 0.433515
 
-$BC
+$NFC
   Variable  p-value
-1   S_Chl0  <0.0001
-2   S_Sal0 0.230803
-3 S_Sal200 0.000241
-4  S_FSLE0 0.002192
-5    Temp0  <0.0001
+1   S_Chl0 0.307677
+2   S_Sal0 0.345031
+3  S_FSLE0 0.470139
+4    Temp0  <0.0001
 
-$WC
-  Variable  p-value
-1   S_Chl0  <0.0001
-2   S_Sal0 0.230803
-3 S_Sal200 0.000241
-4  S_FSLE0 0.002192
-5    Temp0  <0.0001
+$HAT
+  Variable p-value
+1   S_Chl0 <0.0001
 
 $BS
   Variable  p-value
-1   S_Chl0  <0.0001
-2 S_Sal200 0.002245
-3  S_FSLE0 0.002806
-4     SSH0 0.007039
-5    Temp0  <0.0001
+1     SSH0 0.166723
+2    Temp0  <0.0001
+
 
 # Again, remove non-significant terms and rerun
 ```{r site-specific models}
@@ -753,32 +746,25 @@ print(pValListRed)
 
 
 ```
+[1] "Getting marginal p-values"
+[1] "Getting marginal p-values"
+[1] "Getting marginal p-values"
 $HZ
   Variable p-value
 1   S_Chl0 <0.0001
-2  S_FSLE0 <0.0001
 
-$BC
-  Variable  p-value
-1   S_Chl0  <0.0001
-2 S_Sal200 0.000426
-3  S_FSLE0 0.004257
-4    Temp0  <0.0001
+$NFC
+  Variable p-value
+1    Temp0 <0.0001
 
-$WC
-  Variable  p-value
-1   S_Chl0  <0.0001
-2 S_Sal200 0.000426
-3  S_FSLE0 0.004257
-4    Temp0  <0.0001
+$HAT
+  Variable p-value
+1   S_Chl0 <0.0001
 
 $BS
-  Variable  p-value
-1   S_Chl0  <0.0001
-2 S_Sal200 0.002245
-3  S_FSLE0 0.002806
-4     SSH0 0.007039
-5    Temp0  <0.0001
+  Variable p-value
+1    Temp0 <0.0001
+
 
 # Plot terms from site-specific models
 ```{r plot sites specific models}
@@ -797,11 +783,15 @@ for (j in 1:length(siteModListRed)){
       term = str_remove(terms[i],"S_")
       coefInd = which(str_detect(names(siteModListRed[[j]]$coefficients),term))
       if (str_detect(term,"Asp")){periodic=TRUE} else {periodic=FALSE}
+      # png(file=paste('J:/Chpt_3/FigsForLB/SBCD_',term,'_',siteName,'.png',sep=""),width = 8, height = 5,units = "in",res=600)
       print(plotSmooths(siteModListRed[[j]],term,coefInd,k,periodic,site=siteName,title=siteName))
+      # dev.off()
     } else { # plot linear terms
       term=terms[i]
       coefInd = which(str_detect(names(siteModListRed[[j]]$coefficients),term))
+      # png(file=paste('J:/Chpt_3/FigsForLB/SBCD_',term,'_',siteName,'.png',sep=""),width = 8, height = 5,units = "in",res=600)
       print(plotLinears(siteModListRed[[j]],term,coefInd,site=siteName,title=siteName))
+      # dev.off()
     }
   }
 }
@@ -809,7 +799,12 @@ for (j in 1:length(siteModListRed)){
 ```
 
 
+```{r GAMs}
+
+library(mgcv)
+siteInd = which(!is.na(str_match(data$Site,"HAT")))
+testGAM = gam(Pres~s(Chl0,bs="cr",k=4),data=data[siteInd,],family=poisson)
+plot.gam(testGAM)
 
 
-
-
+```
