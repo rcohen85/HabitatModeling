@@ -1,12 +1,17 @@
 library(stringr)
 library(dplyr)
 library(lubridate)
+library(sm)
+
 inDir = 'J:/Chpt_3/ModelData'
 outDir = 'J:/Chpt_3/EcologicalNichePlots'
 fileList = list.files(path=inDir,pattern=paste('_masterDF.csv',sep=""),
                       full.names=TRUE,recursive=FALSE,
                       include.dirs=FALSE,no..=TRUE)
-covarList = c("Temp0","Sal0","Temp300","Temp400","Sal300","Sal400","Temp700","Sal700","SSH0","Chl0","FSLE0")
+covarList = c("EKE0","Temp0","Sal0","Temp200","Temp300","Temp400","Sal200","Sal300",
+              "Sal400","Temp700","Sal700","SSH0","Chl0","FSLE0","VelMag0","VelMag200",
+              "VelMag300","VelMag400","VelMag700","VelAsp0","VelAsp200","VelAsp300",
+              "VelAsp400","VelAsp700")
 stDt = as.Date("2016-05-01")
 edDt = as.Date("2019-04-30")
 allDates = stDt:edDt
@@ -14,7 +19,9 @@ weekDates = seq.Date(stDt,edDt,by=7)
 
 sites = sites = c('HZ','OC','NC','BC','WC','NFC','HAT','GS','BP','BS')
 OptImportanceStats = list()
-statNames = sort(paste(covarList,rep(c("_Opt","_Coef","_Pval","_AdjR","_Rho"),each=length(covarList)),sep=""))
+# statNames = sort(paste(covarList,rep(c("_Opt","_Coef","_Pval","_AdjR","_Rho"),each=length(covarList)),sep=""))
+statNames = sort(paste(covarList,rep(c("_Opt","_DistRho","_PresRho"),each=length(covarList)),sep=""))
+
 
 for (i in 1:length(fileList)){
   
@@ -28,13 +35,15 @@ for (i in 1:length(fileList)){
   }
   weeklyDF = as.numeric()
 
-  OptImportanceStats[[spec]]=data.frame(matrix(nrow=length(sites),ncol=length(covarList)*5))
+  # OptImportanceStats[[spec]]=data.frame(matrix(nrow=length(sites),ncol=length(covarList)*5))
+  OptImportanceStats[[spec]]=data.frame(matrix(nrow=length(sites),ncol=length(covarList)*3))
+  
   colnames(OptImportanceStats[[spec]]) = statNames
   
   for (l in 1:length(sites)) {
     
     # Create dataframe to hold data (or NAs) for all dates
-    fullDatesDF = data.frame(matrix(nrow=length(allDates), ncol=258))
+    fullDatesDF = data.frame(matrix(nrow=length(allDates), ncol=43))
     fullDatesDF[,1] = allDates
     
     # sort the observations we have for this site into the full date range
@@ -52,6 +61,8 @@ for (i in 1:length(fileList)){
     summaryData = fullDatesDF %>%
       group_by(WeekID) %>%
       summarize(Pres=sum(Pres,na.rm=TRUE))
+    
+    summaryData$Site = sites[l]
     
     # find bins with presence (don't plot all the 0's)
     presWeeks = which(summaryData$Pres>0)
@@ -92,10 +103,11 @@ for (i in 1:length(fileList)){
         
         # add optimum value and importance stats to matrix
         OptImportanceStats[[spec]][[paste(covarList[j],"_Opt",sep="")]][l] = optCovar
-        OptImportanceStats[[spec]][[paste(covarList[j],"_Coef",sep="")]][l] = coef(OptfitLine)[2]
-        OptImportanceStats[[spec]][[paste(covarList[j],"_AdjR",sep="")]][l] = summary(OptfitLine)$adj.r.squared
-        OptImportanceStats[[spec]][[paste(covarList[j],"_Pval",sep="")]][l] = summary(OptfitLine)$coefficients[2,4]
-        OptImportanceStats[[spec]][[paste(covarList[j],"_Rho",sep="")]][l] = distCor
+        # OptImportanceStats[[spec]][[paste(covarList[j],"_Coef",sep="")]][l] = coef(OptfitLine)[2]
+        # OptImportanceStats[[spec]][[paste(covarList[j],"_AdjR",sep="")]][l] = summary(OptfitLine)$adj.r.squared
+        # OptImportanceStats[[spec]][[paste(covarList[j],"_Pval",sep="")]][l] = summary(OptfitLine)$coefficients[2,4]
+        OptImportanceStats[[spec]][[paste(covarList[j],"_DistRho",sep="")]][l] = distCor
+        OptImportanceStats[[spec]][[paste(covarList[j],"_PresRho",sep="")]][l] = presCor
         
         # Plot and save
         png(paste(outDir,"/",spec,"/Weekly",covarList[j],"_at_",fullDatesDF$Site[1],".png",sep=""),width=800,height=350)
@@ -211,6 +223,12 @@ for (i in 1:length(fileList)){
          cex=1.5)
     
     # Plot distribution of presence covar values
+    # sm.density.compare(weeklyDF[[covarList[j]]][presWeeks],weeklyDF$Site[presWeeks],
+    #                         xlab=paste(covarList[j]),
+    #                         ylab='Density',
+    #                         main=character(0),
+    #                         cex.lab=1.5,
+    #                         cex.axis=1.5)
     plot(density(weeklyDF[[covarList[j]]][presWeeks],na.rm=TRUE),
          xlab=paste(covarList[j]),
          ylab='Density',
@@ -229,4 +247,4 @@ for (i in 1:length(fileList)){
   
 }
 
-
+save(OptImportanceStats,file=paste(outDir,'OptimumImportance'))
