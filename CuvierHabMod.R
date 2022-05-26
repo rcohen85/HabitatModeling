@@ -104,14 +104,14 @@ round(conCurv$estimate,digits=4)
 
 # Sal0 problematic w SSH, Sal700, Temp0, less w Chl0
 # Sal700 prolematic w Sal0, Temp700
-# Taking out Sal0, Sal700, Temp0
+# Taking out Sal0, Sal700, SSH
 
 # run reduced model
 redMod = gam(Pres ~ s(FSLE0,bs="cs",k=5)
              # + s(Sal0,bs="cs",k=4)
              # + s(Sal700,bs="cs",k=5)
-             + s(SSH0,bs="cs",k=5)
-             # + s(Temp0,bs="cs",k=5)
+             # + s(SSH0,bs="cs",k=5)
+             + s(Temp0,bs="cs",k=5)
              + s(Temp700,bs="cs",k=5)
              + s(Slope,bs="cc",k=5)
              + s(Aspect,bs="cc",k=5),
@@ -125,13 +125,13 @@ redMod = gam(Pres ~ s(FSLE0,bs="cs",k=5)
 conCurv = concurvity(redMod,full=FALSE)
 round(conCurv$estimate,digits=4)
 
-#             para s(FSLE0) s(SSH0) s(Temp700) s(Slope) s(Aspect)
-# para          1   0.0000  0.0000     0.0000   0.0000    0.0000
-# s(FSLE0)      0   1.0000  0.1191     0.1255   0.0450    0.0267
-# s(SSH0)       0   0.1434  1.0000     0.4568   0.2145    0.1298
-# s(Temp700)    0   0.1492  0.3361     1.0000   0.1491    0.1256
-# s(Slope)      0   0.0484  0.1906     0.1758   1.0000    0.1961
-# s(Aspect)     0   0.0194  0.1523     0.0618   0.1538    1.0000
+#             para s(FSLE0) s(Temp0) s(Temp700) s(Slope) s(Aspect)
+# para          1   0.0000   0.0000     0.0000   0.0000    0.0000
+# s(FSLE0)      0   1.0000   0.0448     0.1255   0.0450    0.0267
+# s(Temp0)      0   0.0840   1.0000     0.3941   0.0784    0.0809
+# s(Temp700)    0   0.1492   0.3469     1.0000   0.1491    0.1256
+# s(Slope)      0   0.0484   0.0881     0.1758   1.0000    0.1961
+# s(Aspect)     0   0.0194   0.0382     0.0618   0.1538    1.0000
 
 # Sal700 still quite explained by SSH, but proceeding anyway
 
@@ -148,33 +148,32 @@ optMod = optMod[[names(optMod)]]
 PV = summary(optMod)$s.pv
 summary(optMod)
 
-
-# Family: poisson 
-# Link function: log 
+# Family: poisson
+# Link function: log
 # 
 # Formula:
-#   Pres ~ s(Aspect, bs = "cc", k = 5) + s(FSLE0, bs = "cs", 
-#                                          k = 5) + s(Slope, bs = "cc", k = 5) + s(SSH0, bs = "cs", 
+#   Pres ~ s(Aspect, bs = "cc", k = 5) + s(FSLE0, bs = "cs",
+#                                          k = 5) + s(Slope, bs = "cc", k = 5) + s(Temp0, bs = "cs",
 #                                                                                  k = 5) + s(Temp700, bs = "cs", k = 5) + 1
 # 
 # Parametric coefficients:
-#               Estimate Std. Error z value Pr(>|z|)    
-# (Intercept) 3.290587   0.002586    1272   <2e-16 ***
+#   Estimate Std. Error z value Pr(>|z|)
+# (Intercept) 3.298419   0.002507    1316   <2e-16 ***
 #   ---
 #   Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 # 
 # Approximate significance of smooth terms:
-#                 edf Ref.df Chi.sq p-value    
-#   s(Aspect)  2.999      3   2224  <2e-16 ***
-#   s(FSLE0)   3.964      4   2334  <2e-16 ***
-#   s(Slope)   2.988      3   3768  <2e-16 ***
-#   s(SSH0)    3.989      4  41520  <2e-16 ***
-#   s(Temp700) 3.993      4   7593  <2e-16 ***
+#   edf Ref.df Chi.sq p-value
+# s(Aspect)  2.999      3   4714  <2e-16 ***
+#   s(FSLE0)   3.961      4   6894  <2e-16 ***
+#   s(Slope)   2.996      3   8245  <2e-16 ***
+#   s(Temp0)   3.998      4  46248  <2e-16 ***
+#   s(Temp700) 3.995      4  14260  <2e-16 ***
 #   ---
 #   Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 # 
-# R-sq.(adj) =  0.451   Deviance explained = 52.5%
-# UBRE = 20.562  Scale est. = 1         n = 10477
+# R-sq.(adj) =  0.528   Deviance explained = 55.1%
+# UBRE = 19.376  Scale est. = 1         n = 10477
 
 
 # plot
@@ -198,8 +197,8 @@ for (i in 1:length(sites)){
     fullSiteMod = gam(Pres ~ s(FSLE0,bs="cs",k=5)
                       # + s(Sal0,bs="cs",k=4)
                       # + s(Sal700,bs="cs",k=5)
-                      + s(SSH0,bs="cs",k=5)
-                      # + s(Temp0,bs="cs",k=5)
+                      # + s(SSH0,bs="cs",k=5)
+                      + s(Temp0,bs="cs",k=5)
                       + s(Temp700,bs="cs",k=5),
                       # + s(Slope,bs="cc",k=5)
                       # + s(Aspect,bs="cc",k=5),
