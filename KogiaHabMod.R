@@ -8,14 +8,14 @@ library(gratia)
 ## GAM approach ---------------------
 # Regional model
 spec = 'Kogia'
-outDir = "E:/ModelingCovarData/ModelOutput"
+outDir = "J:/Chpt_3/ModelOutput"
 
 # if it doesn't already exist, create directory to save models and figures
 if (!dir.exists(paste(outDir,'/',spec,sep=""))){
   dir.create(paste(outDir,'/',spec,sep=""))
 }
 
-data = data.frame(read.csv('E:/ModelingCovarData/Master_DFs/Kogia_masterDF.csv'))
+data = data.frame(read.csv('J:/Chpt_3/ModelData/Kogia_masterDF.csv'))
 # Round presence to get Poisson dist
 data$Pres = round(data$Pres)
 
@@ -218,15 +218,9 @@ for (i in 1:length(sites)){
     fullSiteMod = gam(Pres ~ s(Chl0,bs="cs",k=5)
                       + s(EKE0,bs="cs",k=5)
                       + s(FSLE0,bs="cs",k=5)
-                      # + s(Sal0,bs="cs",k=4)
                       + s(Sal700,bs="cs",k=5)
-                      # + s(SSH0,bs="cs",k=5)
                       + s(Temp0,bs="cs",k=4)
-                      # + s(Temp700,bs="cs",k=5)
-                      # + s(VelAsp0,bs="cc",k=5)
                       + s(VelMag0,bs="cs",k=5),
-                      # + s(Slope,bs="cs",k=5)
-                      # + s(Aspect,bs="cc",k=5),
                       data=siteData,
                       family=poisson,
                       gamma=1.4,
@@ -262,7 +256,8 @@ for (i in 1:length(sites)){
         # identify which terms were non-significant
         badVars = allTerms[sitePV>=0.05]
         dontNeed = which(!is.na(str_match(badVars,"1")))
-        badVars = badVars[-dontNeed]
+        if (!is_empty(dontNeed)){
+        badVars = badVars[-dontNeed]}
         # update model
         optSiteMod<-eval(parse(text=paste("update(optSiteMod, . ~ . - ", paste(badVars,collapse="-"), ")", sep="")))
         sitePV = summary(optSiteMod)$s.pv
