@@ -7,7 +7,7 @@ library(gratia)
 
 ## GAM approach ---------------------
 # Regional model
-spec = 'Cuvier'
+spec = 'Gervais'
 outDir = "E:/ModelingCovarData/ModelOutput"
 
 # if it doesn't already exist, create directory to save models and figures
@@ -15,21 +15,21 @@ if (!dir.exists(paste(outDir,'/',spec,sep=""))){
   dir.create(paste(outDir,'/',spec,sep=""))
 }
 
-data = data.frame(read.csv('E:/ModelingCovarData/Master_DFs/Cuvier_masterDF.csv'))
+data = data.frame(read.csv('E:/ModelingCovarData/Master_DFs/Gervais_masterDF.csv'))
 # Round presence to get Poisson dist
 data$Pres = round(data$Pres)
 
 # Check which covars are correlated w presence to determine starting covar list
 
 # Test for how a term should be included in the model
-smoothVarList = c ("FSLE0",
-                  "Sal0",
-                  "Sal700",
-                  "SSH",
-                  "Temp0",
-                  "Temp700",
-                  "Slope",
-                  "Aspect")
+smoothVarList = c ("Chl0",
+                   "FSLE0",
+                   "Sal0",
+                   "Sal700",
+                   "SSH0",
+                   "Temp700",
+                   "Slope",
+                   "Aspect")
 
 
 modOpts = c("linMod","threeKnots","fourKnots","fiveKnots")
@@ -61,23 +61,23 @@ colnames(AIC_votes) = c(modOpts,"Best")
 rownames(AIC_votes) = smoothVarList[]
 AIC_votes
 
-#           linMod             threeKnots         fourKnots          fiveKnots          Best       
-# FSLE0   "143518.029434583" "139700.990717399" "136581.634889274" "136493.20158728"  "fiveKnots"
-# Sal0    "153118.970496731" "153007.155354861" "138251.547146199" "131995.945355285" "fiveKnots"
-# Sal700  "153926.405063222" "153828.301284669" "135649.612216234" "129176.277855976" "fiveKnots"
-# SSH     "166827.993364552" "95270.4496259113" "83489.9374853719" "82791.4859578095" "fiveKnots"
-# Temp0   "158889.846656827" "158876.379796124" "157468.377276248" "157446.412951153" "fiveKnots"
-# Temp700 "155067.737181327" "149396.209582999" "137529.18534134"  "138160.689819933" "fourKnots"
-# Slope   "119444.909524396" "109800.390547004" "108806.710522833" "103469.192587452" "fiveKnots"
-# Aspect  "141184.85109818"  "140609.895994276" "140609.895994276" "134940.422019047" "fiveKnots"
+#           linMod             threeKnots         fourKnots          fiveKnots          Best        
+# Chl0    "118229.927645981" "115489.215748967" "108018.690331556" "106068.782270985" "fiveKnots" 
+# FSLE0   "162553.434443166" "155336.305505699" "155286.229403025" "154649.122020783" "fiveKnots" 
+# Sal0    "94531.3615646504" "81711.8148979425" "80990.9966251957" "80393.4151280875" "fiveKnots" 
+# Sal700  "142256.753203003" "109217.197203478" "107775.905232529" "97193.9785944924" "fiveKnots" 
+# SSH0    "109854.618143319" "73579.2486224001" "73352.3604758128" "72859.6904024093" "fiveKnots" 
+# Temp700 "134144.502845382" "79052.637656501"  "73326.6538113701" "71534.5753083113" "fiveKnots" 
+# Slope   "147405.450630565" "145364.839384447" "134260.094145996" "127176.190477336" "fiveKnots" 
+# Aspect  "159900.695276914" "132615.392747505" "132615.392747505" "132637.20029411"  "threeKnots"
 
 # run full model
-fullMod = gam(Pres ~ s(FSLE0,bs="cs",k=5)
-              + s(Sal0,bs="cs",k=5)
+fullMod = gam(Pres ~ s(Chl0,bs="cs",k=5)
+              + s(FSLE0,bs="cs",k=5)
+              + s(Sal0,bs="cs",k=4)
               + s(Sal700,bs="cs",k=5)
               + s(SSH0,bs="cs",k=5)
-              + s(Temp0,bs="cs",k=5)
-              + s(Temp700,bs="cs",k=4)
+              + s(Temp700,bs="cs",k=5)
               + s(Slope,bs="cs",k=5)
               + s(Aspect,bs="cc",k=5),
               data=data,
@@ -91,29 +91,29 @@ fullMod = gam(Pres ~ s(FSLE0,bs="cs",k=5)
 conCurv = concurvity(fullMod,full=FALSE)
 round(conCurv$estimate,digits=4)
 
-#             para s(FSLE0) s(Sal0) s(Sal700) s(SSH0) s(Temp0) s(Temp700) s(Slope) s(Aspect)
-# para          1   0.0000  0.0000    0.0000  0.0000   0.0000     0.0000   0.0000    0.0000
-# s(FSLE0)      0   1.0000  0.1162    0.1125  0.1191   0.0448     0.2162   0.0401    0.0267
-# s(Sal0)       0   0.1560  1.0000    0.6640  0.2913   0.2460     0.8290   0.1452    0.1161
-# s(Sal700)     0   0.1531  0.6765    1.0000  0.3452   0.2256     0.8758   0.1839    0.1746
-# s(SSH0)       0   0.1434  0.4231    0.3864  1.0000   0.2993     0.7826   0.2119    0.1298
-# s(Temp0)      0   0.0840  0.3360    0.3292  0.2677   1.0000     0.5096   0.0717    0.0809
-# s(Temp700)    0   0.1490  0.5654    0.6400  0.3326   0.3353     1.0000   0.1331    0.0996
-# s(Slope)      0   0.0577  0.1944    0.1940  0.2844   0.0945     0.3463   1.0000    0.2540
-# s(Aspect)     0   0.0194  0.1047    0.1216  0.1523   0.0382     0.1043   0.1911    1.0000
+#             para s(Chl0) s(FSLE0) s(Sal0) s(Sal700) s(SSH0) s(Temp700) s(Slope) s(Aspect)
+# para          1  0.0000   0.0000  0.0000    0.0000  0.0000     0.0000   0.0000    0.0000
+# s(Chl0)       0  1.0000   0.0322  0.3345    0.1604  0.2111     0.1842   0.1385    0.0477
+# s(FSLE0)      0  0.0206   1.0000  0.1710    0.0205  0.1191     0.0321   0.0401    0.0267
+# s(Sal0)       0  0.1286   0.1268  1.0000    0.1783  0.2476     0.1928   0.1414    0.1053
+# s(Sal700)     0  0.1192   0.0479  0.4151    1.0000  0.2931     0.6843   0.1857    0.0873
+# s(SSH0)       0  0.1551   0.1434  0.5754    0.3578  1.0000     0.5074   0.2119    0.1298
+# s(Temp700)    0  0.1318   0.0833  0.5454    0.7176  0.4764     1.0000   0.1988    0.1550
+# s(Slope)      0  0.0919   0.0577  0.2556    0.3340  0.2844     0.4322   1.0000    0.2540
+# s(Aspect)     0  0.0361   0.0194  0.1489    0.1707  0.1523     0.2355   0.1911    1.0000
 
 
-# Sal0 problematic w SSH, Sal700, Temp0, less w Chl0
-# Sal700 prolematic w Sal0, Temp700
-# Taking out Sal0, Sal700, SSH
+# Sal0 problematic w SSH, Temp700, less w Chl0, Sal700
+# Sal700 problematic w Temp700
+# Taking out Temp700, SSH, Sal0
 
 # run reduced model
-redMod = gam(Pres ~ s(FSLE0,bs="cs",k=5)
-             # + s(Sal0,bs="cs",k=5)
-             # + s(Sal700,bs="cs",k=5)
+redMod = gam(Pres ~ s(Chl0,bs="cs",k=5)
+             + s(FSLE0,bs="cs",k=5)
+             # + s(Sal0,bs="cs",k=4)
+             + s(Sal700,bs="cs",k=5)
              # + s(SSH0,bs="cs",k=5)
-             + s(Temp0,bs="cs",k=5)
-             + s(Temp700,bs="cs",k=4)
+             # + s(Temp700,bs="cs",k=5)
              + s(Slope,bs="cs",k=5)
              + s(Aspect,bs="cc",k=5),
              data=data,
@@ -128,15 +128,15 @@ redMod = gam(Pres ~ s(FSLE0,bs="cs",k=5)
 conCurv = concurvity(redMod,full=FALSE)
 round(conCurv$estimate,digits=4)
 
-#             para s(FSLE0) s(Temp0) s(Temp700) s(Slope) s(Aspect)
-# para          1   0.0000   0.0000     0.0000   0.0000    0.0000
-# s(FSLE0)      0   1.0000   0.0448     0.2162   0.0401    0.0267
-# s(Temp0)      0   0.0840   1.0000     0.5096   0.0717    0.0809
-# s(Temp700)    0   0.1490   0.3353     1.0000   0.1331    0.0996
-# s(Slope)      0   0.0577   0.0945     0.3463   1.0000    0.2540
-# s(Aspect)     0   0.0194   0.0382     0.1043   0.1911    1.0000
+#             para s(Chl0) s(FSLE0) s(Sal700) s(Slope) s(Aspect)
+# para         1  0.0000   0.0000    0.0000   0.0000    0.0000
+# s(Chl0)      0  1.0000   0.0322    0.1604   0.1385    0.0477
+# s(FSLE0)     0  0.0206   1.0000    0.0205   0.0401    0.0267
+# s(Sal700)    0  0.1192   0.0479    1.0000   0.1857    0.0873
+# s(Slope)     0  0.0919   0.0577    0.3340   1.0000    0.2540
+# s(Aspect)    0  0.0361   0.0194    0.1707   0.1911    1.0000
 
-# Sal700 still quite explained by SSH, but proceeding anyway
+# all looks good!
 
 modCompTable = dredge(redMod,
                       beta="none",
@@ -155,32 +155,32 @@ summary(optMod)
 # Link function: log 
 # 
 # Formula:
-#   Pres ~ s(Aspect, bs = "cc", k = 5) + s(FSLE0, bs = "cs", 
-#                                          k = 5) + s(Slope, bs = "cs", k = 5) + s(Temp0, bs = "cs", 
-#                                                                                  k = 5) + s(Temp700, bs = "cs", k = 4) + 1
+#   Pres ~ s(Aspect, bs = "cc", k = 5) + s(Chl0, bs = "cs", 
+#                                          k = 5) + s(FSLE0, bs = "cs", k = 5) + s(Sal700, bs = "cs", 
+#                                                                                  k = 5) + s(Slope, bs = "cs", k = 5) + 1
 # 
 # Parametric coefficients:
 #              Estimate Std. Error z value Pr(>|z|)    
-# (Intercept) -1.18277    0.02782  -42.52   <2e-16 ***
+# (Intercept)  -12.641      2.468  -5.123 3.01e-07 ***
 #   ---
 #   Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 # 
 # Approximate significance of smooth terms:
-#                 edf Ref.df  Chi.sq p-value    
-#   s(Aspect)  2.992      3  3838.1  <2e-16 ***
-#   s(FSLE0)   3.694      4   254.6  <2e-16 ***
-#   s(Slope)   3.994      4 22391.1  <2e-16 ***
-#   s(Temp0)   3.976      4   675.6  <2e-16 ***
-#   s(Temp700) 2.969      3   534.4  <2e-16 ***
+#                edf Ref.df Chi.sq p-value    
+#   s(Aspect) 2.925      3  219.3  <2e-16 ***
+#   s(Chl0)   3.939      4  843.2  <2e-16 ***
+#   s(FSLE0)  3.863      4  225.4  <2e-16 ***
+#   s(Sal700) 3.184      4  424.9  <2e-16 ***
+#   s(Slope)  3.968      4  394.5  <2e-16 ***
 #   ---
 #   Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 # 
-# R-sq.(adj) =  0.574   Deviance explained = 72.3%
-# -REML =  19564  Scale est. = 1         n = 10477
+# R-sq.(adj) =  0.482   Deviance explained = 73.3%
+# -REML =  18849  Scale est. = 1         n = 10477
 
 
 # plot
-png(filename=paste(outDir,'/',spec,'/','Cuvier_allSites.png',sep=""),width=600,height=600)
+png(filename=paste(outDir,'/',spec,'/','Gervais_allSites.png',sep=""),width=600,height=600)
 plot.gam(optMod,all.terms=TRUE,rug=TRUE,scale=0,pages=1)
 while (dev.cur()>1) {dev.off()}
 
@@ -197,12 +197,12 @@ for (i in 1:length(sites)){
   
   if (sum(siteData$Pres>0)>25){
     # same terms as redMod from regional model, but no slope or aspect
-    fullSiteMod = gam(Pres ~ s(FSLE0,bs="cs",k=5)
-                      # + s(Sal0,bs="cs",k=5)
-                      # + s(Sal700,bs="cs",k=5)
+    fullSiteMod = gam(Pres ~ s(Chl0,bs="cs",k=5)
+                      + s(FSLE0,bs="cs",k=5)
+                      # + s(Sal0,bs="cs",k=4)
+                      + s(Sal700,bs="cs",k=5),
                       # + s(SSH0,bs="cs",k=5)
-                      + s(Temp0,bs="cs",k=5)
-                      + s(Temp700,bs="cs",k=4),
+                      # + s(Temp700,bs="cs",k=5)
                       # + s(Slope,bs="cs",k=5)
                       # + s(Aspect,bs="cc",k=5),
                       data=siteData,
@@ -223,7 +223,7 @@ for (i in 1:length(sites)){
     sitePV = summary(optSiteMod)$s.pv
     
     
-      # Remove non-significant terms & re-run model iteratively until only signif covars remain
+    # Remove non-significant terms & re-run model iteratively until only signif covars remain
     if (any(sitePV>=0.05)){ # Remove non-significant terms & re-run model iteratively until only signif covars remain
       flag = 1
       while (flag==1){
@@ -255,7 +255,7 @@ for (i in 1:length(sites)){
       pValList[[sites[i]]] = sitePV
     }
     
-    png(filename=paste(outDir,'/',spec,'/','Cuvier_',sites[i],'.png',sep=""),width=600,height=600)
+    png(filename=paste(outDir,'/',spec,'/','Gervais_',sites[i],'.png',sep=""),width=600,height=600)
     plot.gam(siteModList[[sites[i]]],all.terms=TRUE,rug=TRUE,scale=0,pages=1)
     while (dev.cur()>1) {dev.off()}
     
