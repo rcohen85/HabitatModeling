@@ -226,7 +226,7 @@ AIC_votes = matrix(nrow=length(smoothVarList),ncol=5)
 
 for (i in 1:(length(smoothVarList))){
   
-  if (str_detect(smoothVarList[i],"Slope")|str_detect(smoothVarList[i],"Asp")){
+  if (str_detect(smoothVarList[i],"Asp")){
     bs = "cc"
   } else { bs = "cs"}
   
@@ -273,10 +273,12 @@ fullMod = gam(Pres ~ s(Chl0,bs="cs",k=5)
               + s(Temp0,bs="cs",k=5)
               + s(Temp200,bs="cs",k=5)
               + s(VelAsp0,bs="cc",k=5)
-              + s(Slope,bs="cc",k=5)
+              + s(Slope,bs="cs",k=5)
               + s(Aspect,bs="cc",k=5),
               data=data,
               family=poisson,
+              method="REML",
+              select=TRUE,
               gamma=1.4,
               na.action="na.fail")
 
@@ -286,19 +288,19 @@ round(conCurv$estimate,digits=4)
 
 #             para s(Chl0) s(FSLE0) s(Sal0) s(Sal200) s(EKE0) s(SSH0) s(Temp0) s(Temp200) s(VelAsp0) s(Slope) s(Aspect)
 # para          1  0.0000   0.0000  0.0000    0.0000  0.0000  0.0000   0.0000     0.0000     0.0000   0.0000    0.0000
-# s(Chl0)       0  1.0000   0.0322  0.3345    0.3936  0.0776  0.2111   0.2806     0.3368     0.0699   0.1455    0.0477
-# s(FSLE0)      0  0.0206   1.0000  0.1710    0.1938  0.0812  0.1191   0.0448     0.0974     0.0712   0.0450    0.0267
-# s(Sal0)       0  0.1286   0.1268  1.0000    0.9617  0.1797  0.2476   0.2139     0.3567     0.1608   0.1521    0.1053
-# s(Sal200)     0  0.1190   0.1324  0.9562    1.0000  0.1852  0.2503   0.1988     0.3761     0.1657   0.1784    0.1463
-# s(EKE0)       0  0.0315   0.1023  0.2900    0.3294  1.0000  0.1574   0.0864     0.1597     0.9430   0.0335    0.0395
-# s(SSH0)       0  0.1551   0.1434  0.5754    0.6569  0.2027  1.0000   0.2993     0.4723     0.1849   0.2145    0.1298
-# s(Temp0)      0  0.2332   0.0840  0.3741    0.4189  0.1160  0.2677   1.0000     0.7417     0.1063   0.0784    0.0809
-# s(Temp200)    0  0.2029   0.1263  0.5911    0.6660  0.1699  0.3421   0.7125     1.0000     0.1537   0.1090    0.0840
-# s(VelAsp0)    0  0.0318   0.0981  0.2848    0.3241  0.8862  0.1511   0.0873     0.1588     1.0000   0.0298    0.0366
-# s(Slope)      0  0.0856   0.0484  0.2314    0.2731  0.0551  0.1906   0.0881     0.1557     0.0508   1.0000    0.1961
-# s(Aspect)     0  0.0361   0.0194  0.1489    0.1454  0.0348  0.1523   0.0382     0.0431     0.0419   0.1538    1.0000
+# s(Chl0)       0  1.0000   0.0322  0.3345    0.3936  0.0776  0.2111   0.2806     0.3368     0.0699   0.1385    0.0477
+# s(FSLE0)      0  0.0206   1.0000  0.1710    0.1938  0.0812  0.1191   0.0448     0.0974     0.0712   0.0401    0.0267
+# s(Sal0)       0  0.1286   0.1268  1.0000    0.9617  0.1797  0.2476   0.2139     0.3567     0.1608   0.1414    0.1053
+# s(Sal200)     0  0.1190   0.1324  0.9562    1.0000  0.1852  0.2503   0.1988     0.3761     0.1657   0.1736    0.1463
+# s(EKE0)       0  0.0315   0.1023  0.2900    0.3294  1.0000  0.1574   0.0864     0.1597     0.9430   0.0278    0.0395
+# s(SSH0)       0  0.1551   0.1434  0.5754    0.6569  0.2027  1.0000   0.2993     0.4723     0.1849   0.2119    0.1298
+# s(Temp0)      0  0.2332   0.0840  0.3741    0.4189  0.1160  0.2677   1.0000     0.7417     0.1063   0.0717    0.0809
+# s(Temp200)    0  0.2029   0.1263  0.5911    0.6660  0.1699  0.3421   0.7125     1.0000     0.1537   0.0977    0.0840
+# s(VelAsp0)    0  0.0318   0.0981  0.2848    0.3241  0.8862  0.1511   0.0873     0.1588     1.0000   0.0236    0.0366
+# s(Slope)      0  0.0919   0.0577  0.2556    0.2966  0.0649  0.2844   0.0945     0.1632     0.0607   1.0000    0.2540
+# s(Aspect)     0  0.0361   0.0194  0.1489    0.1454  0.0348  0.1523   0.0382     0.0431     0.0419   0.1911    1.0000
 
-# Sal0 problematic w SSH, Sal200, Temp0, less w Chl0
+# Sal0 problematic w SSH, Sal200, Temp0, Temp200 less w Chl0
 # Sal200 prolematic w Chl0, Sal0, SSH, Temp0, Temp200
 # EKE problematic w VelAsp0
 # Temp200 problematic w Temp0
@@ -314,10 +316,12 @@ redMod = gam(Pres ~ s(Chl0,bs="cs",k=5)
              + s(Temp0,bs="cs",k=5)
              # + s(Temp200,bs="cs",k=5)
              # + s(VelAsp0,bs="cc",k=5)
-             + s(Slope,bs="cc",k=5)
+             + s(Slope,bs="cs",k=5)
              + s(Aspect,bs="cc",k=5),
              data=data,
              family=poisson,
+             method="REML",
+             select=TRUE,
              gamma=1.4,
              na.action="na.fail")
 
@@ -328,14 +332,14 @@ round(conCurv$estimate,digits=4)
 
 #             para s(Chl0) s(FSLE0) s(Sal0) s(EKE0) s(SSH0) s(Temp0) s(Slope) s(Aspect)
 # para         1  0.0000   0.0000  0.0000  0.0000  0.0000   0.0000   0.0000    0.0000
-# s(Chl0)      0  1.0000   0.0322  0.3345  0.0776  0.2111   0.2806   0.1455    0.0477
-# s(FSLE0)     0  0.0206   1.0000  0.1710  0.0812  0.1191   0.0448   0.0450    0.0267
-# s(Sal0)      0  0.1286   0.1268  1.0000  0.1797  0.2476   0.2139   0.1521    0.1053
-# s(EKE0)      0  0.0315   0.1023  0.2900  1.0000  0.1574   0.0864   0.0335    0.0395
-# s(SSH0)      0  0.1551   0.1434  0.5754  0.2027  1.0000   0.2993   0.2145    0.1298
-# s(Temp0)     0  0.2332   0.0840  0.3741  0.1160  0.2677   1.0000   0.0784    0.0809
-# s(Slope)     0  0.0856   0.0484  0.2314  0.0551  0.1906   0.0881   1.0000    0.1961
-# s(Aspect)    0  0.0361   0.0194  0.1489  0.0348  0.1523   0.0382   0.1538    1.0000
+# s(Chl0)      0  1.0000   0.0322  0.3345  0.0776  0.2111   0.2806   0.1385    0.0477
+# s(FSLE0)     0  0.0206   1.0000  0.1710  0.0812  0.1191   0.0448   0.0401    0.0267
+# s(Sal0)      0  0.1286   0.1268  1.0000  0.1797  0.2476   0.2139   0.1414    0.1053
+# s(EKE0)      0  0.0315   0.1023  0.2900  1.0000  0.1574   0.0864   0.0278    0.0395
+# s(SSH0)      0  0.1551   0.1434  0.5754  0.2027  1.0000   0.2993   0.2119    0.1298
+# s(Temp0)     0  0.2332   0.0840  0.3741  0.1160  0.2677   1.0000   0.0717    0.0809
+# s(Slope)     0  0.0919   0.0577  0.2556  0.0649  0.2844   0.0945   1.0000    0.2540
+# s(Aspect)    0  0.0361   0.0194  0.1489  0.0348  0.1523   0.0382   0.1911    1.0000
 
 # Sal0 still quite explained by SSH & Temp0, but proceeding anyway
 
@@ -350,7 +354,6 @@ optMod = optMod[[names(optMod)]]
 save(optMod,modCompTable,file=paste(outDir,'/',spec,'/','RegionalModel.Rdata',sep=""))
 
 # check p-values
-PV = summary(optMod)$s.pv
 summary(optMod)
 
 # Family: poisson 
@@ -359,36 +362,36 @@ summary(optMod)
 # Formula:
 #   Pres ~ s(Aspect, bs = "cc", k = 5) + s(Chl0, bs = "cs", k = 5) + 
 #   s(EKE0, bs = "cs", k = 5) + s(FSLE0, bs = "cs", k = 5) + 
-#   s(Sal0, bs = "cs", k = 4) + s(Slope, bs = "cc", k = 5) + 
+#   s(Sal0, bs = "cs", k = 4) + s(Slope, bs = "cs", k = 5) + 
 #   s(SSH0, bs = "cs", k = 5) + s(Temp0, bs = "cs", k = 5) + 
 #   1
 # 
 # Parametric coefficients:
 #   Estimate Std. Error z value Pr(>|z|)    
-# (Intercept) 3.263605   0.002586    1262   <2e-16 ***
+# (Intercept) 3.256467   0.002627    1239   <2e-16 ***
 #   ---
 #   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 # 
 # Approximate significance of smooth terms:
-#   edf Ref.df   Chi.sq p-value    
-# s(Aspect) 2.983      3  2966.35  <2e-16 ***
-#   s(Chl0)   3.979      4  4500.43  <2e-16 ***
-#   s(EKE0)   3.905      4    56.59  <2e-16 ***
-#   s(FSLE0)  3.950      4  1910.39  <2e-16 ***
-#   s(Sal0)   2.867      3  7528.63  <2e-16 ***
-#   s(Slope)  2.994      3  1886.67  <2e-16 ***
-#   s(SSH0)   3.986      4 15254.86  <2e-16 ***
-#   s(Temp0)  3.999      4 10570.58  <2e-16 ***
+#   edf Ref.df  Chi.sq p-value    
+# s(Aspect) 2.998      3  5156.5  <2e-16 ***
+#   s(Chl0)   3.964      4  3877.4  <2e-16 ***
+#   s(EKE0)   3.647      4   143.5  <2e-16 ***
+#   s(FSLE0)  3.871      4  1226.2  <2e-16 ***
+#   s(Sal0)   2.957      3  5842.2  <2e-16 ***
+#   s(Slope)  3.996      4  5795.6  <2e-16 ***
+#   s(SSH0)   3.993      4 18848.2  <2e-16 ***
+#   s(Temp0)  3.992      4 11694.8  <2e-16 ***
 #   ---
 #   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 # 
-# R-sq.(adj) =  0.567   Deviance explained =   60%
-# UBRE = 17.128  Scale est. = 1         n = 10477
+# R-sq.(adj) =  0.578   Deviance explained = 60.9%
+# -REML =  83038  Scale est. = 1         n = 10477
 
 
 # plot
-png(filename=paste(outDir,'/',spec,'/','SBCD_allSites.png',sep=""),width=600,height=600)
-plot.gam(optMod,all.terms=TRUE,rug=TRUE,pages=1)
+png(filename=paste(outDir,'/',spec,'/',spec,'_allSites.png',sep=""),width=600,height=600)
+plot.gam(optMod,all.terms=TRUE,rug=TRUE,pages=1,scale=0)
 while (dev.cur()>1) {dev.off()}
 
 
@@ -412,6 +415,8 @@ for (i in 1:length(sites)){
                       + s(Temp0,bs="cs",k=5),
                       data=siteData,
                       family=poisson,
+                      method="REML",
+                      select=TRUE,
                       gamma=1.4,
                       na.action="na.fail")
     
@@ -429,34 +434,36 @@ for (i in 1:length(sites)){
     if (any(sitePV>=0.05)){ # Remove non-significant terms & re-run model iteratively until only signif covars remain
       flag = 1
       while (flag==1){
-      # get terms from formula as strings
-      thisForm = as.character(optSiteMod$formula)[3]
-      startSmooth = str_locate_all(thisForm,'s\\(')[[1]][,1]
-      termInd = str_locate_all(thisForm,'\\+')[[1]][,1]
-      termInd = c(0,termInd,str_length(thisForm)+1)
-      allTerms = character()
-      for (j in 1:length(termInd)-1){
-        thisTerm = str_sub(thisForm,start=termInd[j]+1,end=termInd[j+1]-1)
-        allTerms = c(allTerms,thisTerm)
-      }
-      # identify which terms were non-significant
-      badVars = allTerms[sitePV>=0.05]
-      # update model
-      redMod<-eval(parse(text=paste("update(optSiteMod, . ~ . - ", paste(badVars,collapse="-"), ")", sep="")))
-      redSitePV = summary(redMod)$s.pv
-      if (!any(redSitePV>=0.05)){
-        siteModList[[sites[i]]] = redMod
-        pValList[[sites[i]]] = redSitePV
-        flag=0
-      }
+        # get terms from formula as strings
+        thisForm = as.character(optSiteMod$formula)[3]
+        startSmooth = str_locate_all(thisForm,'s\\(')[[1]][,1]
+        termInd = str_locate_all(thisForm,'\\+')[[1]][,1]
+        termInd = c(0,termInd,str_length(thisForm)+1)
+        allTerms = character()
+        for (j in 1:length(termInd)-1){
+          thisTerm = str_sub(thisForm,start=termInd[j]+1,end=termInd[j+1]-1)
+          allTerms = c(allTerms,thisTerm)
+        }
+        # identify which terms were non-significant
+        badVars = allTerms[sitePV>=0.05]
+        dontNeed = which(!is.na(str_match(badVars,"1")))
+        badVars = badVars[-dontNeed]
+        # update model
+        optSiteMod<-eval(parse(text=paste("update(optSiteMod, . ~ . - ", paste(badVars,collapse="-"), ")", sep="")))
+        sitePV = summary(optSiteMod)$s.pv
+        if (!any(sitePV>=0.05)){
+          siteModList[[sites[i]]] = optSiteMod
+          pValList[[sites[i]]] = sitePV
+          flag=0
+        }
       }
     } else {
       siteModList[[sites[i]]] = optSiteMod
       pValList[[sites[i]]] = sitePV
     }
     
-    png(filename=paste(outDir,'/',spec,'/','SBCD_',sites[i],'.png',sep=""),width=600,height=600)
-    plot.gam(siteModList[[sites[i]]],all.terms=TRUE,rug=TRUE,pages=1)
+    png(filename=paste(outDir,'/',spec,'/',spec,'_',sites[i],'.png',sep=""),width=600,height=600)
+    plot.gam(siteModList[[sites[i]]],all.terms=TRUE,rug=TRUE,pages=1,main=sites[i],scale=0)
     while (dev.cur()>1) {dev.off()}
     
   }
