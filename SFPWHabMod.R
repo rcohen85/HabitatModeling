@@ -38,20 +38,20 @@ AIC_votes = matrix(nrow=length(smoothVarList),ncol=5)
 
 for (i in 1:(length(smoothVarList))){
   
-  if (str_detect(smoothVarList[i],"Slope")|str_detect(smoothVarList[i],"Asp")){
+  if (str_detect(smoothVarList[i],"Asp")){
     bs = "cc"
   } else { bs = "cs"}
   
-  modelCall = paste('gam(Pres~data$',smoothVarList[i],',data=data,family=poisson)',sep="")
+  modelCall = paste('gam(Pres~data$',smoothVarList[i],',data=data,family=poisson,method="REML",select=TRUE)',sep="")
   linMod = eval(parse(text=modelCall))
   
-  modelCall = paste('gam(Pres~s(data$',smoothVarList[i],',bs="',bs,'",k=3),data=data,family=poisson)',sep="")
+  modelCall = paste('gam(Pres~s(data$',smoothVarList[i],',bs="',bs,'",k=3),data=data,family=poisson,method="REML",select=TRUE)',sep="")
   smoothMod1 = eval(parse(text=modelCall))
   
-  modelCall = paste('gam(Pres~s(data$',smoothVarList[i],',bs="',bs,'",k=4),data=data,family=poisson)',sep="")
+  modelCall = paste('gam(Pres~s(data$',smoothVarList[i],',bs="',bs,'",k=4),data=data,family=poisson,method="REML",select=TRUE)',sep="")
   smoothMod2 = eval(parse(text=modelCall))
   
-  modelCall = paste('gam(Pres~s(data$',smoothVarList[i],',bs="',bs,'",k=5),data=data,family=poisson)',sep="")
+  modelCall = paste('gam(Pres~s(data$',smoothVarList[i],',bs="',bs,'",k=5),data=data,family=poisson,method="REML",select=TRUE)',sep="")
   smoothMod3 = eval(parse(text=modelCall))
   
   AIC_votes[i,1:4] = c(AIC(linMod)[[1]],AIC(smoothMod1)[[1]],AIC(smoothMod2)[[1]],AIC(smoothMod3)[[1]])
@@ -63,15 +63,15 @@ rownames(AIC_votes) = smoothVarList[]
 AIC_votes
 
 #             linMod             threeKnots         fourKnots          fiveKnots          Best       
-# Chl0    "173931.539455583" "164401.90983094"  "156155.115172241" "156013.261499281" "fiveKnots"
-# FSLE0   "173741.349301875" "170972.349325979" "165872.994538534" "163957.516696382" "fiveKnots"
-# Sal0    "177870.753516572" "177199.035056446" "172632.17245835"  "171558.308456471" "fiveKnots"
-# Sal700  "178177.295450721" "174602.559816833" "167903.415368144" "162910.972607726" "fiveKnots"
-# SSH0    "167877.347367725" "135603.381048807" "135107.411940843" "135184.500097775" "fourKnots"
-# Temp0   "177924.455758584" "166214.091499445" "165995.039170708" "165416.245772813" "fiveKnots"
-# Temp700 "177740.652544819" "166433.625252021" "161304.991843192" "161409.92895673"  "fourKnots"
-# Slope   "163692.761760395" "134021.328642419" "134021.328642419" "127361.218266489" "fiveKnots"
-# Aspect  "160392.189591788" "148968.245769183" "148968.245769183" "143476.574508039" "fiveKnots"
+# Chl0    "173931.539455583" "164401.827164323" "156155.011837316" "156013.101197081" "fiveKnots"
+# FSLE0   "173741.349301875" "170972.143374144" "165872.907640855" "163957.348934929" "fiveKnots"
+# Sal0    "177870.753516572" "177198.932232041" "172631.992642169" "171558.146240492" "fiveKnots"
+# Sal700  "178177.295450721" "174602.428689335" "167903.271342381" "162910.860087515" "fiveKnots"
+# SSH0    "167877.347367725" "135603.246627822" "135107.344195514" "135184.424481544" "fourKnots"
+# Temp0   "177924.455758584" "166213.914082787" "165994.893658411" "165416.10013583"  "fiveKnots"
+# Temp700 "177740.652544819" "166433.466396946" "161304.858524333" "161409.775611604" "fourKnots"
+# Slope   "163692.761760395" "137405.681510786" "137152.066357936" "124615.318617604" "fiveKnots"
+# Aspect  "160392.189591788" "148968.143390251" "148968.143390251" "143476.484139084" "fiveKnots"
 
 # run full model
 fullMod = gam(Pres ~ s(Chl0,bs="cs",k=5)
@@ -86,7 +86,9 @@ fullMod = gam(Pres ~ s(Chl0,bs="cs",k=5)
               data=data,
               family=poisson,
               gamma=1.4,
-              na.action="na.fail")
+              na.action="na.fail",
+              method="REML",
+              select=TRUE)
 
 # check concurvity of smooth terms
 conCurv = concurvity(fullMod,full=FALSE)
@@ -123,7 +125,9 @@ redMod =gam(Pres ~ s(Chl0,bs="cs",k=5)
              data=data,
              family=poisson,
              gamma=1.4,
-             na.action="na.fail")
+             na.action="na.fail",
+             method="REML",
+            select=TRUE)
 
 
 # check concurvity of smooth terms
@@ -164,24 +168,24 @@ summary(optMod)
 #                                                                                                                          k = 5) + 1
 # 
 # Parametric coefficients:
-#              Estimate Std. Error z value Pr(>|z|)    
-# (Intercept) 0.817079   0.009114   89.65   <2e-16 ***
+#               Estimate Std. Error z value Pr(>|z|)    
+# (Intercept) 0.818063   0.009092   89.97   <2e-16 ***
 #   ---
 #   Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 # 
 # Approximate significance of smooth terms:
-#   edf Ref.df Chi.sq p-value    
-# s(Aspect) 2.997      3 6071.1  <2e-16 ***
-#   s(Chl0)   4.000      4 3153.7  <2e-16 ***
-#   s(FSLE0)  3.982      4  513.2  <2e-16 ***
-#   s(Sal700) 3.919      4  703.7  <2e-16 ***
-#   s(Slope)  2.994      3 5973.5  <2e-16 ***
-#   s(Temp0)  3.986      4 8303.5  <2e-16 ***
+#                edf Ref.df Chi.sq p-value    
+#   s(Aspect) 2.999      3 6085.3  <2e-16 ***
+#   s(Chl0)   3.987      4 3155.1  <2e-16 ***
+#   s(FSLE0)  3.939      4  510.0  <2e-16 ***
+#   s(Sal700) 3.929      4  703.8  <2e-16 ***
+#   s(Slope)  2.988      3 5974.0  <2e-16 ***
+#   s(Temp0)  3.988      4 8309.3  <2e-16 ***
 #   ---
 #   Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 # 
 # R-sq.(adj) =  0.415   Deviance explained = 49.6%
-# UBRE = 6.7549  Scale est. = 1         n = 10477
+# -REML =  35296  Scale est. = 1         n = 10477
 
 
 # plot
@@ -214,7 +218,9 @@ for (i in 1:length(sites)){
                       data=siteData,
                       family=poisson,
                       gamma=1.4,
-                      na.action="na.fail")
+                      na.action="na.fail",
+                      method="REML",
+                      select=TRUE)
     
     siteModCompTable = dredge(fullSiteMod,
                               beta="none",
@@ -227,6 +233,7 @@ for (i in 1:length(sites)){
     sitePV = summary(optSiteMod)$s.pv
     
     
+    # Remove non-significant terms & re-run model iteratively until only signif covars remain
     if (any(sitePV>=0.05)){ # Remove non-significant terms & re-run model iteratively until only signif covars remain
       flag = 1
       while (flag==1){
@@ -242,12 +249,14 @@ for (i in 1:length(sites)){
         }
         # identify which terms were non-significant
         badVars = allTerms[sitePV>=0.05]
+        dontNeed = which(!is.na(str_match(badVars,"1")))
+        badVars = badVars[-dontNeed]
         # update model
-        redMod<-eval(parse(text=paste("update(optSiteMod, . ~ . - ", paste(badVars,collapse="-"), ")", sep="")))
-        redSitePV = summary(redMod)$s.pv
+        optSiteMod<-eval(parse(text=paste("update(optSiteMod, . ~ . - ", paste(badVars,collapse="-"), ")", sep="")))
+        sitePV = summary(redMod)$s.pv
         if (!any(redSitePV>=0.05)){
-          siteModList[[sites[i]]] = redMod
-          pValList[[sites[i]]] = redSitePV
+          siteModList[[sites[i]]] = optSiteMod
+          pValList[[sites[i]]] = sitePV
           flag=0
         }
       }
