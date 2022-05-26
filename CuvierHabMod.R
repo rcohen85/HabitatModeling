@@ -15,7 +15,7 @@ if (!dir.exists(paste(outDir,'/',spec,sep=""))){
   dir.create(paste(outDir,'/',spec,sep=""))
 }
 
-data = data.frame(read.csv('E:/ModelingCovarData/Master_DFs/UD28_masterDF.csv'))
+data = data.frame(read.csv('E:/ModelingCovarData/Master_DFs/Cuvier_masterDF.csv'))
 # Round presence to get Poisson dist
 data$Pres = round(data$Pres)
 
@@ -61,23 +61,23 @@ colnames(AIC_votes) = c(modOpts,"Best")
 rownames(AIC_votes) = smoothVarList[]
 AIC_votes
 
-#             linMod             threeKnots         fourKnots          fiveKnots          Best       
-# FSLE0   "520088.534596979" "502724.504836865" "502631.679800649" "500300.820961495" "fiveKnots"
-# Sal0    "486235.085207736" "411360.68690928"  "387124.519719507" "387743.377412269" "fourKnots"
-# Sal700  "464609.314309435" "408543.373290636" "387910.250307009" "387756.9174753"   "fiveKnots"
-# SSH     "315223.54295346"  "313716.309875766" "310936.878266334" "309552.141151369" "fiveKnots"
-# Temp0   "376639.997067505" "346409.813758524" "345047.529139283" "344559.124634964" "fiveKnots"
-# Temp700 "403429.944778358" "371726.867286493" "359909.202646128" "357272.815699072" "fiveKnots"
-# Slope   "471243.092863463" "376404.925208875" "376698.873559256" "373939.212858259" "fiveKnots"
-# Aspect  "519177.311573147" "518337.51248262"  "518337.51248262"  "512187.352377945" "fiveKnots"
+#           linMod             threeKnots         fourKnots          fiveKnots          Best       
+# FSLE0   "143518.029434583" "139700.990717399" "136581.634889274" "136493.20158728"  "fiveKnots"
+# Sal0    "153118.970496731" "153007.155354861" "138251.547146199" "131995.945355285" "fiveKnots"
+# Sal700  "153926.405063222" "153828.301284669" "135649.612216234" "129176.277855976" "fiveKnots"
+# SSH     "166827.993364552" "95270.4496259113" "83489.9374853719" "82791.4859578095" "fiveKnots"
+# Temp0   "158889.846656827" "158876.379796124" "157468.377276248" "157446.412951153" "fiveKnots"
+# Temp700 "155067.737181327" "149396.209582999" "137529.18534134"  "138160.689819933" "fourKnots"
+# Slope   "119444.909524396" "109800.390547004" "108806.710522833" "103469.192587452" "fiveKnots"
+# Aspect  "141184.85109818"  "140609.895994276" "140609.895994276" "134940.422019047" "fiveKnots"
 
 # run full model
 fullMod = gam(Pres ~ s(FSLE0,bs="cs",k=5)
-              + s(Sal0,bs="cs",k=4)
+              + s(Sal0,bs="cs",k=5)
               + s(Sal700,bs="cs",k=5)
               + s(SSH0,bs="cs",k=5)
               + s(Temp0,bs="cs",k=5)
-              + s(Temp700,bs="cs",k=5)
+              + s(Temp700,bs="cs",k=4)
               + s(Slope,bs="cs",k=5)
               + s(Aspect,bs="cc",k=5),
               data=data,
@@ -93,14 +93,14 @@ round(conCurv$estimate,digits=4)
 
 #             para s(FSLE0) s(Sal0) s(Sal700) s(SSH0) s(Temp0) s(Temp700) s(Slope) s(Aspect)
 # para          1   0.0000  0.0000    0.0000  0.0000   0.0000     0.0000   0.0000    0.0000
-# s(FSLE0)      0   1.0000  0.1710    0.1125  0.1191   0.0448     0.1255   0.0401    0.0267
-# s(Sal0)       0   0.1268  1.0000    0.6319  0.2476   0.2139     0.5615   0.1414    0.1053
-# s(Sal700)     0   0.1531  0.8001    1.0000  0.3452   0.2256     0.6636   0.1839    0.1746
-# s(SSH0)       0   0.1434  0.5754    0.3864  1.0000   0.2993     0.4568   0.2119    0.1298
-# s(Temp0)      0   0.0840  0.3741    0.3292  0.2677   1.0000     0.3941   0.0717    0.0809
-# s(Temp700)    0   0.1492  0.7265    0.6841  0.3361   0.3469     1.0000   0.1361    0.1256
-# s(Slope)      0   0.0577  0.2556    0.1940  0.2844   0.0945     0.1849   1.0000    0.2540
-# s(Aspect)     0   0.0194  0.1489    0.1216  0.1523   0.0382     0.0618   0.1911    1.0000
+# s(FSLE0)      0   1.0000  0.1162    0.1125  0.1191   0.0448     0.2162   0.0401    0.0267
+# s(Sal0)       0   0.1560  1.0000    0.6640  0.2913   0.2460     0.8290   0.1452    0.1161
+# s(Sal700)     0   0.1531  0.6765    1.0000  0.3452   0.2256     0.8758   0.1839    0.1746
+# s(SSH0)       0   0.1434  0.4231    0.3864  1.0000   0.2993     0.7826   0.2119    0.1298
+# s(Temp0)      0   0.0840  0.3360    0.3292  0.2677   1.0000     0.5096   0.0717    0.0809
+# s(Temp700)    0   0.1490  0.5654    0.6400  0.3326   0.3353     1.0000   0.1331    0.0996
+# s(Slope)      0   0.0577  0.1944    0.1940  0.2844   0.0945     0.3463   1.0000    0.2540
+# s(Aspect)     0   0.0194  0.1047    0.1216  0.1523   0.0382     0.1043   0.1911    1.0000
 
 
 # Sal0 problematic w SSH, Sal700, Temp0, less w Chl0
@@ -109,11 +109,11 @@ round(conCurv$estimate,digits=4)
 
 # run reduced model
 redMod = gam(Pres ~ s(FSLE0,bs="cs",k=5)
-             # + s(Sal0,bs="cs",k=4)
+             # + s(Sal0,bs="cs",k=5)
              # + s(Sal700,bs="cs",k=5)
              # + s(SSH0,bs="cs",k=5)
              + s(Temp0,bs="cs",k=5)
-             + s(Temp700,bs="cs",k=5)
+             + s(Temp700,bs="cs",k=4)
              + s(Slope,bs="cs",k=5)
              + s(Aspect,bs="cc",k=5),
              data=data,
@@ -130,11 +130,11 @@ round(conCurv$estimate,digits=4)
 
 #             para s(FSLE0) s(Temp0) s(Temp700) s(Slope) s(Aspect)
 # para          1   0.0000   0.0000     0.0000   0.0000    0.0000
-# s(FSLE0)      0   1.0000   0.0448     0.1255   0.0401    0.0267
-# s(Temp0)      0   0.0840   1.0000     0.3941   0.0717    0.0809
-# s(Temp700)    0   0.1492   0.3469     1.0000   0.1361    0.1256
-# s(Slope)      0   0.0577   0.0945     0.1849   1.0000    0.2540
-# s(Aspect)     0   0.0194   0.0382     0.0618   0.1911    1.0000
+# s(FSLE0)      0   1.0000   0.0448     0.2162   0.0401    0.0267
+# s(Temp0)      0   0.0840   1.0000     0.5096   0.0717    0.0809
+# s(Temp700)    0   0.1490   0.3353     1.0000   0.1331    0.0996
+# s(Slope)      0   0.0577   0.0945     0.3463   1.0000    0.2540
+# s(Aspect)     0   0.0194   0.0382     0.1043   0.1911    1.0000
 
 # Sal700 still quite explained by SSH, but proceeding anyway
 
@@ -157,26 +157,26 @@ summary(optMod)
 # Formula:
 #   Pres ~ s(Aspect, bs = "cc", k = 5) + s(FSLE0, bs = "cs", 
 #                                          k = 5) + s(Slope, bs = "cs", k = 5) + s(Temp0, bs = "cs", 
-#                                                                                  k = 5) + s(Temp700, bs = "cs", k = 5) + 1
+#                                                                                  k = 5) + s(Temp700, bs = "cs", k = 4) + 1
 # 
 # Parametric coefficients:
-#   Estimate Std. Error z value Pr(>|z|)    
-# (Intercept) 3.286517   0.002579    1274   <2e-16 ***
+#              Estimate Std. Error z value Pr(>|z|)    
+# (Intercept) -1.18277    0.02782  -42.52   <2e-16 ***
 #   ---
 #   Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 # 
 # Approximate significance of smooth terms:
-#                edf Ref.df Chi.sq p-value    
-#   s(Aspect)  2.985      3   3230  <2e-16 ***
-#   s(FSLE0)   3.976      4   8098  <2e-16 ***
-#   s(Slope)   3.973      4   8668  <2e-16 ***
-#   s(Temp0)   3.995      4  45946  <2e-16 ***
-#   s(Temp700) 3.999      4  14556  <2e-16 ***
+#                 edf Ref.df  Chi.sq p-value    
+#   s(Aspect)  2.992      3  3838.1  <2e-16 ***
+#   s(FSLE0)   3.694      4   254.6  <2e-16 ***
+#   s(Slope)   3.994      4 22391.1  <2e-16 ***
+#   s(Temp0)   3.976      4   675.6  <2e-16 ***
+#   s(Temp700) 2.969      3   534.4  <2e-16 ***
 #   ---
 #   Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 # 
-# R-sq.(adj) =  0.518   Deviance explained = 55.2%
-# -REML =  92719  Scale est. = 1         n = 10477
+# R-sq.(adj) =  0.574   Deviance explained = 72.3%
+# -REML =  19564  Scale est. = 1         n = 10477
 
 
 # plot
@@ -198,12 +198,12 @@ for (i in 1:length(sites)){
   if (sum(siteData$Pres>0)>25){
     # same terms as redMod from regional model, but no slope or aspect
     fullSiteMod = gam(Pres ~ s(FSLE0,bs="cs",k=5)
-                      # + s(Sal0,bs="cs",k=4)
+                      # + s(Sal0,bs="cs",k=5)
                       # + s(Sal700,bs="cs",k=5)
                       # + s(SSH0,bs="cs",k=5)
                       + s(Temp0,bs="cs",k=5)
-                      + s(Temp700,bs="cs",k=5),
-                      # + s(Slope,bs="cc",k=5)
+                      + s(Temp700,bs="cs",k=4),
+                      # + s(Slope,bs="cs",k=5)
                       # + s(Aspect,bs="cc",k=5),
                       data=siteData,
                       family=poisson,
