@@ -1,5 +1,5 @@
 library(tidyverse)
-library(mgcv.helper)
+# library(mgcv.helper)
 library(splines2)
 library(mgcv)
 library(MuMIn)
@@ -223,7 +223,6 @@ for (i in 1:length(sites)){
     sitePV = summary(optSiteMod)$s.pv
     
     
-      # Remove non-significant terms & re-run model iteratively until only signif covars remain
     if (any(sitePV>=0.05)){ # Remove non-significant terms & re-run model iteratively until only signif covars remain
       flag = 1
       while (flag==1){
@@ -243,8 +242,8 @@ for (i in 1:length(sites)){
         badVars = badVars[-dontNeed]
         # update model
         optSiteMod<-eval(parse(text=paste("update(optSiteMod, . ~ . - ", paste(badVars,collapse="-"), ")", sep="")))
-        sitePV = summary(redMod)$s.pv
-        if (!any(redSitePV>=0.05)){
+        sitePV = summary(optSiteMod)$s.pv
+        if (!any(sitePV>=0.05)){
           siteModList[[sites[i]]] = optSiteMod
           pValList[[sites[i]]] = sitePV
           flag=0
