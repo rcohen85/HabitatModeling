@@ -1,5 +1,5 @@
 library(tidyverse)
-library(mgcv.helper)
+# library(mgcv.helper)
 library(splines2)
 library(mgcv)
 library(MuMIn)
@@ -8,14 +8,14 @@ library(gratia)
 ## GAM approach ---------------------
 # Regional model
 spec = 'Kogia'
-outDir = "J:/Chpt_3/ModelOutput"
+outDir = "E:/ModelingCovarData/ModelOutput"
 
 # if it doesn't already exist, create directory to save models and figures
 if (!dir.exists(paste(outDir,'/',spec,sep=""))){
   dir.create(paste(outDir,'/',spec,sep=""))
 }
 
-data = data.frame(read.csv('J:/Chpt_3/ModelData/Kogia_masterDF.csv'))
+data = data.frame(read.csv('E:/ModelingCovarData/Master_DFs/Kogia_masterDF.csv'))
 # Round presence to get Poisson dist
 data$Pres = round(data$Pres)
 

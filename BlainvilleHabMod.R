@@ -204,11 +204,11 @@ for (i in 1:length(sites)){
                         # + s(Sal0,bs="cs",k=3)
                         s(Sal700,bs="cs",k=5)
                       + s(Temp0,bs="cs",k=5)
-                      + s(VelAsp700,bs="cc",k=5)
+                      + s(VelAsp700,bs="cc",k=5),
                       # + s(VelMag700,bs="cs",k=5)
-                      + s(Slope,bs="cs",k=5)
-                      + s(Aspect,bs="cc",k=5),
-                      data=data,
+                      # + s(Slope,bs="cs",k=5)
+                      # + s(Aspect,bs="cc",k=5),
+                      data=siteData,
                       family=poisson,
                       gamma=1.4,
                       na.action="na.fail",
@@ -242,7 +242,8 @@ for (i in 1:length(sites)){
         # identify which terms were non-significant
         badVars = allTerms[sitePV>=0.05]
         dontNeed = which(!is.na(str_match(badVars,"1")))
-        badVars = badVars[-dontNeed]
+        if (!is_empty(dontNeed)){
+          badVars = badVars[-dontNeed]}
         # update model
         optSiteMod<-eval(parse(text=paste("update(optSiteMod, . ~ . - ", paste(badVars,collapse="-"), ")", sep="")))
         sitePV = summary(optSiteMod)$s.pv

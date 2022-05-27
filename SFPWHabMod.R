@@ -249,7 +249,8 @@ for (i in 1:length(sites)){
         # identify which terms were non-significant
         badVars = allTerms[sitePV>=0.05]
         dontNeed = which(!is.na(str_match(badVars,"1")))
-        badVars = badVars[-dontNeed]
+        if (!is_empty(dontNeed)){
+          badVars = badVars[-dontNeed]}
         # update model
         optSiteMod<-eval(parse(text=paste("update(optSiteMod, . ~ . - ", paste(badVars,collapse="-"), ")", sep="")))
         sitePV = summary(optSiteMod)$s.pv
@@ -262,7 +263,7 @@ for (i in 1:length(sites)){
     } else {
       siteModList[[sites[i]]] = optSiteMod
       pValList[[sites[i]]] = sitePV
-    }
+    } 
     
     png(filename=paste(outDir,'/',spec,'/','SFPW_',sites[i],'.png',sep=""),width=600,height=600)
     plot.gam(siteModList[[sites[i]]],all.terms=TRUE,rug=TRUE,scale=0,pages=1)

@@ -239,7 +239,8 @@ for (i in 1:length(sites)){
         # identify which terms were non-significant
         badVars = allTerms[sitePV>=0.05]
         dontNeed = which(!is.na(str_match(badVars,"1")))
-        badVars = badVars[-dontNeed]
+        if (!is_empty(dontNeed)){
+          badVars = badVars[-dontNeed]}
         # update model
         optSiteMod<-eval(parse(text=paste("update(optSiteMod, . ~ . - ", paste(badVars,collapse="-"), ")", sep="")))
         sitePV = summary(optSiteMod)$s.pv
