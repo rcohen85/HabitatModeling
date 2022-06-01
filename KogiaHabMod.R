@@ -161,6 +161,7 @@ modCompTable = dredge(redMod,
 # run optimal model
 optMod = get.models(modCompTable,subset=1)
 optMod = optMod[[names(optMod)]]
+save(optMod,modCompTable,file=paste(outDir,'/',spec,'/','RegionalModel.Rdata',sep=""))
 
 # check p-values
 PV = summary(optMod)$s.pv
