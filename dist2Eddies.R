@@ -40,14 +40,23 @@ masterData.Time = double()
 
 for (j in dateRange){
   
-  if (j<HAT_change){HARPcoords = HARPs[,1:2]
-  } else if (j>=HAT_change & j<OC_change){HARPcoords = HARPs[,3:4]
-  } else if (j>=OC_change) {HARPcoords = HARPs[,5:6]}
-  colnames(HARPcoords) = c("latitude", 'longitude')
+  # save time stamp
   masterData.Time = cbind(masterData.Time, j)
+  
+  # find eddies on this date
   thisDate = which(eddyData$date==j)
   
-  # calculate min dist to anticyclonic eddy
+  # get correct HARP coordinates based on the date
+  if (j<HAT_change){
+    HARPcoords = HARPs[,1:2]
+  } else if (j>=HAT_change & j<OC_change){
+    HARPcoords = HARPs[,3:4]
+  } else if (j>=OC_change) {
+    HARPcoords = HARPs[,5:6]}
+  
+  colnames(HARPcoords) = c("latitude", 'longitude')
+  
+  # calculate min dist to anticyclonic (downwelling) eddy
   Aind = which(eddyData$polarity[thisDate]=='A')
   Acoords = cbind(eddyData$centerLat[thisDate[Aind]],eddyData$centerLon[thisDate[Aind]])
   colnames(Acoords) = c("latitude", 'longitude')
@@ -55,7 +64,7 @@ for (j in dateRange){
   Adist = Adist/1000
   masterData.eddyDistA = cbind(masterData.eddyDistA,apply(Adist,MARGIN=1,min))
   
-  # calculate min dist to cyclonic eddy
+  # calculate min dist to cyclonic (upwelling) eddy
   Cind = which(eddyData$polarity[thisDate]=='C')
   Ccoords = cbind(eddyData$centerLat[thisDate[Cind]],eddyData$centerLon[thisDate[Cind]])
   colnames(Ccoords) = c("latitude", 'longitude')
