@@ -1,8 +1,8 @@
 tic
-GSvid = VideoWriter('GSPosition.avi','Motion JPEG AVI');
+GSvid = VideoWriter('AllEddies_Temp.avi','Motion JPEG AVI');
 GSvid.FrameRate = 5
 open(GSvid);
-figDir = 'E:\hycom\0.08deg\movie';
+figDir = 'E:\ModelingCovarData\EddyMoviePlots_Temp';
 fileList = dir(fullfile(figDir,'*.jpeg'));
 
 for i=1:length(fileList)
