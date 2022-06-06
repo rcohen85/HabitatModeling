@@ -12,8 +12,8 @@ presDir = 'J:/Chpt_2/TimeSeries_ScaledByEffortError'
 covarDir = 'J:/Chpt_3/CovarTS'
 outDir = 'J:/Chpt_3/ModelData'
 sites = c('HZ','OC','NC','BC','WC','NFC','HAT','GS','BP','BS')
-covarAbbrev = cbind(c("Chl","FSLE","Salinity","SSH","Temperature","VelocityAsp","VelocityMag","EKE"),
-                    c("Chl","FSLE","Sal","SSH","Temp","VelAsp","VelMag","EKE"))
+covarAbbrev = cbind(c("Chl","FSLE","Salinity","SSH","Temperature","VelocityAsp","VelocityMag","EKE","AEddyDist","CEddyDist"),
+                    c("Chl","FSLE","Sal","SSH","Temp","VelAsp","VelMag","EKE","AEddyDist","CEddyDist"))
 # lags = c(7,14,21,28,42,56)
 OC_change = as_date('2018-05-01') # account for change in OC site location
 HAT_change = as_date('2017-05-01') # account for change in HAT location from site A to B
@@ -87,10 +87,6 @@ for (i in goodFiles) {
     #     lagInd = startInd-k
     #     eval(parse(text=paste('thisSpecies$GSLatLag',as.character(k),'[siteInd] = GSLat$y[(lagInd):(lagInd+fullLength-1)]',sep="")))
     #   }
-    
-    startInd = which(GSLat$x==as.Date('2016-05-01',origin="1970-01-01"))
-    fullLength = length(siteInd)
-    thisSpecies$GSLat[siteInd] = GSLat$y[startInd:startInd+fullLength-1]
     
     if (n!=2 & n!=7){
     thisSpecies$Slope[siteInd] = slopeMat[n,1]

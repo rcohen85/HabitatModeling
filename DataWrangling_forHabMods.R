@@ -271,5 +271,49 @@ for (i in 2:12){
 # }
 write.csv(Chl,file=paste(inDir,'/','Chl_TS.csv',sep=""),row.names=FALSE)
 
-## Make modeling csv files ---------------------------
+## Clean eddy data? ---------------------------
+load('J:/Chpt_3/CovarTS/EddyDist_TS.Rdata')
+eddyA = data.frame(Time=as.Date(masterData.Time[1,],origin="1970-01-01"),HZ0=masterData.eddyDistA[1,],
+                 OC0=masterData.eddyDistA[2,],NC0=masterData.eddyDistA[3,],BC0=masterData.eddyDistA[4,],
+                 WC0=masterData.eddyDistA[5,],NFC0=masterData.eddyDistA[6,],HAT0=masterData.eddyDistA[7,],
+                 GS0=masterData.eddyDistA[8,],BP0=masterData.eddyDistA[9,],BS0=masterData.eddyDistA[10,],
+                 JAX0=masterData.eddyDistA[11,])
+eddyC = data.frame(Time=as.Date(masterData.Time[1,],origin="1970-01-01"),HZ0=masterData.eddyDistC[1,],
+                   OC0=masterData.eddyDistC[2,],NC0=masterData.eddyDistC[3,],BC0=masterData.eddyDistC[4,],
+                   WC0=masterData.eddyDistC[5,],NFC0=masterData.eddyDistC[6,],HAT0=masterData.eddyDistC[7,],
+                   GS0=masterData.eddyDistC[8,],BP0=masterData.eddyDistC[9,],BS0=masterData.eddyDistC[10,],
+                   JAX0=masterData.eddyDistC[11,])
 
+sites = colnames(eddyA)
+
+# Plot histograms
+for (i in 2:12){
+  eval(parse(text=(paste(sites[i],' = ggplot(data=eddyA)+geom_histogram(aes(x=',sites[i],'))+labs(x=expression("km"),title=sites[i])',sep=""))))
+}
+png(file=paste(outDir,'/',"AEddyDist_hist.png",sep=""),width = 800, height = 800, units = "px")
+grid.arrange(HZ0,OC0,NC0,BC0,WC0,NFC0,HAT0,GS0,BP0,BS0,JAX0, ncol=4,nrow=3,top="Distance to Anticyclonic Eddies")
+while (dev.cur()>1) {dev.off()}
+
+for (i in 2:12){
+  eval(parse(text=(paste(sites[i],' = ggplot(data=eddyC)+geom_histogram(aes(x=',sites[i],'))+labs(x=expression("km"),title=sites[i])',sep=""))))
+}
+png(file=paste(outDir,'/',"CEddyDist_hist.png",sep=""),width = 800, height = 800, units = "px")
+grid.arrange(HZ0,OC0,NC0,BC0,WC0,NFC0,HAT0,GS0,BP0,BS0,JAX0, ncol=4,nrow=3,top="Distance to Cyclonic Eddies")
+while (dev.cur()>1) {dev.off()}
+
+# Plot boxplots and calculate quantiles to identify outliers
+ggplot(stack(eddyA[,2:12]))+geom_boxplot(aes(x=ind,y=values))+labs(x="Site & Depth",y=expression("km"),title="Distance to Anticyclonic Eddies")
+ggsave(paste(outDir,'/',"AEddyDist_boxplot.png",sep=""),device="png",width=600,height=800,units="px",scale=5,dpi=600)
+
+ggplot(stack(eddyC[,2:12]))+geom_boxplot(aes(x=ind,y=values))+labs(x="Site & Depth",y=expression("km"),title="Distance to Cyclonic Eddies")
+ggsave(paste(outDir,'/',"CEddyDist_boxplot.png",sep=""),device="png",width=600,height=800,units="px",scale=5,dpi=600)
+
+# Check for missing dates
+timeDiff = diff(as.numeric(eddyA$Time))
+any(timeDiff>1)
+
+# doesn't make sense to interpolate this time series
+
+# save
+write.csv(eddyA,file=paste(inDir,'/','AEddyDist_TS.csv',sep=""),row.names=FALSE)
+write.csv(eddyC,file=paste(inDir,'/','CEddyDist_TS.csv',sep=""),row.names=FALSE)
