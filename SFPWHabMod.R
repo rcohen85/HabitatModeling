@@ -424,13 +424,14 @@ for (i in 1:length(sites)){
   
   if (sum(weekData$Pres>0)>25){
     #run full weekly model for this site
-    fullSiteWeekMod = gam(Pres ~ s(sqrt(AEddyDist0),bs="cs",k=5)
+    fullSiteWeekMod = gam(Pres ~ s(sqrt(CEddyDist0),bs="cs",k=4)
                           + s(log(Chl0),bs="cs",k=5)
                           + s(log(abs(FSLE0)),bs="cs",k=5)
-                          + s(Sal0,bs="cs",k=4)
-                          + s(sqrt(EKE0),bs="cs",k=5)
+                          # + s(Sal0,bs="cs",k=4)
+                          + s(Sal700,bs="cs",k=5)
                           + s(SSH0,bs="cs",k=5)
                           + s(Temp0,bs="cs",k=5),
+                          # + s(Temp700,bs="cs",k=5),
                           data=weekData,
                           family=poisson,
                           method="REML",
