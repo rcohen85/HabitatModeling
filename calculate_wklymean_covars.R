@@ -1,6 +1,7 @@
 library(ggplot2)
 library(zoo)
 library(gridExtra)
+library(stringr)
 
 data = read.csv("E:/ModelingCovarData/Master_DFs/Cuvier_masterDF.csv")
 outDir = "E:/ModelingCovarData/CovarTS_Plots"
@@ -34,7 +35,7 @@ for (j in 1:length(sites)){
     plotDF = data.frame(Pres = rollmean(data$Pres[siteInd],k=k,fill=NA),
                         Date = as.Date(rollmean(data$Date[siteInd],k=k,fill=NA),origin="1970-01-01"))
     for (m in 1:(length(dateMarks)-1)){ # for each year
-      # plotList = list()
+      plotList = list()
       st = dateMarks[m]
       ed = dateMarks[m+1]
       # plotList[['Pres']] = ggplot(plotDF,aes(x=Date) # plot presence in this year
@@ -46,18 +47,17 @@ for (j in 1:length(sites)){
       # )+theme(plot.margin=margin(c(0,43,0,0),unit="pt"))
       for (i in 1:length(covarList)){ # plot single layer covars in this year
         plotDF$Covar = rollmean(data[[covarList[i]]][siteInd],k=k,fill=NA)
-        
-        png(filename = paste(outDir,"/",covarList[i],"_",sites[j],"_",substr(st,1,4),"-",substr(ed,1,4),"_rm.png",sep=""))
-        ggplot(plotDF,aes(x=Date)
-        )+geom_line(aes(y=Covar)
+        plotList[[covarList[i]]] = ggplot(plotDF,aes(x=Date)
+        )+geom_line(aes(y=plotDF$Covar)
         )+scale_x_continuous(breaks=c(seq.Date(from=st,to=ed,by="quarter"))
         )+coord_cartesian(xlim=c(st,ed)
         )+ggtitle(covarList[i]
         )+labs(x=NULL,y=NULL
         )+theme(plot.margin=margin(c(0,43,0,0),unit="pt"))
-        while (dev.cur()>1) {dev.off()}
       }
-      # grid.arrange(grobs=plotList,ncol=1,nrow=length(covarList)+1,top=paste('Cuvier at',sites[j]))
+      png(filename = paste(outDir,"/",sites[j],"_",substr(st,1,4),"-",substr(ed,1,4),"_rm.png",sep=""),width=3000,height=2000)
+      grid.arrange(grobs=plotList,ncol=1,nrow=length(covarList)+1,top=paste('Covars at',sites[j]))
+      while (dev.cur()>1) {dev.off()}
     }
   # }
 } 
