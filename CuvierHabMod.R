@@ -8,14 +8,14 @@ library(gratia)
 ## GAM approach ---------------------
 # Regional model
 spec = 'Cuvier'
-outDir = "E:/ModelingCovarData/ModelOutput"
+outDir = "J:/Chpt_3/GAM_Output"
 
 # if it doesn't already exist, create directory to save models and figures
 if (!dir.exists(paste(outDir,'/',spec,sep=""))){
   dir.create(paste(outDir,'/',spec,sep=""))
 }
 
-data = data.frame(read.csv('E:/ModelingCovarData/Master_DFs/Cuvier_masterDF.csv'))
+data = data.frame(read.csv('J:/Chpt_3/ModelData/Cuvier_masterDF.csv'))
 # Round presence to get Poisson dist
 data$Pres = round(data$Pres)
 
@@ -45,9 +45,19 @@ for (l in 1:length(sites)) {
   weekID = weekID[1:dim(fullDatesDF)[1]]
   fullDatesDF$WeekID = weekID
   
+  # sum presence in each week
   summaryData = fullDatesDF %>%
     group_by(WeekID) %>%
     summarize(Pres=sum(Pres,na.rm=TRUE))
+  
+  # normalize by effort
+  effDF = data.frame(count=rep(1,length(allDates)),weekID=weekID)
+  effDF$count[which(is.na(fullDatesDF$Pres))] = 0
+  propEff = effDF %>%
+    group_by(weekID) %>%
+    summarize(sum(count))
+  summaryData$propEff = unlist(propEff[,2])/7
+  summaryData$Pres = summaryData$Pres*(1/summaryData$propEff)
   
   summaryData$Site = sites[l]
   summaryData$WeekDate = weekDates
@@ -66,22 +76,105 @@ for (l in 1:length(sites)) {
 data$FSLE0[data$FSLE0==0] = NA
 weeklyDF$FSLE0[weeklyDF$FSLE0==0] = NA
 
+# Transform data to fix skew, get all predictors on a similar scale
+weeklyDF$log_Chl0 = log10(weeklyDF$Chl0)
+weeklyDF$log_abs_FSLE0 = log10(abs(weeklyDF$FSLE0))
+weeklyDF$sqrt_CEddyDist0 = sqrt(weeklyDF$CEddyDist0)
+weeklyDF$sqrt_AEddyDist0 = sqrt(weeklyDF$AEddyDist0)
+weeklyDF$sqrt_VelAsp0 = sqrt(weeklyDF$VelAsp0)
+weeklyDF$sqrt_VelAsp700 = sqrt(weeklyDF$VelAsp700)
+weeklyDF$GSDist_div100 = weeklyDF$GSDist/100
+
 # Remove incomplete observations (NAs in FSLE)
 badRows = which(is.na(data),arr.ind=TRUE)[,1]
 data = data[-badRows,]
 badRows = unique(which(is.na(weeklyDF),arr.ind=TRUE)[,1])
 weeklyDF = weeklyDF[-badRows,]
 
+# re-round presence data
+weeklyDF$Pres = round(weeklyDF$Pres)
 
 # Check which covars are correlated w presence to determine starting covar list
-smoothVarList = c ("FSLE0",
+smoothVarList = c ("sqrt_CEddyDist0",
+                   "EKE0",
+                   "log_abs_FSLE0",
                    "Sal0",
                    "Sal700",
-                   "SSH",
+                   "SSH0",
                    "Temp0",
                    "Temp700",
-                   "CEddyDist0")
+                   "sqrt_VelAsp0",
+                   "VelMag0")
 
+# check residual autocorrelation of weekly data
+sites = unique(weeklyDF$Site)
+residAutocorr = matrix(ncol=1,nrow=length(sites))
+rownames(residAutocorr) = sites
+for (j in 1:length(sites)){
+  
+  siteInd = which(!is.na(str_match(weeklyDF$Site,sites[j])))
+  
+  if (sum(which(weeklyDF$Pres[siteInd]>0))>10){
+    
+    siteData = weeklyDF[siteInd,]
+    
+    BlockMod = glm(Pres~bs(sqrt_CEddyDist0)
+                   + bs(EKE0)
+                   + bs(log_abs_FSLE0) # include all terms in smoothVarList above!!
+                   + bs(Sal0)
+                   + bs(Sal700)
+                   + bs(SSH0)
+                   + bs(Temp0)
+                   + bs(Temp700)
+                   + bs(sqrt_VelAsp0)
+                   + bs(VelMag0),
+                   data=siteData,family=poisson)
+    
+    acorr = acf(residuals(BlockMod), lag.max = 1000, main=paste(spec,"at",sites[j]))
+    CI = ggfortify:::confint.acf(acorr)
+    ACFidx = which(acorr[["acf"]] < CI, arr.ind=TRUE)
+    residAutocorr[j,1] = ACFidx[1]
+  }
+}
+residAutocorr
+# HZ     7
+# OC     3
+# NC     2
+# BC     3
+# WC     4
+# NFC    3
+# HAT    3
+# GS     3
+# BP    NA
+# BS     2
+
+
+# test for overdispersion
+dispMod = glm(Pres~bs(sqrt_CEddyDist0)
+              + bs(EKE0)
+              + bs(log_abs_FSLE0) # include all terms in smoothVarList above!!
+              + bs(Sal0)
+              + bs(Sal700)
+              + bs(SSH0)
+              + bs(Temp0)
+              + bs(Temp700)
+              + bs(sqrt_VelAsp0)
+              + bs(VelMag0),
+              data=weeklyDF,family=poisson)
+
+dispersiontest(dispMod,alternative='two.sided')
+
+# Dispersion test
+# 
+# data:  dispMod
+# z = 1.4116, p-value = 0.1581
+# alternative hypothesis: true dispersion is not equal to 1
+# sample estimates:
+#   dispersion 
+# 1982482 
+
+# data are incredibly overdispersed, will use Tweedie family in models
+modFam=tw
 
 # determine whether covars should be included as linear or smooth terms
 # seafloor aspect and water velocity direction are included as cyclic smooths
@@ -95,16 +188,16 @@ for (i in 1:(length(smoothVarList))){
     bs = "cc"
   } else { bs = "cs"}
   
-  modelCall = paste('gam(Pres~data$',smoothVarList[i],',data=data,family=poisson)',sep="")
+  modelCall = paste('gam(Pres~weeklyDF$',smoothVarList[i],',data=weeklyDF,family=modFam)',sep="")
   linMod = eval(parse(text=modelCall))
   
-  modelCall = paste('gam(Pres~s(data$',smoothVarList[i],',bs="',bs,'",k=3),data=data,family=poisson)',sep="")
+  modelCall = paste('gam(Pres~s(weeklyDF$',smoothVarList[i],',bs="',bs,'",k=3),data=weeklyDF,family=modFam)',sep="")
   smoothMod1 = eval(parse(text=modelCall))
   
-  modelCall = paste('gam(Pres~s(data$',smoothVarList[i],',bs="',bs,'",k=4),data=data,family=poisson)',sep="")
+  modelCall = paste('gam(Pres~s(weeklyDF$',smoothVarList[i],',bs="',bs,'",k=4),data=weeklyDF,family=modFam)',sep="")
   smoothMod2 = eval(parse(text=modelCall))
   
-  modelCall = paste('gam(Pres~s(data$',smoothVarList[i],',bs="',bs,'",k=5),data=data,family=poisson)',sep="")
+  modelCall = paste('gam(Pres~s(weeklyDF$',smoothVarList[i],',bs="',bs,'",k=5),data=weeklyDF,family=modFam)',sep="")
   smoothMod3 = eval(parse(text=modelCall))
   
   AIC_votes[i,1:4] = c(AIC(linMod)[[1]],AIC(smoothMod1)[[1]],AIC(smoothMod2)[[1]],AIC(smoothMod3)[[1]])
@@ -115,118 +208,114 @@ colnames(AIC_votes) = c(modOpts,"Best")
 rownames(AIC_votes) = smoothVarList[]
 AIC_votes
 
-#               linMod             threeKnots         fourKnots          fiveKnots          Best       
-# FSLE0      "140340.455536642" "135693.090137227" "134257.321481422" "134190.159811598" "fiveKnots"
-# Sal0       "150936.489983644" "150863.572262892" "136325.840951809" "129891.614577069" "fiveKnots"
-# Sal700     "151639.461000963" "151507.8897522"   "133712.067489804" "127212.095946889" "fiveKnots"
-# SSH        "164393.149675362" "94221.3144218556" "82653.6023318413" "81913.847321494"  "fiveKnots"
-# Temp0      "156592.58379896"  "156587.15460589"  "155255.399264108" "155227.206313321" "fiveKnots"
-# Temp700    "152811.844010939" "147412.200061237" "135797.491181525" "136432.870583687" "fourKnots"
-# CEddyDist0 "153869.762369917" "151972.080071443" "150973.847651684" "150324.10725468"  "fiveKnots"
+#                 linMod             threeKnots         fourKnots          fiveKnots          Best       
+# sqrt_CEddyDist0 "9744.10142534158" "9745.65422959439" "9745.86197869341" "9745.84212067389" "linMod"   
+# EKE0            "9307.81330230467" "9246.98947722161" "9240.62964821556" "9238.6955932339"  "fiveKnots"
+# log_abs_FSLE0   "9685.24220577975" "9594.38418948581" "9595.96185299969" "9584.24814290339" "fiveKnots"
+# Sal0            "9733.0106305944"  "9726.82138358531" "9573.83454224964" "9445.25482687564" "fiveKnots"
+# Sal700          "9755.20777224234" "9725.46066818638" "9527.8083230453"  "9387.12355043742" "fiveKnots"
+# SSH0            "9868.59680996047" "9255.02262593593" "9234.38511033155" "8847.32732119218" "fiveKnots"
+# Temp0           "9800.8697573946"  "9802.19467736361" "9788.06603518313" "9790.43307948947" "fourKnots"
+# Temp700         "9746.72127429583" "9743.71411340501" "9593.61942287693" "9596.26066868845" "fourKnots"
+# sqrt_VelAsp0    "9487.57113859344" "9500.20851681037" "9500.20851681037" "9475.46657172766" "fiveKnots"
+# VelMag0         "9228.613081353"   "9230.39191088552" "9217.46952994537" "9209.10960045838" "fiveKnots"
 
 # run full model
-fullMod = gam(Pres ~ s(sqrt(CEddyDist0),bs="cs",k=5)
-              + s(log(abs(FSLE0)),bs="cs",k=5)
-              + s(Sal0,bs="cs",k=5)
-              + s(Sal700,bs="cs",k=5)
-              + s(SSH0,bs="cs",k=5)
-              + s(Temp0,bs="cs",k=5)
-              + s(Temp700,bs="cs",k=4),
-              data=data,
-              family=poisson,
-              method="REML",
-              select=TRUE,
-              gamma=1.4,
-              na.action="na.fail")
+# fullMod = gam(Pres ~ s(sqrt(CEddyDist0),bs="cs",k=5)
+#               + s(log(abs(FSLE0)),bs="cs",k=5)
+#               + s(Sal0,bs="cs",k=5)
+#               + s(Sal700,bs="cs",k=5)
+#               + s(SSH0,bs="cs",k=5)
+#               + s(Temp0,bs="cs",k=5)
+#               + s(Temp700,bs="cs",k=4),
+#               data=data,
+#               family=poisson,
+#               method="REML",
+#               select=TRUE,
+#               gamma=1.4,
+#               na.action="na.fail")
 
-weekMod = gam(Pres ~ s(sqrt(CEddyDist0),bs="cs",k=5)
-              + s(log(abs(FSLE0)),bs="cs",k=5)
+weekMod = gam(Pres ~ sqrt_CEddyDist0
+              + s(EKE0,bs="cs",k=5)
+              + s(log_abs_FSLE0,bs="cs",k=5)
               + s(Sal0,bs="cs",k=5)
               + s(Sal700,bs="cs",k=5)
               + s(SSH0,bs="cs",k=5)
-              + s(Temp0,bs="cs",k=5)
-              + s(Temp700,bs="cs",k=4),
+              + s(Temp0,bs="cs",k=4)
+              + s(Temp700,bs="cs",k=4)
+              + s(sqrt_VelAsp0,bs="cc",k=5)
+              + s(VelMag0,bs="cs",k=5),
               data=weeklyDF,
-              family=poisson,
+              family=modFam,
               method="REML",
               select=TRUE,
               gamma=1.4,
               na.action="na.fail")
 
 # check convergence
-fullMod$converged
+# fullMod$converged
 # TRUE
 weekMod$converged
 # TRUE
 
 # check concurvity of smooth terms
-conCurv = concurvity(fullMod,full=FALSE)
+conCurv = concurvity(weekMod,full=FALSE)
 round(conCurv$estimate,digits=4)
 
-#                     para s(sqrt(CEddyDist0)) s(log(abs(FSLE0))) s(Sal0) s(Sal700) s(SSH0) s(Temp0) s(Temp700)
-# para                   1              0.0000             0.0000  0.0000    0.0000  0.0000   0.0000     0.0000
-# s(sqrt(CEddyDist0))    0              1.0000             0.0339  0.1544    0.1578  0.1012   0.0673     0.2633
-# s(log(abs(FSLE0)))     0              0.0403             1.0000  0.1152    0.1119  0.1212   0.0470     0.2185
-# s(Sal0)                0              0.1665             0.1061  1.0000    0.6566  0.2936   0.2464     0.8307
-# s(Sal700)              0              0.1669             0.1096  0.6580    1.0000  0.3471   0.2254     0.8767
-# s(SSH0)                0              0.1550             0.1005  0.3984    0.3781  1.0000   0.2985     0.7828
-# s(Temp0)               0              0.1003             0.0556  0.3325    0.3239  0.2669   1.0000     0.5091
-# s(Temp700)             0              0.1581             0.1068  0.5377    0.6309  0.3305   0.3347     1.0000
+#                   para s(EKE0) s(log_abs_FSLE0) s(Sal0) s(Sal700) s(SSH0) s(Temp0) s(Temp700) s(sqrt_VelAsp0) s(VelMag0)
+# para                1  0.0000           0.0000  0.0000    0.0000  0.0000   0.0000     0.0000          0.0000     0.0000
+# s(EKE0)             0  1.0000           0.0858  0.2166    0.2130  0.2934   0.1310     0.3019          0.1972     0.8989
+# s(log_abs_FSLE0)    0  0.1857           1.0000  0.1767    0.1782  0.1792   0.1203     0.3143          0.1217     0.1418
+# s(Sal0)             0  0.3783           0.1720  1.0000    0.6916  0.3354   0.4311     0.8075          0.2144     0.3392
+# s(Sal700)           0  0.4396           0.1787  0.6968    1.0000  0.4132   0.3853     0.8535          0.2252     0.3869
+# s(SSH0)             0  0.4369           0.1620  0.4210    0.4023  1.0000   0.4799     0.7603          0.2178     0.3791
+# s(Temp0)            0  0.1744           0.0858  0.3375    0.3104  0.2578   1.0000     0.5001          0.1179     0.1776
+# s(Temp700)          0  0.2635           0.1657  0.5394    0.5896  0.3448   0.4229     1.0000          0.2004     0.2537
+# s(sqrt_VelAsp0)     0  0.4458           0.1349  0.2709    0.2636  0.2367   0.1890     0.4340          1.0000     0.3952
+# s(VelMag0)          0  0.9288           0.0878  0.2257    0.2204  0.3237   0.1374     0.3172          0.2079     1.0000
 
-
+# EKE0 highly concurved w VelMag0
 # Sal0 concurved with Sal700 and Temp700
 # Sal700 concurved with Sal0 and Temp700
 # Temp700 concurved with Sal700, Sal0, SSH, Temp0  
-# check pvals of Sal0, Temp0, Sal700, Temp700, SSH
 
-# check p vals of concurved covars
-format.pval(summary(gam(Pres~s(Sal0,bs="cs",k=5),data=data,family=poisson,gamma=1.4,method="REML",select=TRUE))$s.pv,digits=10)
-# < 2.220446e-16
-format.pval(summary(gam(Pres~s(Sal700,bs="cs",k=5),data=data,family=poisson,gamma=1.4,method="REML",select=TRUE))$s.pv,digits=10)
-# < 2.220446e-16
-format.pval(summary(gam(Pres~s(Temp700,bs="cs",k=5),data=data,family=poisson,gamma=1.4,method="REML",select=TRUE))$s.pv,digits=10)
-# < 2.220446e-16
-format.pval(summary(gam(Pres~s(Temp0,bs="cs",k=5),data=data,family=poisson,gamma=1.4,method="REML",select=TRUE))$s.pv,digits=10)
-# < 2.220446e-16
-format.pval(summary(gam(Pres~s(SSH0,bs="cs",k=5),data=data,family=poisson,gamma=1.4,method="REML",select=TRUE))$s.pv,digits=10)
-# < 2.220446e-16
-
-# all p vlaues are the same :(
-# remove temp 700 because it is concurved with sal0 & sal700 & SSH0
-# remove sal0 because still still concurved w sal700
+# removing Sal0, Temp700, VelMag0
 
 
 # run reduced model
-dayMod = gam(Pres ~ s(sqrt(CEddyDist0),bs="cs",k=5)
-             + s(log(abs(FSLE0)),bs="cs",k=5)
-             # + s(Sal0,bs="cs",k=5)
-             + s(Sal700,bs="cs",k=5)
-             + s(SSH0,bs="cs",k=5)
-             + s(Temp0,bs="cs",k=5),
-             # + s(Temp700,bs="cs",k=4),
-             data=data,
-             family=poisson,
-             method="REML",
-             select=TRUE,
-             gamma=1.4,
-             na.action="na.fail")
+# dayMod = gam(Pres ~ s(sqrt(CEddyDist0),bs="cs",k=5)
+#              + s(log(abs(FSLE0)),bs="cs",k=5)
+#              # + s(Sal0,bs="cs",k=5)
+#              + s(Sal700,bs="cs",k=5)
+#              + s(SSH0,bs="cs",k=5)
+#              + s(Temp0,bs="cs",k=5),
+#              # + s(Temp700,bs="cs",k=4),
+#              data=data,
+#              family=poisson,
+#              method="REML",
+#              select=TRUE,
+#              gamma=1.4,
+#              na.action="na.fail")
 
-weekMod = gam(Pres ~ s(sqrt(CEddyDist0),bs="cs",k=5)
-              + s(log(abs(FSLE0)),bs="cs",k=5)
+weekMod = gam(Pres ~ sqrt_CEddyDist0
+              + s(EKE0,bs="cs",k=5)
+              + s(log_abs_FSLE0,bs="cs",k=5)
               # + s(Sal0,bs="cs",k=5)
               + s(Sal700,bs="cs",k=5)
               + s(SSH0,bs="cs",k=5)
-              + s(Temp0,bs="cs",k=5),
-              # + s(Temp700,bs="cs",k=4),
+              + s(Temp0,bs="cs",k=4)
+              # + s(Temp700,bs="cs",k=4)
+              + s(sqrt_VelAsp0,bs="cc",k=5),
+              # + s(VelMag0,bs="cs",k=5),
               data=weeklyDF,
-              family=poisson,
+              family=modFam,
               method="REML",
               select=TRUE,
               gamma=1.4,
               na.action="na.fail")
 
 # check convergence
-dayMod$converged
+# dayMod$converged
 # TRUE
 weekMod$converged
 # TRUE
@@ -234,20 +323,21 @@ weekMod$converged
 conCurv = concurvity(weekMod,full=FALSE)
 round(conCurv$estimate,digits=4)
 
-#                     para s(sqrt(CEddyDist0)) s(log(abs(FSLE0))) s(Sal700) s(SSH0) s(Temp0)
-# para                   1              0.0000             0.0000    0.0000  0.0000   0.0000
-# s(sqrt(CEddyDist0))    0              1.0000             0.0554    0.1902  0.1092   0.0814
-# s(log(abs(FSLE0)))     0              0.0671             1.0000    0.1727  0.1837   0.0653
-# s(Sal700)              0              0.2016             0.1782    1.0000  0.4132   0.2330
-# s(SSH0)                0              0.1840             0.1607    0.4023  1.0000   0.3026
-# s(Temp0)               0              0.1216             0.0866    0.3179  0.2631   1.0000
+#                     para s(EKE0) s(log_abs_FSLE0) s(Sal700) s(SSH0) s(Temp0) s(sqrt_VelAsp0)
+# para                1  0.0000           0.0000    0.0000  0.0000   0.0000          0.0000
+# s(EKE0)             0  1.0000           0.0858    0.2130  0.2934   0.1310          0.1972
+# s(log_abs_FSLE0)    0  0.1857           1.0000    0.1782  0.1792   0.1203          0.1217
+# s(Sal700)           0  0.4396           0.1787    1.0000  0.4132   0.3853          0.2252
+# s(SSH0)             0  0.4369           0.1620    0.4023  1.0000   0.4799          0.2178
+# s(Temp0)            0  0.1744           0.0858    0.3104  0.2578   1.0000          0.1179
+# s(sqrt_VelAsp0)     0  0.4458           0.1349    0.2636  0.2367   0.1890          1.0000
 
 # everything looks good! all values below 0.5
 
-dayModCompTable = dredge(dayMod,
-                         beta="none",
-                         evaluate=TRUE,
-                         trace=TRUE)
+# dayModCompTable = dredge(dayMod,
+#                          beta="none",
+#                          evaluate=TRUE,
+#                          trace=TRUE)
 
 weekModCompTable = dredge(weekMod,
                           beta="none",
@@ -255,15 +345,19 @@ weekModCompTable = dredge(weekMod,
                           trace=TRUE)
 
 # run optimal models
-optDayMod = get.models(dayModCompTable,subset=1)
-optDayMod = optDayMod[[names(optDayMod)]]
-save(optDayMod,dayModCompTable,file=paste(outDir,'/',spec,'/','DailyRegionalModel.Rdata',sep=""))
+# optDayMod = get.models(dayModCompTable,subset=1)
+# optDayMod = optDayMod[[names(optDayMod)]]
+# save(optDayMod,dayModCompTable,file=paste(outDir,'/',spec,'/','DailyRegionalModel.Rdata',sep=""))
 optWeekMod = get.models(weekModCompTable,subset=1)
 optWeekMod = optWeekMod[[names(optWeekMod)]]
 save(optWeekMod,weekModCompTable,file=paste(outDir,'/',spec,'/','WeeklyRegionalModel.Rdata',sep=""))
 
+sink(paste(outDir,'/',spec,'/','WeeklyRegionalModelSummary.txt',sep=""))
+print(summary(optWeekMod))
+sink()
+
 # check p-values
-summary(optDayMod)
+# summary(optDayMod)
 
 # Family: poisson 
 # Link function: log 
@@ -295,38 +389,38 @@ summary(optDayMod)
 
 summary(optWeekMod)
 
-# Family: poisson 
+# Family: Tweedie(p=1.552) 
 # Link function: log 
 # 
 # Formula:
-#   Pres ~ s(log(abs(FSLE0)), bs = "cs", k = 5) + s(Sal700, 
-#                                                   bs = "cs", k = 5) + s(sqrt(CEddyDist0), bs = "cs", 
-#                                                                         k = 5) + s(SSH0, bs = "cs", k = 5) + s(Temp0, bs = "cs", 
-#                                                                                                                k = 5) + 1
+#   Pres ~ s(EKE0, bs = "cs", k = 5) + s(Sal700, bs = "cs", k = 5) + 
+#   s(sqrt_VelAsp0, bs = "cc", k = 5) + s(SSH0, bs = "cs", k = 5) + 
+#   s(Temp0, bs = "cs", k = 4) + sqrt_CEddyDist0 + 1
 # 
 # Parametric coefficients:
-#              Estimate Std. Error z value Pr(>|z|)    
-# (Intercept)  1.25379    0.03046   41.17   <2e-16 ***
+#   Estimate Std. Error t value Pr(>|t|)    
+# (Intercept)      2.72953    0.19110  14.284  < 2e-16 ***
+#   sqrt_CEddyDist0 -0.07778    0.01552  -5.012 6.03e-07 ***
 #   ---
-#   Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+#   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 # 
 # Approximate significance of smooth terms:
-#                           edf Ref.df  Chi.sq p-value    
-#   s(log(abs(FSLE0)))  3.971      4   367.9  <2e-16 ***
-#   s(Sal700)           3.993      4  6407.2  <2e-16 ***
-#   s(sqrt(CEddyDist0)) 3.956      4   656.2  <2e-16 ***
-#   s(SSH0)             3.993      4 12131.6  <2e-16 ***
-#   s(Temp0)            3.961      4  1020.4  <2e-16 ***
+#   edf Ref.df       F  p-value    
+# s(EKE0)         2.098      4  13.400  < 2e-16 ***
+#   s(Sal700)       2.835      4  15.663  < 2e-16 ***
+#   s(sqrt_VelAsp0) 1.941      3   5.499 5.35e-05 ***
+#   s(SSH0)         3.933      4 169.804  < 2e-16 ***
+#   s(Temp0)        2.479      3   9.843 8.81e-07 ***
 #   ---
-#   Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+#   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 # 
-# R-sq.(adj) =  0.638   Deviance explained = 74.9%
-# -REML =  13780  Scale est. = 1         n = 1509
+# R-sq.(adj) =  0.484   Deviance explained = 63.1%
+# -REML = 3065.5  Scale est. = 6.0762    n = 1509
 
 # plot
-png(filename=paste(outDir,'/',spec,'/',spec,'_allSitesDaily.png',sep=""),width=600,height=600)
-plot.gam(optDayMod,all.terms=TRUE,rug=TRUE,pages=1,scale=0)
-while (dev.cur()>1) {dev.off()}
+# png(filename=paste(outDir,'/',spec,'/',spec,'_allSitesDaily.png',sep=""),width=600,height=600)
+# plot.gam(optDayMod,all.terms=TRUE,rug=TRUE,pages=1,scale=0)
+# while (dev.cur()>1) {dev.off()}
 png(filename=paste(outDir,'/',spec,'/',spec,'_allSitesWeekly.png',sep=""),width=600,height=600)
 plot.gam(optWeekMod,all.terms=TRUE,rug=TRUE,pages=1,scale=0)
 while (dev.cur()>1) {dev.off()}
