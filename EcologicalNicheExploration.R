@@ -31,59 +31,69 @@ DayOptStats = list()
 statNames = sort(paste(covarList,rep(c("_Opt","_DistRho","_PresRho"),each=length(covarList)),sep=""))
 
 for (i in 1:length(fileList)){
-
+  
   spec = str_remove(str_remove(fileList[i],'_masterDF.csv'),paste(inDir,'/',sep=""))
   data = data.frame(read.csv(fileList[i]))
   data$Pres = round(data$Pres)
-
+  
   # if it doesn't already exist, create directory to save figures
   if (!dir.exists(paste(outDir,'/',spec,sep=""))){
     dir.create(paste(outDir,'/',spec,sep=""))
   }
   weeklyDF = as.numeric()
-
+  
   WeekOptStats[[spec]]=data.frame(matrix(nrow=length(sites),ncol=length(covarList)*3))
   DayOptStats[[spec]]=data.frame(matrix(nrow=length(sites),ncol=length(covarList)*3))
-
+  
   colnames(WeekOptStats[[spec]]) = statNames
   colnames(DayOptStats[[spec]]) = statNames
-
+  
   for (l in 1:length(sites)) {
-
+    
     # Create dataframe to hold data (or NAs) for all dates
     fullDatesDF = data.frame(matrix(nrow=length(allDates), ncol=43))
     fullDatesDF[,1] = allDates
-
+    
     # sort the observations we have for this site into the full date range
     thisSite = which(!is.na(str_match(data$Site,sites[l])))
     matchRow = match(data$Date[thisSite],allDates)
     fullDatesDF[matchRow,2:dim(data)[2]] = data[thisSite,2:dim(data)[2]]
-
+    
     colnames(fullDatesDF) = colnames(data)
-
+    
     # create grouping variable
     weekID = rep(1:length(weekDates),each=7)
     weekID = weekID[1:dim(fullDatesDF)[1]]
     fullDatesDF$WeekID = weekID
-
+    
+    # sum presence in each week
     summaryData = fullDatesDF %>%
       group_by(WeekID) %>%
       summarize(Pres=sum(Pres,na.rm=TRUE))
-
+    
+    # normalize by effort
+    effDF = data.frame(count=rep(1,length(allDates)),weekID=weekID)
+    effDF$count[which(is.na(fullDatesDF$Pres))] = 0
+    propEff = effDF %>%
+      group_by(weekID) %>%
+      summarize(sum(count))
+    summaryData$propEff = unlist(propEff[,2])/7
+    summaryData$Pres = summaryData$Pres*(1/summaryData$propEff)
+    
     summaryData$Site = sites[l]
-
+    
     # find bins with presence (don't plot all the 0's)
     presWeeks = which(summaryData$Pres>0)
-
-
+    
+    
     for (j in 1:length(covarList)){  # for each covar of interest
-
+      
       # calculate weekly average for this covar
       eval(parse(text=paste('thisCovar=fullDatesDF%>%group_by(WeekID)%>%summarize(',covarList[j],'=mean(',covarList[j],',na.rm=TRUE))',sep="")))
       eval(parse(text='summaryData[[covarList[j]]]=unlist(thisCovar[,2])'))
-
+      
       if (i==1){
-
+        
         png(paste(outDir,"/FullWeekly_",covarList[j],"Dist_at_",sites[l],".png",sep=""),width=350,height=350)
         plot(density(summaryData[[covarList[j]]],na.rm=TRUE),
              xlab=paste(covarList[j]),
@@ -97,33 +107,33 @@ for (i in 1:length(fileList)){
              ylab='Density',
              main=paste(covarList[j]," at ",sites[l],sep=""))
         while (dev.cur()>1) {dev.off()}
-
+        
       }
-
-      if (sum(summaryData$Pres>0)>=5){ # only plot if sufficient presence at this site
-
+      
+      if (sum(summaryData$Pres>0,na.rm=TRUE)>=5){ # only plot if sufficient presence at this site
+        
         # fit line to pres vs. covar
         weekDatfitLine = lm(summaryData$Pres[presWeeks]~summaryData[[covarList[j]]][presWeeks])
         weekpresCor = cor(summaryData$Pres[presWeeks],summaryData[[covarList[j]]][presWeeks])
-
+        
         # calculate optimum value of covar as mean weighted by presence values
         weekoptCovar = sum(summaryData$Pres[presWeeks]*summaryData[[covarList[j]]][presWeeks])/sum(summaryData$Pres[presWeeks])
         weekoptDist = summaryData[[covarList[j]]][presWeeks]-weekoptCovar
-
+        
         # fit line to pres vs. dist from opt
         weekOptfitLine = lm(summaryData$Pres[presWeeks]~abs(weekoptDist))
-
+        
         # calculate correlation between presence and dist from opt
         weekdistCor = cor(summaryData$Pres[presWeeks],abs(weekoptDist))
-
+        
         # add optimum value and importance stats to matrix
         WeekOptStats[[spec]][[paste(covarList[j],"_Opt",sep="")]][l] = weekoptCovar
         WeekOptStats[[spec]][[paste(covarList[j],"_DistRho",sep="")]][l] = weekdistCor
         WeekOptStats[[spec]][[paste(covarList[j],"_PresRho",sep="")]][l] = weekpresCor
-
+        
         # Plot and save weekly optimums
         png(paste(outDir,"/",spec,"/Weekly",covarList[j],"_at_",sites[l],".png",sep=""),width=800,height=350)
-
+        
         par(mfrow=c(1,3))
         # Plot presence vs. covar values w. line indicating value of "optimum"
         textX = (0.5*(max(summaryData[[covarList[j]]][presWeeks])-min(summaryData[[covarList[j]]][presWeeks])))+min(summaryData[[covarList[j]]][presWeeks])
@@ -143,7 +153,7 @@ for (i in 1:length(fileList)){
              x=textX,
              y=textY,
              cex=1.5)
-
+        
         # Plot presence vs. distance from optimum covar value
         textX = (0.5*(max(abs(weekoptDist))-min(abs(weekoptDist))))+min(abs(weekoptDist))
         textY = 0.9*max(summaryData$Pres[presWeeks])
@@ -162,7 +172,7 @@ for (i in 1:length(fileList)){
              x=textX,
              y=textY,
              cex=1.5)
-
+        
         # Plot distribution of presence covar values
         plot(density(summaryData[[covarList[j]]][presWeeks],na.rm=TRUE),
              xlab=paste(covarList[j]),
@@ -172,12 +182,12 @@ for (i in 1:length(fileList)){
              cex.axis=1.5)
         # Add line showing optimum value for this covar
         abline(v=weekoptCovar,col="red",lty=2)
-
+        
         while (dev.cur()>1) {dev.off()}
-
+        
       }
       
-      if (sum(data$Pres[thisSite]>0)>=25){
+      if (sum(data$Pres[thisSite]>0,na.rm=TRUE)>=25){
         
         presDays = which(data$Pres[thisSite]>0)
         
@@ -256,33 +266,39 @@ for (i in 1:length(fileList)){
         
       }
     }
-
-    if (sum(summaryData$Pres>0)>=5){
-    weeklyDF = rbind(weeklyDF,summaryData)
+    
+    if (sum(summaryData$Pres>0,na.rm=TRUE)>=5){
+      weeklyDF = rbind(weeklyDF,summaryData)
     }
-
+    
   }
-
+  
   # Plot daily and weekly optimums for each covar across all sites
   for (j in 1:length(covarList)){
-
+    
     presWeeks = which(weeklyDF$Pres>0)
-
+    
+    # calculate correlation between presence and covar
+    weekCor = cor(weeklyDF$Pres[presWeeks],weeklyDF[[covarList[j]]][presWeeks])
+    weekFitLine = lm(weeklyDF$Pres[presWeeks]~weeklyDF[[covarList[j]]][presWeeks])
+    
     # calculate optimum value of covar as mean weighted by presence values
     weekoptCovar = sum(weeklyDF$Pres[presWeeks]*weeklyDF[[covarList[j]]][presWeeks])/sum(weeklyDF$Pres[presWeeks])
     weekoptDist = weeklyDF[[covarList[j]]][presWeeks]-weekoptCovar
-
+    
     # fit line to pres vs. dist from opt
     weekOptfitLine = lm(weeklyDF$Pres[presWeeks]~abs(weekoptDist))
-
+    
     # calculate correlation between presence and dist from opt
     weekdistCor = cor(weeklyDF$Pres[presWeeks],abs(weekoptDist))
-
+    
     # Plot and save
     png(paste(outDir,"/",spec,"/Weekly",covarList[j],"_allSites.png",sep=""),width=800,height=350)
-
+    
     par(mfrow=c(1,3))
-    # Plot presence vs. covar values w. lines indicating value of "optimums"
+    # Plot presence vs. covar values w. lines indicating value of "optimums" and overall correlation
+    textX = (0.5*(max(weeklyDF[[covarList[j]]][presWeeks])-min(weeklyDF[[covarList[j]]][presWeeks])))+min(weeklyDF[[covarList[j]]][presWeeks])
+    textY = 0.9*max(weeklyDF$Pres[presWeeks])
     plot(weeklyDF[[covarList[j]]][presWeeks],weeklyDF$Pres[presWeeks],type="p",
          xlab=paste(covarList[j]),
          ylab='Weekly Presence',
@@ -292,7 +308,13 @@ for (i in 1:length(fileList)){
     abline(v=WeekOptStats[[spec]][[paste(covarList[j],"_Opt",sep="")]],col="blue",lty=2)
     # Add line showing optimum value for this covar across sites
     abline(v=weekoptCovar,col="red",lty=2)
-
+    # add line showing overall relationship between presence & covar
+    abline(weekFitLine,col="green")
+    text(labels=paste("Rho = ",round(weekCor,digits=4),sep=""),
+         x=textX,
+         y=textY,
+         cex=1.5)
+    
     # Plot presence vs. distance from optimum covar value
     textX = (0.5*(max(abs(weekoptDist))-min(abs(weekoptDist))))+min(abs(weekoptDist))
     textY = 0.9*max(weeklyDF$Pres[presWeeks])
@@ -312,7 +334,7 @@ for (i in 1:length(fileList)){
          x=textX,
          y=textY,
          cex=1.5)
-
+    
     # Plot distribution of presence covar values
     # sm.density.compare(weeklyDF[[covarList[j]]][presWeeks],weeklyDF$Site[presWeeks],
     #                         xlab=paste(covarList[j]),
@@ -330,10 +352,14 @@ for (i in 1:length(fileList)){
     abline(v=WeekOptStats[[spec]][[paste(covarList[j],"_Opt",sep="")]],col="blue",lty=2)
     # Add line showing optimum value for this covar across sites
     abline(v=weekoptCovar,col="red",lty=2)
-
+    
     while (dev.cur()>1) {dev.off()}
     
     presDays = which(data$Pres>0)
+    
+    # calculate correlation between presence and covar
+    dayCor = cor(data$Pres[presDays],data[[covarList[j]]][presDays])
+    dayFitLine = lm(data$Pres[presDays]~data[[covarList[j]]][presDays])
     
     # calculate optimum value of covar as mean weighted by presence values
     dayoptCovar = sum(data$Pres[presDays]*data[[covarList[j]]][presDays])/sum(data$Pres[presDays])
@@ -350,6 +376,8 @@ for (i in 1:length(fileList)){
     
     par(mfrow=c(1,3))
     # Plot presence vs. covar values w. lines indicating value of "optimums"
+    textX = (0.5*(max(data[[covarList[j]]][presDays])-min(data[[covarList[j]]][presDays])))+min(data[[covarList[j]]][presDays])
+    textY = 0.9*max(data$Pres[presDays])
     plot(data[[covarList[j]]][presDays],data$Pres[presDays],type="p",
          xlab=paste(covarList[j]),
          ylab='Daily Presence',
@@ -359,6 +387,12 @@ for (i in 1:length(fileList)){
     abline(v=DayOptStats[[spec]][[paste(covarList[j],"_Opt",sep="")]],col="blue",lty=2)
     # Add line showing optimum value for this covar across sites
     abline(v=dayoptCovar,col="red",lty=2)
+    # add line showing overall relationship between presence & covar
+    abline(dayFitLine,col="green")
+    text(labels=paste("Rho = ",round(dayCor,digits=4),sep=""),
+         x=textX,
+         y=textY,
+         cex=1.5)
     
     # Plot presence vs. distance from optimum covar value
     textX = (0.5*(max(abs(dayoptDist))-min(abs(dayoptDist))))+min(abs(dayoptDist))
@@ -399,14 +433,13 @@ for (i in 1:length(fileList)){
     abline(v=dayoptCovar,col="red",lty=2)
     
     while (dev.cur()>1) {dev.off()}
-
-
+    
+    
   }
-
+  
 }
 
 save(WeekOptStats,DayOptStats,file=paste(outDir,'/','OptimumImportance.Rdata',sep=""))
-
 
 ## Compare species covar selections at specific sites ------------
 # specs = c("UD26","Risso")
