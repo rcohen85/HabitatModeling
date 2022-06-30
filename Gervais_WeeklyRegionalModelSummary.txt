@@ -1,0 +1,27 @@
+
+Family: Tweedie(p=1.493) 
+Link function: log 
+
+Formula:
+Pres ~ s(log_Chl0, bs = "cs", k = 5) + s(Sal700, bs = "cs", k = 5) + 
+    s(sqrt_VelAsp0, bs = "cc", k = 4) + s(SSH0, bs = "cs", k = 5) + 
+    s(Temp0, bs = "cs", k = 5) + 1
+
+Parametric coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept)  -3.1365     0.3737  -8.393   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Approximate significance of smooth terms:
+                   edf Ref.df      F  p-value    
+s(log_Chl0)     3.2285      4 12.345 1.48e-11 ***
+s(Sal700)       3.6791      4 42.887  < 2e-16 ***
+s(sqrt_VelAsp0) 1.5833      2  5.152  0.00149 ** 
+s(SSH0)         2.7814      4 37.214  < 2e-16 ***
+s(Temp0)        0.6522      4  0.513  0.06545 .  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+R-sq.(adj) =    0.6   Deviance explained = 86.9%
+-REML = 2169.5  Scale est. = 5.3331    n = 1509

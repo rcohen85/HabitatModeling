@@ -553,22 +553,31 @@ save(WeekOptStats,DayOptStats,file=paste(outDir,'/','OptimumImportance.Rdata',se
 
 sites = unique(weeklyDF$Site)
 # sites = c("HAT","GS","BP","BS")
-covars = c("Chl0","EKE0","FSLE0","AEddyDist0","CEddyDist0","SSH0","Temp0","Temp700","Sal0","Sal700",
-          "VelMag0","VelMag700","VelAsp0","VelAsp700")
-lineOpts = c("twodash","solid","dotted","longdash",
-             "dotdash","dotted","dashed","solid",
-             "dotdash","longdash")
+# covars = c("Chl0","EKE0","FSLE0","AEddyDist0","CEddyDist0","SSH0","Temp0","Temp700","Sal0","Sal700",
+#           "VelMag0","VelMag700","VelAsp0","VelAsp700")
+covars = c("Chl0","FSLE0","SSH0","Temp0","Sal0","VelMag0","VelAsp0")
+lineOpts = c("dotdash","solid","dotted","dashed",
+             "dotdash","solid","dotted","dashed",
+             "dotdash","solid")
+weeklyDF$SiteFac = factor(weeklyDF$Site,levels=sites)
 
 for (i in 1:length(covars)){
-  
+
   siteInd = which(weeklyDF$Site%in%sites)
+  xmin = min(weeklyDF[[covars[i]]],na.rm=TRUE)
+  xmax = max(weeklyDF[[covars[i]]],na.rm=TRUE)
+  # yrInd = which(weeklyDF$WeekDate[siteInd]<as.Date("2017-05-01"))
   ggplot(weeklyDF[siteInd,],aes(x=.data[[covars[i]]])
-         )+geom_density(aes(color=Site,linetype=Site)
-         )+scale_linetype_manual(values=lineOpts[1:length(sites)])
-  # ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',covars[i],"_Density.png",sep=""),device="png",
-  #        width=300,height=125,units="px",scale=5)
-  ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',"ForLegend.png",sep=""),device="png",
-         width=300,height=300,units="px",scale=5)
+         )+geom_density(aes(color=SiteFac,linetype=SiteFac)
+         )+scale_linetype_manual(values=lineOpts[1:length(sites)]
+  )+scale_color_manual(values=c("#f05a43","#db51a4","#de76f5","#9b85f2","#56b4fc","#2fc7cc","#3dd17d","#5aba30","#bbc22f","#d6a10f")
+  )+theme(legend.position="none"
+  )+coord_cartesian(xlim=c(xmin,xmax)
+  )+theme_minimal()
+  ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',covars[i],"_Density_1.png",sep=""),device="png",
+         width=300,height=150,units="px",scale=7)
+  # ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',"ForLegend.png",sep=""),device="png",
+  #        width=300,height=300,units="px",scale=7)
   
 }
 
@@ -695,100 +704,101 @@ corrplot(ACorrMatAn,method='circle')
 corrplot(CCorrMatAn,method='circle')
 while (dev.cur()>1) {dev.off()}
 
-## Compare presence conditions across species using violinplots
+## Compare presence conditions across species using violinplots ------------------------
 
 fileList = dir('/Users/RebeccaCohen/Downloads/masterDFs/')
 covars = c("Chl0","EKE0","FSLE0","SSH0","Temp0","Temp700","Sal0","Sal700",
            "VelMag0","VelAsp0","CEddyDist0","AEddyDist0")
 # specs = cbind(c("Blainville","Cuvier","Gervais","Kogia","Risso","Sowerby","SpermWhale","True","UD26","UD28"),
 #               c("Md","Zc","Me","Kg","Gg","Mb","Pm","Mm","Gm","Dd"))
-specs = cbind(c("UD28","Risso","UD26","Blainville","Gervais","Cuvier","Sowerby","True","Kogia","SpermWhale"),
-              c("Dd","Gg","Gm","Md","Me","Zc","Mb","Mm","Kg","Pm"))
+specs = cbind(rev(c("UD28","Risso","UD26","Blainville","Gervais","Cuvier","Sowerby","True","Kogia","SpermWhale")),
+              rev(c("Dd","Gg","Gm","Md","Me","Zc","Mb","Mm","Kg","Pm")))
 
-masterDF = list()
-allNames = list()
-for (i in 1:length(fileList)){
-  
-  data = data.frame(read.csv(fileList[i]))
-  thisSpec = str_remove(fileList[i],'_masterDF.csv')
-  specAbbrev = specs[which(str_detect(specs[,1],thisSpec)),2]
-  
-  # Round presence to get Poisson dist
-  data$Pres = round(data$Pres)
-  
-  # create weekly time series to reduce autocorrelation
-  stDt = as.Date("2016-05-01")
-  edDt = as.Date("2019-04-30")
-  sites = c('HZ','OC','NC','BC','WC','NFC','HAT','GS','BP','BS')
-  allDates = stDt:edDt
-  weekDates = seq.Date(stDt,edDt,by=7)
-  weeklyDF = as.numeric()
-  
-  for (l in 1:length(sites)) {
-    
-    # Create dataframe to hold data (or NAs) for all dates
-    fullDatesDF = data.frame(matrix(nrow=length(allDates), ncol=44))
-    fullDatesDF[,1] = allDates
-    
-    # sort the observations we have for this site into the full date range
-    thisSite = which(!is.na(str_match(data$Site,sites[l])))
-    matchRow = match(data$Date[thisSite],allDates)
-    fullDatesDF[matchRow,2:dim(data)[2]] = data[thisSite,2:dim(data)[2]]
-    
-    colnames(fullDatesDF) = colnames(data)
-    
-    # create grouping variable
-    weekID = rep(1:length(weekDates),each=7)
-    weekID = weekID[1:dim(fullDatesDF)[1]]
-    fullDatesDF$WeekID = weekID
-    
-    # sum presence in each week
-    summaryData = fullDatesDF %>%
-      group_by(WeekID) %>%
-      summarize(Pres=sum(Pres,na.rm=TRUE))
-    
-    # normalize by effort
-    effDF = data.frame(count=rep(1,length(allDates)),weekID=weekID)
-    effDF$count[which(is.na(fullDatesDF$Pres))] = 0
-    propEff = effDF %>%
-      group_by(weekID) %>%
-      summarize(sum(count))
-    summaryData$propEff = unlist(propEff[,2])/7
-    summaryData$Pres = summaryData$Pres*(1/summaryData$propEff)
-    
-    summaryData$Site = sites[l]
-    summaryData$WeekDate = weekDates
-    
-    for (j in 4:(dim(data)[2])){
-      var = names(data)[j]
-      # calculate weekly average for this covar
-      eval(parse(text=paste('thisCovar=fullDatesDF%>%group_by(WeekID)%>%summarize(',var,'=mean(',var,',na.rm=TRUE))',sep="")))
-      eval(parse(text='summaryData[[var]]=unlist(thisCovar[,2])'))
-      
-    }
-    weeklyDF = rbind(weeklyDF,summaryData)
-  }
-  
-  
-  if (i==1){
-    masterDF$WeekDate = weeklyDF$WeekDate
-    masterDF$Site = weeklyDF$Site
-    allNames = c(allNames,"WeekDate","Site")
-    for (j in 1:length(covars)){
-      masterDF[[covars[j]]] = weeklyDF[[covars[j]]]
-      allNames = c(allNames,covars[j])
-    }
-  }
-  
-  masterDF[[specAbbrev]] = weeklyDF$Pres
-  allNames = c(allNames,specAbbrev)
-}
+# masterDF = list()
+# allNames = list()
+# for (i in 1:length(fileList)){
+# 
+#   data = data.frame(read.csv(fileList[i]))
+#   thisSpec = str_remove(fileList[i],'_masterDF.csv')
+#   specAbbrev = specs[which(str_detect(specs[,1],thisSpec)),2]
+# 
+#   # Round presence to get Poisson dist
+#   data$Pres = round(data$Pres)
+# 
+#   # create weekly time series to reduce autocorrelation
+#   stDt = as.Date("2016-05-01")
+#   edDt = as.Date("2019-04-30")
+#   sites = c('HZ','OC','NC','BC','WC','NFC','HAT','GS','BP','BS')
+#   allDates = stDt:edDt
+#   weekDates = seq.Date(stDt,edDt,by=7)
+#   weeklyDF = as.numeric()
+# 
+#   for (l in 1:length(sites)) {
+# 
+#     # Create dataframe to hold data (or NAs) for all dates
+#     fullDatesDF = data.frame(matrix(nrow=length(allDates), ncol=44))
+#     fullDatesDF[,1] = allDates
+# 
+#     # sort the observations we have for this site into the full date range
+#     thisSite = which(!is.na(str_match(data$Site,sites[l])))
+#     matchRow = match(data$Date[thisSite],allDates)
+#     fullDatesDF[matchRow,2:dim(data)[2]] = data[thisSite,2:dim(data)[2]]
+# 
+#     colnames(fullDatesDF) = colnames(data)
+# 
+#     # create grouping variable
+#     weekID = rep(1:length(weekDates),each=7)
+#     weekID = weekID[1:dim(fullDatesDF)[1]]
+#     fullDatesDF$WeekID = weekID
+# 
+#     # sum presence in each week
+#     summaryData = fullDatesDF %>%
+#       group_by(WeekID) %>%
+#       summarize(Pres=sum(Pres,na.rm=TRUE))
+# 
+#     # normalize by effort
+#     effDF = data.frame(count=rep(1,length(allDates)),weekID=weekID)
+#     effDF$count[which(is.na(fullDatesDF$Pres))] = 0
+#     propEff = effDF %>%
+#       group_by(weekID) %>%
+#       summarize(sum(count))
+#     summaryData$propEff = unlist(propEff[,2])/7
+#     summaryData$Pres = summaryData$Pres*(1/summaryData$propEff)
+# 
+#     summaryData$Site = sites[l]
+#     summaryData$WeekDate = weekDates
+# 
+#     for (j in 4:(dim(data)[2])){
+#       var = names(data)[j]
+#       # calculate weekly average for this covar
+#       eval(parse(text=paste('thisCovar=fullDatesDF%>%group_by(WeekID)%>%summarize(',var,'=mean(',var,',na.rm=TRUE))',sep="")))
+#       eval(parse(text='summaryData[[var]]=unlist(thisCovar[,2])'))
+# 
+#     }
+#     weeklyDF = rbind(weeklyDF,summaryData)
+#   }
+# 
+# 
+#   if (i==1){
+#     masterDF$WeekDate = weeklyDF$WeekDate
+#     masterDF$Site = weeklyDF$Site
+#     allNames = c(allNames,"WeekDate","Site")
+#     for (j in 1:length(covars)){
+#       masterDF[[covars[j]]] = weeklyDF[[covars[j]]]
+#       allNames = c(allNames,covars[j])
+#     }
+#   }
+# 
+#   masterDF[[specAbbrev]] = weeklyDF$Pres
+#   allNames = c(allNames,specAbbrev)
+# }
+# 
+# masterDF = data.frame(masterDF)
+# write.csv(masterDF,'MasterWeeklyDF.csv',row.names=FALSE)
 
- masterDF = data.frame(masterDF)
- write.csv(masterDF,'MasterWeeklyDF.csv',row.names=FALSE)
+# make violin plots for each covar
 
- # make violin plots for each covar
- 
+masterDF = data.frame(read.csv('MasterWeeklyDF.csv'))
 for (i in 1:length(covars)){
    plotDF = list()
    
@@ -800,21 +810,34 @@ for (i in 1:length(covars)){
    
    plotDF = data.frame(stack(plotDF))
    
-   ggplot(plotDF,
-          aes(x=ind,y=values,color=ind),
-          trim=TRUE
-   )+geom_violin(scale="area",
-                 draw_quantiles=c(0.25, 0.5, 0.75)
-   )+labs(x="Species",
-          y=covars[i]
-   )+theme(legend.position="none")
+   xmin = min(masterDF[[covars[i]]],na.rm=TRUE)
+   xmax = max(masterDF[[covars[i]]],na.rm=TRUE)
    
-   ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',covars[i],"_SpeciesPresDensity.png",sep=""),
+   ggplot(plotDF,
+          # aes(x=ind,y=values,color=ind), # different color for each species
+          aes(y=ind,x=values), # consistent color across species
+   )+geom_violin(color="#43a5f0",
+                 scale="area",
+                 trim=FALSE,
+                 draw_quantiles=c(0.25, 0.5, 0.75)
+   )+labs(x=covars[i],
+          y="Species"
+   )+theme(legend.position="none"
+   )+coord_cartesian(xlim=c(xmin,xmax)
+   )+theme_minimal()
+   
+   # ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',covars[i],"_SpeciesPresDensity.png",sep=""),
+   #        device="png",
+   #        width=600,
+   #        height=300,
+   #        units="px",
+   #        scale=2.5)
+   ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',covars[i],"_SpeciesPresDensity_flipped.png",sep=""),
           device="png",
-          width=600,
-          height=300,
+          width=300,
+          height=200,
           units="px",
-          scale=2.5)
+          scale=7)
 }
  
  

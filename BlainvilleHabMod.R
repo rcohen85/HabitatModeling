@@ -1,4 +1,5 @@
 library(tidyverse)
+library(stringr)
 library(mgcv.helper)
 library(splines)
 library(splines2)
