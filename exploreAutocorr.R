@@ -1,4 +1,5 @@
 library(stringr) 
+library(ggplot2)
 library(ggfortify)
 library(splines)
 
@@ -39,43 +40,52 @@ colnames(autocorrMat) = allSpec
 
 ## Calculate autocorrelation of residuals in simple model including all possible covars ---------------
 
-
-residAutocorr = matrix(ncol=nspec,nrow=1)
-colnames(residAutocorr) = allSpec
+residAutocorr = matrix(ncol=nspec,nrow=length(sites))
+rownames(residAutocorr) = sites
 allSpec = character()
 
 for (i in 1:nspec){
   
   data = data.frame(read.csv(fileList[i]))
   spec = str_remove(str_remove(fileList[i],"_masterDF.csv"),paste(inDir,'/',sep=""))
+  allSpec = c(allSpec,spec)
   
-  # convert hours of presence back to # 5-min bins, then round to get Poisson dist
-  data$Pres = round(data$Pres*12)
+  # Round to get Poisson dist
+  data$Pres = round(data$Pres)
   
-  
-  BlockMod = glm(Pres~bs(Temp0)
-                 + bs(Sal0)
-                 + bs(Chl0)
-                 + bs(FSLE0)
-                 + bs(VelMag0)
-                 + bs(VelAsp0)
-                 + bs(SSH0)
-                 + bs(GSLat)
-                 + bs(GSDist)
-                 + bs(Slope)
-                 + bs(Aspect),
-                 data=data,family=poisson)
-  
-  acorr = acf(residuals(BlockMod), lag.max = 1000, main=spec)
-  CI = ggfortify:::confint.acf(acorr)
-  ACFidx = which(acorr[["acf"]] < CI, arr.ind=TRUE)
-  residAutocorr[1,i] = ACFidx[1]
-  # lagID = which(abs(acorr$acf)<0.2)
-  # residAutocorr[1,i] = lagID[1]
+  for (j in 1:length(sites)){
+    
+    siteInd = which(!is.na(str_match(weeklyDF$Site,sites[j])))
+    
+    if (sum(which(weeklyDF$Pres[siteInd]>0))>10){
+      
+      siteData = weeklyDF[siteInd,]
+      
+      BlockMod = glm(Pres~bs(Temp0)
+                     + bs(Sal0)
+                     + bs(Chl0)
+                     + bs(FSLE0)
+                     + bs(VelMag0)
+                     + bs(VelAsp0)
+                     + bs(SSH0)
+                     + bs(GSLat)
+                     + bs(GSDist)
+                     + bs(Slope)
+                     + bs(Aspect),
+                     data=siteData,family=poisson)
+      
+      acorr = acf(residuals(BlockMod), lag.max = 1000, main=paste(spec,"at",sites[j]))
+      CI = ggfortify:::confint.acf(acorr)
+      ACFidx = which(acorr[["acf"]] < CI, arr.ind=TRUE)
+      residAutocorr[j,i] = ACFidx[1]
+      # lagID = which(abs(acorr$acf)<0.2)
+      # residAutocorr[1,i] = lagID[1]
+    }
+  }
   
 }
 
-
+colnames(residAutocorr) = allSpec
 
 
 

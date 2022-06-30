@@ -173,8 +173,9 @@ for (i in goodFiles) {
           #                       & str_detect(colnames(thisVar),paste('Lag',lags[m],sep="")))
           
         # find covar cols with data for this site & depth
-        thisSiteDepth = which(!is.na(str_match(colnames(thisVar),paste(sites[k],as.character(depths[l]),sep=""))))
-        
+        # thisSiteDepth = which(!is.na(str_match(colnames(thisVar),
+        #                                        paste(sites[k],as.character(depths[l]),sep=""))))
+        # 
         
           # add data to master data frame
           # if(k==1){
@@ -183,10 +184,10 @@ for (i in goodFiles) {
           #                       lags[m],'[siteInd[putWhere[!is.na(putWhere)]]] = thisVar[-which(is.na(putWhere)),thisSiteDepth]',sep="")))
         
         # add data to master data frame
-        if(k==1){
-          eval(parse(text=paste('thisSpecies$',abbrev,as.character(depths[l]),' = NA',sep="")))}
-        eval(parse(text=paste('thisSpecies$',abbrev,as.character(depths[l]),
-                              '[siteInd[putWhere[!is.na(putWhere)]]] = thisVar[-which(is.na(putWhere)),thisSiteDepth]',sep="")))
+        # if(k==1){
+        #   eval(parse(text=paste('thisSpecies$',abbrev,as.character(depths[l]),' = NA',sep="")))}
+        # eval(parse(text=paste('thisSpecies$',abbrev,as.character(depths[l]),
+        #                       '[siteInd[putWhere[!is.na(putWhere)]]] = thisVar[-which(is.na(putWhere)),thisSiteDepth]',sep="")))
         
         # }
       }

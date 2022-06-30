@@ -15,7 +15,7 @@ library(car)
 library(splines2)
 source("getPvalues.R")
 
-data = data.frame(read.csv('E:/ModelingCovarData/Master_DFs/True_masterDF.csv'))
+data = data.frame(read.csv('J:/Chpt_3/ModelData/True_masterDF.csv'))
 lagID = 41 
 numClust = length(data$Pres)/(lagID-1)
 if (numClust<length(data$Pres)){
@@ -754,7 +754,7 @@ colnames(AIC_comp)[order(AIC_comp)]
 ```
 
 
-Try GSLat at 0m
+# Try GSLat at 0m
 ```{r GSLatLags}
 # Test GSLat at several time lags
 var = "GSLat"
@@ -781,9 +781,9 @@ Covar selection to start: Temp0Lag42
                           Sal0Lag56
                           Sal700Lag42
                           VelMag0Lag14
-                          VelMag700mLag28
-                          VelAsp0m
-                          VelAsp700m
+                          VelMag700Lag28
+                          VelAsp0
+                          VelAsp700
                           SSH0
                           Chl0Lag21
                           FSLE0
@@ -794,9 +794,6 @@ Covar selection to start: Temp0Lag42
                           VelAsp700Lag0:Aspect
 
 
-
-
-## THE FOLLOWING IS COPIED AND PASTED FROM BLAINVILLE'S, MODIFY FOR TRUE'S BEFORE RUNNING
 
 ```{r plotCovars}
 # Fill in smoothVarList based on selection made above

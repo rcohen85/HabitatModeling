@@ -1,4 +1,4 @@
-plotLinears = function(mod,covar,coefInd,site,title){
+plotLinears = function(mod,data,covar,coefInd,resids,site,title){
   
   quant.func<- function(x){quantile(x, probs=c(0.0275,0.975))}
   
@@ -22,15 +22,16 @@ plotLinears = function(mod,covar,coefInd,site,title){
   bootstrapFits = (varSeq%*%t(bootstrapCoefs))+coef(mod)[1]
   cis<-apply(bootstrapFits, 1, quant.func)
   
+  if (!resids){
   ggplot(plotDF, aes(Var, Fit),
   ) + geom_smooth(aes(ymin=cis[1,], ymax=cis[2,]),
                   color="#16A7CA",
                   fill="#16A7CA",
-                  alpha=0.2,
+                  alpha=0.3,
                   stat ="identity"
   ) + geom_rug(data=data[ind,],
                inherit.aes=F,
-               aes(x=data[[covar]][ind]),
+               aes(x=.data[[covar]][ind]),
                sides="b"
   ) + labs(x = covar,
            y = 'log(Presence)'
@@ -38,5 +39,27 @@ plotLinears = function(mod,covar,coefInd,site,title){
   ) + theme(axis.line = element_line(size=0.2),
             panel.background = element_blank()
   )
+  } else if (resids){
+    ggplot(plotDF, aes(Var, Fit),
+    ) + geom_point(data=data[ind,],
+                   aes(x=.data[[covar]][ind],y=log10(Pres)),
+                   size=0.75,
+                   color="#71797E"
+    ) + geom_smooth(aes(ymin=cis[1,], ymax=cis[2,]),
+                    color="#16A7CA",
+                    fill="#16A7CA",
+                    alpha=0.3,
+                    stat ="identity"
+    ) + geom_rug(data=data[ind,],
+                 inherit.aes=F,
+                 aes(x=.data[[covar]][ind]),
+                 sides="b"
+    ) + labs(x = covar,
+             y = 'log(Presence)'
+    ) + ggtitle(title
+    ) + theme(axis.line = element_line(size=0.2),
+              panel.background = element_blank()
+    )
+  }
   
 }

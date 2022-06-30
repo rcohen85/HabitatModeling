@@ -8,15 +8,18 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(geepack)
-library(splines2)
+library(stringr)
 library(lubridate)
 library(tidyverse)
 library(car)
 library(splines2)
 library(ggplot2)
+library(gridExtra)
+library(zoo)
+library(pracma)
 source("getPvalues.R")
 
-data = data.frame(read.csv('E:/ModelingCovarData/Master_DFs/Blainville_masterDF.csv'))
+data = data.frame(read.csv('J:/Chpt_3/ModelData/Blainville_masterDF.csv'))
 lagID = 126
 numClust = length(data$Pres)/(lagID-1)
 if (numClust<length(data$Pres)){
@@ -30,9 +33,8 @@ data$GroupID = clustID
 # Round presence to get Poisson dist
 data$Pres = round(data$Pres)
 ```
-
+# Test temperature across depths at several time lags
 ```{r temp0Lags}
-# Test surface temperature at several time lags
 var = "Temp0"
 colInd = which(!is.na(str_match(colnames(data),var)))
 AIC_comp = matrix(ncol=length(colInd),nrow=1)
@@ -184,8 +186,9 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
+# Test salinity at several depths at several time lags
 ```{r Sal0Lags}
-# Test salinity at 0m at several time lags
+
 var = "Sal0"
 colInd = which(!is.na(str_match(colnames(data),var)))
 AIC_comp = matrix(ncol=length(colInd),nrow=1)
@@ -336,8 +339,9 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
+# Test velocity magnitude at several depths at several time lags
 ```{r VelMag0Lags}
-# Test velocity magnitude at 0m at several time lags
+
 var = "VelMag0"
 colInd = which(!is.na(str_match(colnames(data),var)))
 AIC_comp = matrix(ncol=length(colInd),nrow=1)
@@ -488,8 +492,9 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
+# Test velocity aspect at several depths at several time lags
 ```{r VelAsp0Lags}
-# Test velocity aspect at 0m at several time lags
+
 var = "VelAsp0"
 colInd = which(!is.na(str_match(colnames(data),var)))
 AIC_comp = matrix(ncol=length(colInd),nrow=1)
@@ -640,8 +645,9 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-```{r SSH0Lags}
 # Test SSH at 0m at several time lags
+```{r SSH0Lags}
+
 var = "SSH0"
 colInd = which(!is.na(str_match(colnames(data),var)))
 AIC_comp = matrix(ncol=length(colInd),nrow=1)
@@ -659,8 +665,9 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-```{r Chl0Lags}
 # Test Chl at 0m at several time lags
+```{r Chl0Lags}
+
 var = "Chl0"
 colInd = which(!is.na(str_match(colnames(data),var)))
 AIC_comp = matrix(ncol=length(colInd),nrow=1)
@@ -678,8 +685,9 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-```{r FSLE0Lags}
 # Test FSLE at 0m at several time lags
+```{r FSLE0Lags}
+
 var = "FSLE0"
 colInd = which(!is.na(str_match(colnames(data),var)))
 AIC_comp = matrix(ncol=length(colInd),nrow=1)
@@ -697,8 +705,9 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
-```{r GSLatLags}
 # Test GSLat at several time lags
+```{r GSLatLags}
+
 var = "GSLat"
 colInd = which(!is.na(str_match(colnames(data),var)))
 AIC_comp = matrix(ncol=length(colInd),nrow=1)
@@ -716,15 +725,113 @@ colnames(AIC_comp) = names
 AIC_comp
 colnames(AIC_comp)[order(AIC_comp)]
 ```
+# Plot covar and presence time series to identify trends
+```{r plot pres vs covars, fig.width=15, fig.height=10}
+
+startDate = as.Date("2016-05-01",origin="1970-01-01")
+endDate = as.Date("2019-04-30",origin="1970-01-01")
+covarList = c("Chl0",
+             "SSH0",
+             "GSLat",
+             "GSDist")
+
+profileDir = 'J:/Chpt_3/CovarTS'
+profileList = dir(profileDir,pattern="Profiles_ES.Rdata",full.names=TRUE)
+sites = unique(data$Site)
+
+extract_legend <- function(my_ggp) {
+  step1 <- ggplot_gtable(ggplot_build(my_ggp))
+  step2 <- which(sapply(step1$grobs, function(x) x$name) == "guide-box")
+  step3 <- step1$grobs[[step2]]
+  return(step3)
+}
+
+for (j in 1:length(sites)){
+  
+  plotList = list()
+  plotDF = data.frame()
+  siteInd = which(!is.na(str_match(data$Site,sites[j])))
+  
+  if (sum(data$Pres[siteInd]>0)>7){
+    
+    plotDF = data.frame(Pres = rollmean(data$Pres[siteInd],k=7,fill=NA),
+                        Date = as.Date(rollmean(data$Date[siteInd],k=7,fill=NA),origin="1970-01-01"))
+    
+    plotList[['Pres']] = ggplot(plotDF,aes(x=Date)
+                            )+geom_line(aes(y=Pres)
+                            )+scale_x_continuous(breaks=c(seq.Date(from=startDate,to=endDate,by="quarter"))
+                            )+ggtitle('Presence'
+                            )+labs(x=NULL,y=NULL
+                            )+theme(plot.margin=margin(c(0,0,0,0),unit="pt"))
+    
+    for (i in 1:length(covarList)){ # plot surface covars
+      
+      plotDF$Covar = rollmean(data[[covarList[i]]][siteInd],k=7,fill=NA)
+      plotList[[covarList[i]]] = ggplot(plotDF,aes(x=Date)
+                                    )+geom_line(aes(y=Covar)
+                                    )+scale_x_continuous(breaks=c(seq.Date(from=startDate,to=endDate,by="quarter"))
+                                    )+coord_cartesian(xlim=c(startDate,endDate)
+                                    )+ggtitle(covarList[i]
+                                    )+labs(x=NULL,y=NULL
+                                    )+theme(plot.margin=margin(c(0,0,0,0),unit="pt"))
+    }
+    
+    for (i in 1:length(profileList)){ # plot profiles of covars with multiple depth layers
+      load(profileList[i])
+      profileName = str_remove(str_remove(profileList[i],'_Profiles_ES.Rdata'),paste(profileDir,'/',sep=""))
+      profileDF = data.frame(z=stack(data.frame(eval(parse(text=paste(sites[j],'Profile',sep="")))))[,1],
+                             y=rep(depths,times=dim(eval(parse(text=paste(sites[j],'Profile',sep=""))))[2]),
+                             x=rep(as.Date(masterData.Time,origin="1970-01-01"),each=length(depths)))
+
+      plotList[[profileName]] = ggplot(profileDF,aes(x=x,y=y,z=z)
+                                )+geom_contour_filled(
+                                )+coord_cartesian(xlim=c(startDate,endDate)
+                                )+scale_x_continuous(breaks=c(seq.Date(from=startDate,to=endDate,by="quarter"))
+                                )+scale_y_reverse(
+                                )+ggtitle(profileName
+                                )+labs(x=NULL,y=NULL
+                                )+theme(plot.margin=margin(c(0,0,0,0),unit="pt"),
+                                        legend.position="none")
+      
+      # legendPlot = ggplot(profileDF,aes(x=x,y=y,z=z)
+      #                           )+geom_contour_filled(
+      #                           )+coord_cartesian(xlim=c(startDate,endDate)
+      #                           )+scale_x_continuous(breaks=c(seq.Date(from=startDate,to=endDate,by="quarter"))
+      #                           )+scale_y_reverse(
+      #                           )+ggtitle(profileName
+      #                           )+labs(x=NULL,y=NULL
+      #                           )+theme(plot.margin=margin(c(0,0,0,0),unit="pt"),
+      #                                   legend.position="none")
+      # plotList[[eval(parse(text=paste(profileName,"_Leg",sep="")))]] = extract_legend(legendPlot)
+
+    }
+    
+    grid.arrange(grobs=plotList,ncol=1,nrow=length(covarList)+length(profileList)+1,top=paste('Blainville at',sites[j]))
+    # ,
+    #              layout_matrix=rbind(c(rep(1,times=9),NA),
+    #                                  c(rep(2,times=9),NA),
+    #                                  c(rep(3,times=9),NA),
+    #                                  c(rep(4,times=9),NA),
+    #                                  c(rep(5,times=9),NA),
+    #                                  c(rep(6,times=9),7),
+    #                                  c(rep(8,times=9),9),
+    #                                  c(rep(10,times=9),11),
+    #                                  c(rep(12,times=9),13)))
+  }
+}
+
+
+
+```
 
 Covar selection to start: Temp0Lag2
                           Temp700Lag7
                           Sal0Lag21
-                          Sal700mLag7
-                          VelMag0mLag28 
-                          VelMag700mLag7
-                          VelAsp0mLag14 
-                          VelAsp700mLag28
+                          Sal700Lag7
+                          VelMag0Lag28 
+                          VelMag700Lag7
+                          VelAsp0Lag14 
+                          VelAsp700Lag28
                           SSH0
                           Chl0Lag7
                           FSLE0

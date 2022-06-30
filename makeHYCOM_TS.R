@@ -33,14 +33,13 @@ HARPs$Lon2 = HARPs$Lon2+360
 fullFileList = dir(inDir,".Rdata")
 
 # Covars of interest
-Covars = list("SSH", "Temperature", "Salinity","VelocityMag", "VelocityAsp")
-
+Covars = list("SSH", "Temperature", "Salinity")
 
 for (j in 1:length(Covars)){
   
-  if (j%in%c(2:5)){
-    depths = c(0,100,200,300,400,500,600,700,800)
-  } else {
+  if (j%in%c(2:3)){
+    depths=c(seq(0,100,by=10),seq(150,300,by=50),seq(400,800,by=100))
+      } else {
     depths = 0
   }
   
@@ -103,10 +102,10 @@ for (j in 1:length(Covars)){
         thisFileLat[m] = lats[sitelat-1]
         thisFileLon[m] = lons[sitelon+1]
         
-        # thisData = data.frame(z=stack(data.frame(data))[,1],
-        #                      y=rep(lats,length.out=length(lons)*length(lats)),
-        #                        x=rep(lons,each=length(lats)))
-        # ggplot(thisData,aes(x=x,y=y))+geom_tile(aes(fill=z))+geom_point(x=lons[sitelon],y=lats[sitelat],color="white")
+        thisData = data.frame(z=stack(data.frame(data))[,1],
+                             y=rep(lats,length.out=length(lons)*length(lats)),
+                               x=rep(lons,each=length(lats)))
+        ggplot(thisData,aes(x=x,y=y))+geom_tile(aes(fill=z))+geom_point(x=lons[sitelon+1],y=lats[sitelat-1],color="white")
         
       }
       

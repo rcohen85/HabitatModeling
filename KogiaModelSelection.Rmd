@@ -235,7 +235,7 @@ for (i in 1:length(smoothVarList)){
                       BinCenter=seq(min(data[[smoothVarList[i]]])+(0.5*binDiff),
                                     max(data[[smoothVarList[i]]])+(0.5*binDiff),
                                     by=binDiff))
-  
+  # png(file='J:/Chpt_3/FigsForLB/Kogia_SSH_Hist.png',width=8,height=5,units="in",res=600)
   print(ggplot(plotDF
   )+geom_col(aes(x=BinCenter,y=Obs),
              fill='#bfbfbf',
@@ -247,6 +247,7 @@ for (i in 1:length(smoothVarList)){
            x=NULL,
            title=paste(smoothVarList[i],', p = ',as.character(KS.out$p.value),sep="")
   ) + theme_minimal())
+  # dev.off()
   
   # print(ggplot(data
   # )+geom_point(aes(x=.data[[smoothVarList[i]]],y=Pres)
@@ -424,7 +425,7 @@ S_GSLat	    0.078701
 S_Slope	    <0.0001
 
 #Remove non-significant terms, re-run model, check p-values
-```{r fullMod}
+```{r redMod}
 
 PV$'p-value'[PV$'p-value'=="<0.0001"] = 0.0001
 badVars = PV$Variable[(as.numeric(PV$'p-value')>=0.05)]
@@ -559,6 +560,7 @@ $BS
 5  S_FSLE0 0.006624
 6  S_GSLat    1e-04
 
+
 # Remove non-significant terms and rerun
 ```{r site-specific models}
 
@@ -629,6 +631,27 @@ for (i in 1:length(siteModListRed)){
 
 print(pValListRed)
 ```
+$GS
+  Variable  p-value
+1  S_Temp0 0.005442
+2   S_SSH0    1e-04
+3  S_FSLE0 0.014564
+4  S_GSLat 0.002437
+
+$BP
+  Variable  p-value
+1  S_Temp0 0.000955
+2   S_SSH0    1e-04
+3   S_Chl0    1e-04
+4  S_FSLE0  0.00222
+
+$BS
+  Variable  p-value
+1  S_Temp0 0.001029
+2   S_SSH0    1e-04
+3   S_Chl0    1e-04
+4  S_FSLE0 0.014178
+5  S_GSLat 0.001373
 
 # Plot terms from site-specific models
 ```{r plot sites specific models}

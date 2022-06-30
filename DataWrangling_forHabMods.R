@@ -16,61 +16,62 @@ fileList = dir(inDir,pattern=".Rdata")
 
 ## Clean FSLE data -------------------------
 # Aviso FSLE is daily at 1/25the (0.04) degree spatial resolution, re-gridded to 0.08deg
-load('J:/Chpt_3/CovarTS/FSLE_TS.Rdata')
-FSLE = data.frame(Time=as.Date(masterData.Time[1,],origin="1970-01-01"),HZ0=masterData.Data[1,],
-                  OC0=masterData.Data[2,],NC0=masterData.Data[3,],BC0=masterData.Data[4,],
-                  WC0=masterData.Data[5,],NFC0=masterData.Data[6,],HAT0=masterData.Data[7,],GS0=masterData.Data[8,],
-                  BP0=masterData.Data[9,],BS0=masterData.Data[10,],JAX0=masterData.Data[11,])
-
-sites = colnames(FSLE)
-
-# Plot histograms of data
-for (i in 2:12){
-  eval(parse(text=(paste(sites[i],' = ggplot(data=FSLE)+geom_histogram(aes(x=',sites[i],'))+labs(x="",title=sites[i])',sep=""))))
-}
-png(file=paste(outDir,'/',"FSLE_hist.png",sep=""),width = 800, height = 800, units = "px")
-grid.arrange(HZ0,OC0,NC0,BC0,WC0,NFC0,HAT0,GS0,BP0,BS0,JAX0, ncol=4,nrow=3,top="FSLE")
-while (dev.cur()>1) {dev.off()}
-
-# Plot boxplots and calculate quantiles to identify outliers
-ggplot(stack(FSLE[,2:12]))+geom_boxplot(aes(x=ind,y=values))+labs(x="Site & Depth",y="FSLE",title="FSLE")
-ggsave(paste(outDir,'/',"FSLE_boxplot.png",sep=""),device="png",width=600,height=800,units="px",scale=5,dpi=600)
-
-q25 = quantile(stack(FSLE[,2:12])$values,probs=0.25)
-q75 = quantile(stack(FSLE[,2:12])$values,probs=0.75)
-iqr = q75-q25
-
-# Remove outliers (make NA, interpolate later)
-# for (i in 1:11){
-# which_outliers = which(FSLE[,i]<(q25-(1.5*iqr)) | FSLE[,i]>0)
-# FSLE[which_outliers,i] = NA}
-
-# Check for missing dates
-timeDiff = diff(as.numeric(FSLE$Time))
-any(timeDiff>1)
-
-# Interpolate missing values
-for (i in 2:12){
-  skippedBins = which(is.na(FSLE[,i])) # missing data
-  missFSLE = apply(cbind(FSLE[skippedBins-1,i],FSLE[skippedBins+1,i]),MARGIN=1,mean)
-  FSLE[skippedBins,i] = missFSLE
-}
-
-# # Create time lagged vectors
-# startInd = which(FSLE$Time==as.Date('2016-05-01',origin="1970-01-01"))
-# fullLength = length(FSLE$Time)
+# load('J:/Chpt_3/CovarTS/FSLE_TS.Rdata')
+# FSLE = data.frame(Time=as.Date(masterData.Time[1,],origin="1970-01-01"),HZ0=masterData.Data[1,],
+#                   OC0=masterData.Data[2,],NC0=masterData.Data[3,],BC0=masterData.Data[4,],
+#                   WC0=masterData.Data[5,],NFC0=masterData.Data[6,],HAT0=masterData.Data[7,],GS0=masterData.Data[8,],
+#                   BP0=masterData.Data[9,],BS0=masterData.Data[10,],JAX0=masterData.Data[11,])
+# 
+# sites = colnames(FSLE)
+# 
+# # Plot histograms of data
 # for (i in 2:12){
-#   for (k in lags){
-#     lagInd = startInd-k
-#     eval(parse(text=paste('FSLE$',sites[i],'Lag',as.character(k),' = NA',sep="")))
-#     eval(parse(text=paste('FSLE$',sites[i],'Lag',as.character(k),'[startInd:',fullLength,'] = FSLE$',sites[i],'[lagInd:(',fullLength,'-',as.character(k),')]',sep="")))
-#   }
+#   eval(parse(text=(paste(sites[i],' = ggplot(data=FSLE)+geom_histogram(aes(x=',sites[i],'))+labs(x="",title=sites[i])',sep=""))))
 # }
-write.csv(FSLE,file=paste(inDir,'/','FSLE_TS.csv',sep=""),row.names=FALSE)
+# png(file=paste(outDir,'/',"FSLE_hist.png",sep=""),width = 800, height = 800, units = "px")
+# grid.arrange(HZ0,OC0,NC0,BC0,WC0,NFC0,HAT0,GS0,BP0,BS0,JAX0, ncol=4,nrow=3,top="FSLE")
+# while (dev.cur()>1) {dev.off()}
+# 
+# # Plot boxplots and calculate quantiles to identify outliers
+# ggplot(stack(FSLE[,2:12]))+geom_boxplot(aes(x=ind,y=values))+labs(x="Site & Depth",y="FSLE",title="FSLE")
+# ggsave(paste(outDir,'/',"FSLE_boxplot.png",sep=""),device="png",width=600,height=800,units="px",scale=5,dpi=600)
+# 
+# q25 = quantile(stack(FSLE[,2:12])$values,probs=0.25)
+# q75 = quantile(stack(FSLE[,2:12])$values,probs=0.75)
+# iqr = q75-q25
+# 
+# # Remove outliers (make NA, interpolate later)
+# # for (i in 1:11){
+# # which_outliers = which(FSLE[,i]<(q25-(1.5*iqr)) | FSLE[,i]>0)
+# # FSLE[which_outliers,i] = NA}
+# 
+# # Check for missing dates
+# timeDiff = diff(as.numeric(FSLE$Time))
+# any(timeDiff>1)
+# 
+# # Interpolate missing values
+# for (i in 2:12){
+#   skippedBins = which(is.na(FSLE[,i])) # missing data
+#   missFSLE = apply(cbind(FSLE[skippedBins-1,i],FSLE[skippedBins+1,i]),MARGIN=1,mean)
+#   FSLE[skippedBins,i] = missFSLE
+# }
+# 
+# # # Create time lagged vectors
+# # startInd = which(FSLE$Time==as.Date('2016-05-01',origin="1970-01-01"))
+# # fullLength = length(FSLE$Time)
+# # for (i in 2:12){
+# #   for (k in lags){
+# #     lagInd = startInd-k
+# #     eval(parse(text=paste('FSLE$',sites[i],'Lag',as.character(k),' = NA',sep="")))
+# #     eval(parse(text=paste('FSLE$',sites[i],'Lag',as.character(k),'[startInd:',fullLength,'] = FSLE$',sites[i],'[lagInd:(',fullLength,'-',as.character(k),')]',sep="")))
+# #   }
+# # }
+# write.csv(FSLE,file=paste(inDir,'/','FSLE_TS.csv',sep=""),row.names=FALSE)
 
 ## Clean HYCOM data --------------------------------
 # Downloaded HYCOM data are daily at 2/25th (0.08) degrees irregular spatial resolution, re-gridded to 0.08deg
-vars = c('SSH','Salinity','Temperature','VelocityMag','VelocityAsp','EKE')
+# vars = c('SSH','Salinity','Temperature','VelocityMag','VelocityAsp','EKE')
+vars = 'EKE'
 lon = "ES"
 
 for (j in 1:length(vars)){
@@ -132,7 +133,7 @@ for (j in 1:length(vars)){
     load(paste(inDir,'/',fileList[TSind],sep=""))
     outDFs = c('fullSalinity','fullTemperature','fullVelocityMag','fullVelocityAsp','fullEKE')
     depths = c(0,100,200,300,400,500,600,700,800) # desired depth layers
-    units = c("PPT",paste(intToUtf8(176),"C",sep=""),"m/s",intToUtf8(176),paste(expression('cm'^2),'/',expression('s'^2),sep=""))
+    units = c("PPT",paste(intToUtf8(176),"C",sep=""),"m/s",intToUtf8(176),paste(expression("cm"^2),'/',expression("s"^2),sep=""))
     
     eval(parse(text=paste('full',vars[j],' = data.frame(Time=seq.Date(from=as.Date("2016-02-01",origin="1970-01-01"),to=as.Date("2019-04-30",origin="1970-01-01"),by=1))',sep="")))
     
@@ -178,23 +179,23 @@ for (j in 1:length(vars)){
       lowerThresh = q25-(1.5*iqr)
       
       # Interpolate missing dates and NAs (can't interpolate JAX at most depths, too little data!)
-      if (l==1){    
-        for (i in 1:11){
-          datBins = which(!is.na(Temp[,i]))
-          eval(parse(text=paste('full',vars[j],'$',sites[i],'=NA',sep="")))
-          eval(parse(text=paste('full',vars[j],'$',sites[i],' = (approx(x=masterData.Time[datBins],y=Temp[datBins,i],xout=full',vars[j],'[,1],method="linear"))$y',sep="")))
-        }
-      } else {
+      # if (l==1){
+      #   for (i in 1:11){
+      #     datBins = which(!is.na(Temp[,i]))
+      #     eval(parse(text=paste('full',vars[j],'$',sites[i],'=NA',sep="")))
+      #     eval(parse(text=paste('full',vars[j],'$',sites[i],' = (approx(x=masterData.Time[datBins],y=Temp[datBins,i],xout=full',vars[j],'[,1],method="linear"))$y',sep="")))
+      #   }
+      # } else {
         for (i in 1:10){
           datBins = which(!is.na(Temp[,i]))
           eval(parse(text=paste('full',vars[j],'$',sites[i],'=NA',sep="")))
           eval(parse(text=paste('full',vars[j],'$',sites[i],' = (approx(x=masterData.Time[datBins],y=Temp[datBins,i],xout=full',vars[j],'[,1],method="linear"))$y',sep="")))
         }
-        # add (likely hole-y) JAX data without interpolation
-        eval(parse(text=paste('full',vars[j],'$',sites[i+1],'=NA',sep="")))
-        eval(parse(text=paste('putWhere = match(masterData.Time,full',vars[j],'$Time)',sep="")))
-        eval(parse(text=paste('full',vars[j],'$',sites[i+1],'[putWhere[!is.na(putWhere)]]=Temp[-which(is.na(putWhere)),i+1]',sep="")))
-      }
+      #   # add (likely hole-y) JAX data without interpolation
+      #   eval(parse(text=paste('full',vars[j],'$',sites[i+1],'=NA',sep="")))
+      #   eval(parse(text=paste('putWhere = match(masterData.Time,full',vars[j],'$Time)',sep="")))
+      #   eval(parse(text=paste('full',vars[j],'$',sites[i+1],'[putWhere[!is.na(putWhere)]]=Temp[-which(is.na(putWhere)),i+1]',sep="")))
+      # }
       
     }
     
@@ -219,6 +220,7 @@ for (j in 1:length(vars)){
     
   }
 }
+
 
 ## Clean Chla Data  --------------------------------------
 # Downloaded Chla data are daily at 1/24th (0.04166667) degree spatial resolution, effectively re-gridded to 0.08deg

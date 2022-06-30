@@ -29,11 +29,11 @@ library(geodist)
 # save(newGrid,depthData,newx,newy,file=('J:/Chpt_3/GEBCO/DownsampledGrid_02deg.Rdata'))
 
 # Load depth grid of desired resolution
-load('J:/Chpt_3/GEBCO/DownsampledGrid_02deg.Rdata')
+load('J:/Chpt_3/GEBCO/DownsampledGrid_08deg.Rdata')
 
 # Plot bathymetry and save
-ggplot(newGrid,aes(x=Lon,y=Lat))+geom_tile(aes(fill=Depth))+ggtitle("0.04deg Grid")+scale_fill_viridis()
-ggsave('J:/Chpt_3/GEBCO/04deg_BathMap.png',device="png")
+ggplot(newGrid,aes(x=Lon,y=Lat))+geom_tile(aes(fill=Depth))+ggtitle("0.08deg Grid")+scale_fill_viridis()
+ggsave('J:/Chpt_3/GEBCO/08deg_BathMap.png',device="png")
 
 # Calculate distances between lat grid points and lon grid points in meters
 dy=as.numeric()
@@ -88,7 +88,7 @@ cgrad_RC <-
     cellgr[-rows,-cols,2]=.5*dlx*(mm[-rows,-cols]+md-mr-mrd)
     cellgr[-rows,-cols,1]=.5*dly*(mm[-rows,-cols]-md+mr-mrd)
     cellgr[-rows,-cols,3]=dlx*dly
-    #last row and col are undefined. Replicate last value form previous row/col
+    #last row and col are undefined. Replicate last value from previous row/col
     cellgr[rows,,]=cellgr[(rows-1),,]
     cellgr[,cols,]=cellgr[,(cols-1),]
     cellArea=sqrt(cellgr[,,1]^2+cellgr[,,2]^2+cellgr[,,3]^2)
@@ -116,6 +116,10 @@ aspectDF = data.frame(z=stack(data.frame(floorAspect))[,1],
                       y=rep(newy,length.out=length(newx)*length(newy)),
                       x=rep(newx,each=length(newy)))
 ggplot(aspectDF,aes(x=x,y=y))+geom_tile(aes(fill=z))+scale_fill_viridis()
+
+# Calculate locations of key isobaths
+
+
 
 # Grab data points nearest to each HARP site, save time series
 sites = c('HZ','OC','NC','BC','WC','NFC','HAT','GS','BP','BS','JAX')
@@ -151,4 +155,4 @@ for (m in 1:nrow(HARPs)){ # for each HARP site
   }
 }
 
-save(slopeDF,aspectDF,slopeMat,aspectMat,file='J:/Chpt_3/GEBCO/SlopeAspect_04deg.Rdata')
+save(slopeDF,aspectDF,slopeMat,aspectMat,file='J:/Chpt_3/GEBCO/SlopeAspect_08deg.Rdata')

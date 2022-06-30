@@ -1,4 +1,4 @@
-plotSmooths = function(mod,covar,coefInd,k,periodic,site,title){
+plotSmooths = function(mod,data,covar,coefInd,k,periodic,resids,site,title){
   
   probs = list(c(0.5),
             c(0.333,0.666),
@@ -16,7 +16,7 @@ plotSmooths = function(mod,covar,coefInd,k,periodic,site,title){
   maxVal = max(data[[covar]][ind])
   varSeq = seq(minVal,maxVal,length.out=1000)
   varBasis = mSpline(varSeq,
-                     knots=quantile(data[[covar]][ind],probs=unlist(probs[k-2])),
+                     knots=quantile(data[[covar]][ind],probs=unlist(probs[k])),
                      Boundary.knots=c(minVal,maxVal),
                      periodic=periodic)
   
@@ -30,21 +30,45 @@ plotSmooths = function(mod,covar,coefInd,k,periodic,site,title){
   bootstrapFits = (varBasis%*%t(bootstrapCoefs))+coef(mod)[1]
   cis<-apply(bootstrapFits, 1, quant.func)
   
-  ggplot(plotDF, aes(Var, Fit),
-  ) + geom_smooth(aes(ymin=cis[1,], ymax=cis[2,]),
-                  color="#16A7CA",
-                  fill="#16A7CA",
-                  alpha=0.2,
-                  stat ="identity"
-  ) + geom_rug(data=data[ind,],
-               inherit.aes=F,
-               aes(x=data[[covar]][ind]),
-               sides="b"
-  ) + labs(x = covar,
-           # y = "Probability"
-           y = paste('s(',covar,')',sep="")
-  ) + ggtitle(title
-  ) + theme(axis.line = element_line(size=0.2),
-            panel.background = element_blank()
-  )
+  if (!resids){
+    ggplot(plotDF, aes(Var, Fit),
+    ) + geom_smooth(aes(ymin=cis[1,], ymax=cis[2,]),
+                    color="#16A7CA",
+                    fill="#16A7CA",
+                    alpha=0.3,
+                    stat ="identity"
+    ) + geom_rug(data=data[ind,],
+                 inherit.aes=F,
+                 aes(x=.data[[covar]][ind]),
+                 sides="b"
+    ) + labs(x = covar,
+             y = paste('s(',covar,')',sep="")
+    ) + ggtitle(title
+    ) + theme(axis.line = element_line(size=0.2),
+              panel.background = element_blank()
+    )
+    
+  }else if (resids){
+    ggplot(plotDF, aes(Var, Fit),
+    ) + geom_point(data=data[ind,],
+                   aes(x=.data[[covar]][ind],y=log10(Pres)),
+                   size=0.75,
+                   color="#71797E"
+    ) + geom_smooth(aes(ymin=cis[1,], ymax=cis[2,]),
+                    color="#16A7CA",
+                    fill="#16A7CA",
+                    alpha=0.3,
+                    stat ="identity"
+    ) + geom_rug(data=data[ind,],
+                 inherit.aes=F,
+                 aes(x=.data[[covar]][ind]),
+                 sides="b"
+    ) + labs(x = covar,
+             y = paste('s(',covar,')',sep="")
+    ) + ggtitle(title
+    ) + theme(axis.line = element_line(size=0.2),
+              panel.background = element_blank()
+    )
+  }
+  
 }

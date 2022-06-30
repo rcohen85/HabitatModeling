@@ -15,7 +15,7 @@ library(car)
 library(splines2)
 source("getPvalues.R")
 
-data = data.frame(read.csv('E:/ModelingCovarData/Master_DFs/Sowerby_masterDF.csv'))
+data = data.frame(read.csv('J:/Chpt_3/ModelData/Sowerby_masterDF.csv'))
 lagID = 64
 numClust = length(data$Pres)/(lagID-1)
 if (numClust<length(data$Pres)){

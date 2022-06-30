@@ -99,7 +99,8 @@ for (k in 1:length(depths)){
       # convert from radians to degrees
       velocityAsp = (velocityAsp*180)/pi
       
-      # calculate eddy kinetic energy
+      # calculate eddy kinetic energy (m^2/s^2)
+      # EKE_c = 0.5*(((dataU*100)^2)+((dataV*100)^2))
       EKE = 0.5*((dataU^2)+(dataV^2))
       
       # For Shiny
@@ -159,7 +160,7 @@ for (k in 1:length(depths)){
       # add data points from all files to master data frame
       masterData.Mag = cbind(masterData.Mag, thisFileMag)
       masterData.Asp = cbind(masterData.Asp, thisFileAsp)
-      masterData.EKE = cbind(masterData.Asp, thisFileEKE)
+      masterData.EKE = cbind(masterData.EKE, thisFileEKE)
       masterData.Lat = cbind(masterData.Lat,thisFileLat)
       masterData.Lon = cbind(masterData.Lon,thisFileLon)
       masterData.Time = cbind(masterData.Time,thisTime)
@@ -182,5 +183,5 @@ for (k in 1:length(depths)){
        file=paste(outDir,'/','VelocityAsp','_',as.character(depths[k]),'_TS_ES.Rdata',sep="")) 
   masterData.Data = masterData.EKE
   save(masterData.Data,masterData.Lat,masterData.Lon,masterData.Time,
-       file=paste(outDir,'/','EKE','_',as.character(depths[k]),'_TS_ES.Rdata',sep="")) 
+       file=paste(outDir,'/','EKE','_',as.character(depths[k]),'_TS_ES.Rdata',sep=""))
 }

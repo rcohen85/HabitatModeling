@@ -22,7 +22,7 @@ library(SimDesign)
 library(multitaper)
 source("getPvalues.R")
 
-data = data.frame(read.csv('E:/ModelingCovarData/Master_DFs/Cuvier_masterDF.csv'))
+data = data.frame(read.csv('J:/Chpt_3/ModelData/Cuvier_masterDF.csv'))
 lagID = 44 
 numClust = length(data$Pres)/(lagID-1)
 if (numClust<length(data$Pres)){
@@ -142,7 +142,7 @@ covarList = c("Chl0",
               "Slope",
               "Aspect")
 
-profileDir = 'E:/ModelingCovarData/Profiles'
+profileDir = 'J:/Chpt_3/CovarTS'
 profileList = dir(profileDir,pattern="Profiles_ES.Rdata",full.names=TRUE)
 sites = c("HZ","WC","HAT")
 k=7
@@ -171,7 +171,7 @@ for (j in 1:length(sites)){
       )+labs(x=NULL,y=NULL
       )+theme(plot.margin=margin(c(0,43,0,0),unit="pt"))
       
-      for (i in 1:length(covarList)){ # plot surface covars in this year
+      for (i in 1:length(covarList)){ # plot single layer covars in this year
         
         plotDF$Covar = rollmean(data[[covarList[i]]][siteInd],k=k,fill=NA)
         
@@ -189,104 +189,104 @@ for (j in 1:length(sites)){
     }
     
     
-    for (i in 1:length(profileList)){ # for profiles of covars with multiple depth layers
-      
-      load(profileList[i])
-      profileName = str_remove(str_remove(profileList[i],'_Profiles_ES.Rdata'),paste(profileDir,'/',sep=""))
-      profileDF = data.frame(z=stack(data.frame(eval(parse(text=paste(sites[j],'Profile',sep="")))))[,1],
-                             y=rep(depths,times=dim(eval(parse(text=paste(sites[j],'Profile',sep=""))))[2]),
-                             x=rep(as.Date(masterData.Time,origin="1970-01-01"),each=length(depths)))
-      
-      for (m in 1:(length(dateMarks)-1)){
-        st = dateMarks[m]
-        ed = dateMarks[m+1]
-        
-        if (str_detect(profileName,"Asp")){
-          
-        plotList[['Pres']] = ggplot(plotDF,aes(x=Date) # plot presence in this year
-        )+geom_line(aes(y=Pres)
-        )+scale_x_continuous(breaks=c(seq.Date(from=st,to=ed,by="quarter"))
-        )+coord_cartesian(xlim=c(st,ed)
-        )+ggtitle('Presence'
-        )+labs(x=NULL,y=NULL
-        )+theme(plot.margin=margin(c(0,0,0,0),unit="pt"))
-          
-          direction_labeller <- function(x){
-            ifelse(x %% 45 == 0, c('E','NE','N','NW','W','SW','S','SE')[1+(as.integer(x/45) %% 8)], '')}
-          my_colors=c("#2E22EA","#9E3DFB","#F86BE2","#FCCE7B","#C4E416","#4BBA0F","#447D87","#2C24E9")
-          
-          plotList[[profileName]] = ggplot(profileDF,aes(x=x,y=y,z=z) # plot profile for this year
-          )+geom_contour_filled(
-          )+scale_fill_manual(
-            values=my_colors,
-            guide=NULL
-          )+coord_cartesian(xlim=c(st,ed)
-          )+scale_x_continuous(breaks=c(seq.Date(from=st,to=ed,by="quarter"))
-          )+scale_y_reverse(
-          )+ggtitle(profileName
-          )+labs(x=NULL,y=NULL
-          )+theme(plot.margin=margin(c(0,0,0,0),unit="pt"))
-          
-          hues_df = data.frame(degree = 0:359) %>%
-            mutate(
-              label=direction_labeller(degree+90 %% 360),
-              colors = rev(colorRampPalette(my_colors)(360)))
-          
-          plotList[["ColorLegend"]] = ggplot(hues_df
-            )+geom_rect(aes(ymin=3,
-                            ymax=4,
-                            xmin=degree-0.5,
-                            xmax=degree+0.5,
-                            color=colors,
-                            fill=colors)
-            )+coord_polar(direction=-1,
-                          start=0
-            )+scale_color_identity(
-            )+scale_fill_identity(
-            )+guides(fill=FALSE,color=FALSE
-            )+theme_void(
-            )+ylim(c(1,4.5)
-            )+geom_text(aes(x=degree,
-                            y=4.5,
-                            label=label)) 
-          
-          grid.arrange(plotList$Pres,plotList[[profileName]],plotList[["ColorLegend"]],
-                       ncol=12,nrow=3,top=paste('Cuvier at',sites[j]),layout_matrix=rbind(c(rep(1,11),NA),
-                                                                                          c(rep(2,11),NA),
-                                                                                          c(rep(2,11),3)))
-          
-        } else {
-          
-        plotList[['Pres']] = ggplot(plotDF,aes(x=Date) # plot presence in this year
-        )+geom_line(aes(y=Pres)
-        )+scale_x_continuous(breaks=c(seq.Date(from=st,to=ed,by="quarter"))
-        )+coord_cartesian(xlim=c(st,ed)
-        )+ggtitle('Presence'
-        )+labs(x=NULL,y=NULL
-        )+theme(plot.margin=margin(c(0,40,0,0),unit="pt"))
-                  
-          plotList[[profileName]] = ggplot(profileDF,aes(x=x,y=y,z=z) # plot profile for this year
-          )+geom_contour_filled(
-          )+coord_cartesian(xlim=c(st,ed)
-          )+scale_x_continuous(breaks=c(seq.Date(from=st,to=ed,by="quarter"))
-          )+scale_y_reverse(
-          )+ggtitle(profileName
-          )+labs(x=NULL,y=NULL
-          )+theme(plot.margin=margin(c(0,0,0,0),unit="pt"),
-                  legend.position="right",
-                  legend.title=element_text(size=0),
-                  legend.text=element_text(size=7),
-                  legend.key.size=unit(0.5,'lines'),
-                  legend.direction="vertical",
-                  legend.margin=margin(0))
-          
-          grid.arrange(plotList$Pres,plotList[[profileName]],
-                       ncol=12,nrow=3,top=paste('Cuvier at',sites[j]),layout_matrix=rbind(c(rep(1,12)),
-                                                                                          c(rep(2,12)),
-                                                                                          c(rep(2,12))))
-        }
-      }
-    }
+    # for (i in 1:length(profileList)){ # for profiles of covars with multiple depth layers
+    #   
+    #   load(profileList[i])
+    #   profileName = str_remove(str_remove(profileList[i],'_Profiles_ES.Rdata'),paste(profileDir,'/',sep=""))
+    #   profileDF = data.frame(z=stack(data.frame(eval(parse(text=paste(sites[j],'Profile',sep="")))))[,1],
+    #                          y=rep(depths,times=dim(eval(parse(text=paste(sites[j],'Profile',sep=""))))[2]),
+    #                          x=rep(as.Date(masterData.Time,origin="1970-01-01"),each=length(depths)))
+    #   
+    #   for (m in 1:(length(dateMarks)-1)){
+    #     st = dateMarks[m]
+    #     ed = dateMarks[m+1]
+    #     
+    #     if (str_detect(profileName,"Asp")){
+    #       
+    #     plotList[['Pres']] = ggplot(plotDF,aes(x=Date) # plot presence in this year
+    #     )+geom_line(aes(y=Pres)
+    #     )+scale_x_continuous(breaks=c(seq.Date(from=st,to=ed,by="quarter"))
+    #     )+coord_cartesian(xlim=c(st,ed)
+    #     )+ggtitle('Presence'
+    #     )+labs(x=NULL,y=NULL
+    #     )+theme(plot.margin=margin(c(0,0,0,0),unit="pt"))
+    #       
+    #       direction_labeller <- function(x){
+    #         ifelse(x %% 45 == 0, c('E','NE','N','NW','W','SW','S','SE')[1+(as.integer(x/45) %% 8)], '')}
+    #       my_colors=c("#2E22EA","#9E3DFB","#F86BE2","#FCCE7B","#C4E416","#4BBA0F","#447D87","#2C24E9")
+    #       
+    #       plotList[[profileName]] = ggplot(profileDF,aes(x=x,y=y,z=z) # plot profile for this year
+    #       )+geom_contour_filled(
+    #       )+scale_fill_manual(
+    #         values=my_colors,
+    #         guide=NULL
+    #       )+coord_cartesian(xlim=c(st,ed)
+    #       )+scale_x_continuous(breaks=c(seq.Date(from=st,to=ed,by="quarter"))
+    #       )+scale_y_reverse(
+    #       )+ggtitle(profileName
+    #       )+labs(x=NULL,y=NULL
+    #       )+theme(plot.margin=margin(c(0,0,0,0),unit="pt"))
+    #       
+    #       hues_df = data.frame(degree = 0:359) %>%
+    #         mutate(
+    #           label=direction_labeller(degree+90 %% 360),
+    #           colors = rev(colorRampPalette(my_colors)(360)))
+    #       
+    #       plotList[["ColorLegend"]] = ggplot(hues_df
+    #         )+geom_rect(aes(ymin=3,
+    #                         ymax=4,
+    #                         xmin=degree-0.5,
+    #                         xmax=degree+0.5,
+    #                         color=colors,
+    #                         fill=colors)
+    #         )+coord_polar(direction=-1,
+    #                       start=0
+    #         )+scale_color_identity(
+    #         )+scale_fill_identity(
+    #         )+guides(fill=FALSE,color=FALSE
+    #         )+theme_void(
+    #         )+ylim(c(1,4.5)
+    #         )+geom_text(aes(x=degree,
+    #                         y=4.5,
+    #                         label=label)) 
+    #       
+    #       grid.arrange(plotList$Pres,plotList[[profileName]],plotList[["ColorLegend"]],
+    #                    ncol=12,nrow=3,top=paste('Cuvier at',sites[j]),layout_matrix=rbind(c(rep(1,11),NA),
+    #                                                                                       c(rep(2,11),NA),
+    #                                                                                       c(rep(2,11),3)))
+    #       
+    #     } else {
+    #       
+    #     plotList[['Pres']] = ggplot(plotDF,aes(x=Date) # plot presence in this year
+    #     )+geom_line(aes(y=Pres)
+    #     )+scale_x_continuous(breaks=c(seq.Date(from=st,to=ed,by="quarter"))
+    #     )+coord_cartesian(xlim=c(st,ed)
+    #     )+ggtitle('Presence'
+    #     )+labs(x=NULL,y=NULL
+    #     )+theme(plot.margin=margin(c(0,40,0,0),unit="pt"))
+    #               
+    #       plotList[[profileName]] = ggplot(profileDF,aes(x=x,y=y,z=z) # plot profile for this year
+    #       )+geom_contour_filled(
+    #       )+coord_cartesian(xlim=c(st,ed)
+    #       )+scale_x_continuous(breaks=c(seq.Date(from=st,to=ed,by="quarter"))
+    #       )+scale_y_reverse(
+    #       )+ggtitle(profileName
+    #       )+labs(x=NULL,y=NULL
+    #       )+theme(plot.margin=margin(c(0,0,0,0),unit="pt"),
+    #               legend.position="right",
+    #               legend.title=element_text(size=0),
+    #               legend.text=element_text(size=7),
+    #               legend.key.size=unit(0.5,'lines'),
+    #               legend.direction="vertical",
+    #               legend.margin=margin(0))
+    #       
+    #       grid.arrange(plotList$Pres,plotList[[profileName]],
+    #                    ncol=12,nrow=3,top=paste('Cuvier at',sites[j]),layout_matrix=rbind(c(rep(1,12)),
+    #                                                                                       c(rep(2,12)),
+    #                                                                                       c(rep(2,12))))
+    #     }
+    #   }
+    # }
   }
 }
 
@@ -331,7 +331,7 @@ presDF = data[pres,]
 sites = c("HZ","WC","HAT")
 
 for (i in 1:length(smoothVarList)){
-  
+
   # Bootstrap the covar to produce a sample of the same size as pres
   refDist = sample(data[[smoothVarList[i]]],size=length(pres),replace=TRUE)
   
@@ -346,7 +346,7 @@ for (i in 1:length(smoothVarList)){
                       BinCenter=seq(min(data[[smoothVarList[i]]])+(0.5*binDiff),
                                     max(data[[smoothVarList[i]]])+(0.5*binDiff),
                                     by=binDiff))
-  
+  # png(file='J:/Chpt_3/FigsForLB/Cuvier_SSH_Hist.png',width=8,height=5,units="in",res=600)
   print(ggplot(plotDF
   )+geom_col(aes(x=BinCenter,y=Obs),
              fill='#bfbfbf',
@@ -358,6 +358,7 @@ for (i in 1:length(smoothVarList)){
            x=NULL,
            title=paste(smoothVarList[i],', p = ',as.character(KS.out$p.value),sep="")
   ) + theme_minimal())
+    # dev.off()
   
   # print(ggplot(data
   # )+geom_point(aes(x=.data[[smoothVarList[i]]],y=Pres)
@@ -759,11 +760,15 @@ for (j in 1:length(siteModListRed)){
           k=length(unlist(knotList[knotInd]))+2
           coefInd = which(str_detect(names(siteModListRed[[j]]$coefficients),term))
           if (str_detect(term,"Asp")){periodic=TRUE} else {periodic=FALSE}
+          # png(file=paste('J:/Chpt_3/FigsForLB/Cuvier_',term,'_',siteName,'.png',sep=""),width = 8, height = 5,units = "in",res=600)
           print(plotSmooths(siteModListRed[[j]],term,coefInd,k,periodic,site=siteName,title=siteName))
+          # dev.off()
         } else { # plot linear terms
           term=terms[i]
           coefInd = which(str_detect(names(siteModListRed[[j]]$coefficients),terms[i]))
+          # png(file=paste('J:/Chpt_3/FigsForLB/Cuvier_',term,'_',siteName,'.png',sep=""),width = 8, height = 5,units = "in",res=600)
           print(plotLinears(siteModListRed[[j]],term,coefInd,site=siteName,title=siteName))
+          # dev.off()
         }
       }
     }
@@ -771,3 +776,14 @@ for (j in 1:length(siteModListRed)){
 }
 
 ```
+
+# Sanity check - run a GAM to see if the same patterns are found
+```{r GAMs}
+library(mgcv)
+siteInd = which(!is.na(str_match(data$Site,"HAT")))
+testGAM = gam(Pres~s(Temp0,bs="cr",k=4)+Sal0,data=data[siteInd,],family=poisson)
+plot.gam(testGAM,all.terms=TRUE)
+
+```
+
+

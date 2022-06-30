@@ -5,9 +5,9 @@
 % manageable
 stDt = datenum(2016,5,1,0,0,0); % start date
 edDt = datenum(2019,4,30,0,0,0); % end date
-latMin = 25;
-latMax = 45;
-lonMax = -65;
+latMin = 24;
+latMax = 44;
+lonMax = -63;
 lonMin = -82;
 % directory of .nc files from Aviso
 inDir = 'J:\Chpt_3\Eddies'; 
