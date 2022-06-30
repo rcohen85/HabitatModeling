@@ -1,9 +1,14 @@
 library(tidyverse)
 library(mgcv.helper)
 library(splines2)
+library(splines)
 library(mgcv)
 library(MuMIn)
 library(gratia)
+library(forecast)
+library(nlme)
+library(itsadug)
+library(AER)
 
 # library(tidyverse)
 # library(splines2)
@@ -216,70 +221,6 @@ AIC_votes
 # Temp0           "6865.29614138004" "6818.10775487712" "6798.12408299629" "6778.99422614829" "fiveKnots"
 # Temp700         "6456.09105105771" "6315.40660592163" "6305.57726062973" "6297.11177109373" "fiveKnots"
 
-# test whether to include EKE and EddyDist separately, or as an interaction term
-g1 = gam(Pres~ s(sqrt_CEddyDist0,bs="cs",k=4)
-         + sqrt_EKE0,
-         data=weeklyDF,
-         family=modFam,
-         method="REML",
-         select=TRUE,
-         gamma=1.4,
-         na.action="na.fail")
-
-g2 = gam(Pres~ s(sqrt_CEddyDist0,sqrt_EKE0),
-         data=weeklyDF,
-         family=modFam,
-         method="REML",
-         select=TRUE,
-         gamma=1.4,
-         na.action="na.fail")
-
-summary(g1)
-# Family: Tweedie(p=1.518) 
-# Link function: log 
-# 
-# Formula:
-#   Pres ~ s(sqrt_CEddyDist0, bs = "cs", k = 4) + sqrt_EKE0
-# 
-# Parametric coefficients:
-#   Estimate Std. Error t value Pr(>|t|)    
-# (Intercept)  1.975201   0.089171   22.15  < 2e-16 ***
-#   sqrt_EKE0   -0.020769   0.005231   -3.97 7.52e-05 ***
-#   ---
-#   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
-# 
-# Approximate significance of smooth terms:
-#   edf Ref.df  F p-value    
-# s(sqrt_CEddyDist0) 1.833      3 13  <2e-16 ***
-#   ---
-#   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
-# 
-# R-sq.(adj) =  0.0189   Deviance explained = 4.04%
-# -REML = 2540.6  Scale est. = 7.0869    n = 1509
-
-summary(g2)
-# Family: Tweedie(p=1.512) 
-# Link function: log 
-# 
-# Formula:
-#   Pres ~ s(sqrt_CEddyDist0, sqrt_EKE0)
-# 
-# Parametric coefficients:
-#   Estimate Std. Error t value Pr(>|t|)    
-# (Intercept)  1.60659    0.04646   34.58   <2e-16 ***
-#   ---
-#   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
-# 
-# Approximate significance of smooth terms:
-#   edf Ref.df     F p-value    
-# s(sqrt_CEddyDist0,sqrt_EKE0) 12.93     29 3.761  <2e-16 ***
-#   ---
-#   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
-# 
-# R-sq.(adj) =  0.0368   Deviance explained = 7.41%
-# -REML = 2533.3  Scale est. = 6.9431    n = 1509
-
-# slightly more deviance explained by including them as an interaction term
 
 # run full model
 # fullMod = gam(Pres ~ s(VelMag0,bs="cs",k=5)
@@ -297,7 +238,8 @@ summary(g2)
 #               gamma=1.4,
 #               na.action="na.fail")
 
-weekMod = gam(Pres ~ s(sqrt_CEddyDist0,sqrt_EKE0)
+weekMod = gam(Pres ~ s(sqrt_CEddyDist0,bs="cs",k=5)
+              + sqrt_EKE0
               + s(Sal0,bs="cs",k=4)
               + s(Sal700,bs="cs",k=5)
               + s(SSH0,bs="cs",k=4)
@@ -320,14 +262,14 @@ weekMod$converged
 conCurv = concurvity(weekMod,full=FALSE)
 round(conCurv$estimate,digits=4)
 
-#                                 para s(sqrt_CEddyDist0,sqrt_EKE0) s(Sal0) s(Sal700) s(SSH0) s(Temp0) s(Temp700)
-# para                            1                       0.0000  0.0000    0.0000  0.0000   0.0000     0.0000
-# s(sqrt_CEddyDist0,sqrt_EKE0)    0                       1.0000  0.2695    0.2110  0.3231   0.1030     0.1916
-# s(Sal0)                         0                       0.0876  1.0000    0.6354  0.7989   0.2310     0.5589
-# s(Sal700)                       0                       0.0868  0.7621    1.0000  0.8187   0.2330     0.6364
-# s(SSH0)                         0                       0.0668  0.4745    0.3910  1.0000   0.3096     0.4481
-# s(Temp0)                        0                       0.0366  0.3654    0.3179  0.4891   1.0000     0.3838
-# s(Temp700)                      0                       0.0828  0.6372    0.6399  0.8336   0.3504     1.0000
+#                     para s(sqrt_CEddyDist0) s(Sal0) s(Sal700) s(SSH0) s(Temp0) s(Temp700)
+# para                  1             0.0000  0.0000    0.0000  0.0000   0.0000     0.0000
+# s(sqrt_CEddyDist0)    0             1.0000  0.2333    0.1836  0.2928   0.0805     0.1645
+# s(Sal0)               0             0.1874  1.0000    0.6354  0.7989   0.2310     0.5589
+# s(Sal700)             0             0.1948  0.7621    1.0000  0.8187   0.2330     0.6364
+# s(SSH0)               0             0.1803  0.4745    0.3910  1.0000   0.3096     0.4481
+# s(Temp0)              0             0.1157  0.3654    0.3179  0.4891   1.0000     0.3838
+# s(Temp700)            0             0.1869  0.6372    0.6399  0.8336   0.3504     1.0000
 
 # Sal0 concurved w Sal700, Temp700
 # Sal700 concurved w Sal0, Temp700
@@ -353,7 +295,8 @@ round(conCurv$estimate,digits=4)
 #              gamma=1.4,
 #              na.action="na.fail")
 
-weekMod = gam(Pres ~ s(sqrt_CEddyDist0,sqrt_EKE0)
+weekMod = gam(Pres ~ s(sqrt_CEddyDist0,bs="cs",k=5)
+              + sqrt_EKE0
               # + s(Sal0,bs="cs",k=4)
               + s(Sal700,bs="cs",k=5)
               + s(SSH0,bs="cs",k=4)
@@ -375,17 +318,18 @@ weekMod$converged
 conCurv = concurvity(weekMod,full=FALSE)
 round(conCurv$estimate,digits=4)
 
-#                               para s(sqrt_CEddyDist0,sqrt_EKE0) s(Sal700) s(SSH0) s(Temp0)
-# para                            1                       0.0000    0.0000  0.0000   0.0000
-# s(sqrt_CEddyDist0,sqrt_EKE0)    0                       1.0000    0.2110  0.3231   0.1030
-# s(Sal700)                       0                       0.0868    1.0000  0.8187   0.2330
-# s(SSH0)                         0                       0.0668    0.3910  1.0000   0.3096
-# s(Temp0)                        0                       0.0366    0.3179  0.4891   1.0000
+#                     para s(sqrt_CEddyDist0) s(Sal700) s(SSH0) s(Temp0)
+# para                  1             0.0000    0.0000  0.0000   0.0000
+# s(sqrt_CEddyDist0)    0             1.0000    0.1836  0.2928   0.0805
+# s(Sal700)             0             0.1948    1.0000  0.8187   0.2330
+# s(SSH0)               0             0.1803    0.3910  1.0000   0.3096
+# s(Temp0)              0             0.1157    0.3179  0.4891   1.0000
 
-# SSH still highly convurved w Chl, Sal700, Temp0
+# SSH still highly convurved w Sal700, Temp0
 # removing Sal700
 
-weekMod = gam(Pres ~ s(sqrt_CEddyDist0,sqrt_EKE0)
+weekMod = gam(Pres ~ s(sqrt_CEddyDist0,bs="cs",k=5)
+              + sqrt_EKE0
               # + s(Sal0,bs="cs",k=4)
               # + s(Sal700,bs="cs",k=5)
               + s(SSH0,bs="cs",k=4)
@@ -407,13 +351,13 @@ weekMod$converged
 conCurv = concurvity(weekMod,full=FALSE)
 round(conCurv$estimate,digits=4)
 
-#                                 para s(sqrt_CEddyDist0,sqrt_EKE0) s(SSH0) s(Temp0)
-# para                            1                       0.0000  0.0000   0.0000
-# s(sqrt_CEddyDist0,sqrt_EKE0)    0                       1.0000  0.3231   0.1030
-# s(SSH0)                         0                       0.0668  1.0000   0.3096
-# s(Temp0)                        0                       0.0366  0.4891   1.0000
+#                     para s(sqrt_CEddyDist0) s(SSH0) s(Temp0)
+# para                  1             0.0000  0.0000   0.0000
+# s(sqrt_CEddyDist0)    0             1.0000  0.2928   0.0805
+# s(SSH0)               0             0.1803  1.0000   0.3096
+# s(Temp0)              0             0.1157  0.4891   1.0000
 
-# SSH and Temp0 now concurved, but <0.5
+# SSH and Temp0 still concurved, but <0.5
 
 # dayModCompTable = dredge(dayMod,
 #                          beta="none",
@@ -468,29 +412,29 @@ sink()
 
 summary(optWeekMod)
 
-# Family: Tweedie(p=1.499) 
+# Family: Tweedie(p=1.502) 
 # Link function: log 
 # 
 # Formula:
-#   Pres ~ s(sqrt_CEddyDist0, sqrt_EKE0) + s(SSH0, bs = "cs", k = 4) + 
-#   s(Temp0, bs = "cs", k = 5) + 1
+#   Pres ~ s(sqrt_CEddyDist0, bs = "cs", k = 5) + s(SSH0, bs = "cs", 
+#                                                   k = 4) + s(Temp0, bs = "cs", k = 5) + 1
 # 
 # Parametric coefficients:
 #   Estimate Std. Error t value Pr(>|t|)    
-# (Intercept)   -2.053      0.381   -5.39 8.18e-08 ***
+# (Intercept)  -2.0023     0.3709  -5.398 7.83e-08 ***
 #   ---
 #   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 # 
 # Approximate significance of smooth terms:
 #   edf Ref.df      F  p-value    
-# s(sqrt_CEddyDist0,sqrt_EKE0) 7.813     29  1.155 2.74e-06 ***
-#   s(SSH0)                      2.868      3 77.420  < 2e-16 ***
-#   s(Temp0)                     1.691      4  2.399  0.00266 ** 
+# s(sqrt_CEddyDist0) 1.057      4  3.520 8.76e-05 ***
+#   s(SSH0)            2.868      3 83.614  < 2e-16 ***
+#   s(Temp0)           1.467      4  1.777  0.00812 ** 
 #   ---
 #   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 # 
-# R-sq.(adj) =  0.212   Deviance explained = 51.6%
-# -REML = 2211.3  Scale est. = 4.4194    n = 1509
+# R-sq.(adj) =  0.201   Deviance explained = 50.5%
+# -REML = 2212.1  Scale est. = 4.4657    n = 1509
 
 # plot
 # png(filename=paste(outDir,'/',spec,'/',spec,'_allSitesDaily.png',sep=""),width=600,height=600)
