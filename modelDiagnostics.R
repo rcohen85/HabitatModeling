@@ -23,9 +23,12 @@ masterDF$sqrt_EKE0 = sqrt(masterDF$EKE0)
 badRows = unique(which(is.na(masterDF),arr.ind=TRUE)[,1])
 masterDF = masterDF[-badRows,]
 
-ModStats = matrix(ncol=6,nrow=dim(specs)[1])
-colnames(ModStats) = c("Rho","MAE","MAENorm","MAPE","RMSE","RMSENorm")
-rownames(ModStats) = specs[,2]
+AllModStats = matrix(ncol=6,nrow=dim(specs)[1])
+colnames(AllModStats) = c("Rho","MAE","MAENorm","MAPE","RMSE","RMSENorm")
+rownames(AllModStats) = specs[,2]
+ZeroModStats = matrix(ncol=6,nrow=dim(specs)[1])
+colnames(ZeroModStats) = c("Rho","MAE","MAENorm","MAPE","RMSE","RMSENorm")
+rownames(ZeroModStats) = specs[,2]
 
 for (i in 1:dim(specs)[1]){
   # load model
@@ -39,25 +42,35 @@ for (i in 1:dim(specs)[1]){
   modPreds = predict.gam(optWeekMod,masterDF,type="response")
   
   # calculate Spearman's rank correlation
-  ModStats[i,1] = round(cor(masterDF[[abbrev]][pres], modPreds[pres],method="spearman"),digits=4)
+  ZeroModStats[i,1] = round(cor(masterDF[[abbrev]][pres], modPreds[pres],method="spearman"),digits=4)
+  AllModStats[i,1] = round(cor(masterDF[[abbrev]], modPreds,method="spearman"),digits=4)
   
   # calculate mean absolute error
-  ModStats[i,2] = round(mean(abs(masterDF[[abbrev]][pres]- modPreds[pres])),digits=4)
+  ZeroModStats[i,2] = round(mean(abs(masterDF[[abbrev]][pres]- modPreds[pres])),digits=4)
+  AllModStats[i,2] = round(mean(abs(masterDF[[abbrev]]- modPreds)),digits=4)
   
   # normalize MAE by 10th-90th percentile range
   quants = quantile(masterDF[[abbrev]][pres],probs=c(0.1,0.9))
-  iqr = quants[2]-quants[1]
-  ModStats[i,3] = round(ModStats[i,2]/iqr,digits=4)
+  Ziqr = quants[2]-quants[1]
+  ZeroModStats[i,3] = round(ZeroModStats[i,2]/Ziqr,digits=4)
+  quants = quantile(masterDF[[abbrev]],probs=c(0.1,0.9))
+  Aiqr = quants[2]-quants[1]
+  AllModStats[i,3] = round(AllModStats[i,2]/Aiqr,digits=4)
 
   # calculate mean absolute percent error
-  ModStats[i,4] = round(mean(abs(masterDF[[abbrev]][pres]- modPreds[pres])/masterDF[[abbrev]][pres]),digits=4)
+  ZeroModStats[i,4] = round(mean(abs(masterDF[[abbrev]][pres]- modPreds[pres])/masterDF[[abbrev]][pres]),digits=4)
+  AllModStats[i,4] = round(mean(abs(masterDF[[abbrev]]- modPreds)/masterDF[[abbrev]]),digits=4) # get -Inf from dividing by 0
 
   # calculate root mean square error
-  ModStats[i,5] = round(mean((masterDF[[abbrev]][pres]-modPreds[pres])^2),digits=4)
+  ZeroModStats[i,5] = round(mean((masterDF[[abbrev]][pres]-modPreds[pres])^2),digits=4)
+  AllModStats[i,5] = round(mean((masterDF[[abbrev]]-modPreds)^2),digits=4)
 
   # calculate root mean square error
-  ModStats[i,6] = round(ModStats[i,5]/iqr,digits=4)
+  ZeroModStats[i,6] = round(ZeroModStats[i,5]/Ziqr,digits=4)
+  AllModStats[i,6] = round(AllModStats[i,5]/Aiqr,digits=4)
 }
+
+ModStats = cbind(ZeroModStats,AllModStats)
 
 # Save fit statistics
 write.csv(ModStats,'ModelStatistics.csv',row.names=TRUE)
