@@ -4,8 +4,8 @@ library(Metrics)
 library(stringr)
 modFam = tw
 masterDF = data.frame(read.csv("MasterWeeklyDF.csv"))
-specs = cbind(rev(c("SBCD","Risso","SFPW","Blainville","Gervais","Cuvier","Sowerby","True","Kogia","SpermWhale")),
-              rev(c("Dd","Gg","Gm","Md","Me","Zc","Mb","Mm","Kg","Pm")))
+specs = cbind(c("SBCD","Risso","SFPW","Blainville","Gervais","Cuvier","Sowerby","True","Kogia","SpermWhale"),
+              c("Dd","Gg","Gm","Md","Me","Zc","Mb","Mm","Kg","Pm"))
 
 
 # Remove zeros in FSLE data to prepare for later transformation
