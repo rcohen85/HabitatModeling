@@ -549,45 +549,6 @@ save(WeekOptStats,DayOptStats,file=paste(outDir,'/','OptimumImportance.Rdata',se
 #   }
 # }
 
-## Compare density curves of covar values experienced across sites ----------------
-
-sites = unique(weeklyDF$Site)
-# sites = c("HAT","GS","BP","BS")
-# covars = c("Chl0","EKE0","FSLE0","AEddyDist0","CEddyDist0","SSH0","Temp0","Temp700","Sal0","Sal700",
-#           "VelMag0","VelMag700","VelAsp0","VelAsp700")
-covars = c("Chl0","FSLE0","SSH0","Temp0","Sal0","VelMag0","VelAsp0")
-lineOpts = c("dotdash","solid","dotted","dashed",
-             "dotdash","solid","dotted","dashed",
-             "dotdash","solid")
-weeklyDF$SiteFac = factor(weeklyDF$Site,levels=sites)
-
-for (i in 1:length(covars)){
-
-  siteInd = which(weeklyDF$Site%in%sites)
-  xmin = min(weeklyDF[[covars[i]]],na.rm=TRUE)
-  xmax = max(weeklyDF[[covars[i]]],na.rm=TRUE)
-  # yrInd = which(weeklyDF$WeekDate[siteInd]<as.Date("2017-05-01"))
-  ggplot(weeklyDF[siteInd,],aes(x=.data[[covars[i]]])
-         )+geom_density(aes(color=SiteFac,linetype=SiteFac)
-         )+scale_linetype_manual(values=lineOpts[1:length(sites)]
-  )+scale_color_manual(values=c("#f05a43","#db51a4","#de76f5","#9b85f2","#56b4fc","#2fc7cc","#3dd17d","#5aba30","#bbc22f","#d6a10f")
-  )+theme(legend.position="none"
-  )+coord_cartesian(xlim=c(xmin,xmax)
-  )+theme_minimal()
-  ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',covars[i],"_Density_1.png",sep=""),device="png",
-         width=300,height=150,units="px",scale=7)
-  # ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',"ForLegend.png",sep=""),device="png",
-  #        width=300,height=300,units="px",scale=7)
-  
-}
-
-# # sanity check that values are what we expect
-# for (i in 1:length(sites)){
-#   siteInd = which(weeklyDF$Site==sites[i])
-#   print(paste(sites[i],":",max(weeklyDF$Chl0[siteInd],na.rm=TRUE)))
-#   
-# }
-
 ## Look at impact of eddies at each site ---------------------
 
 sites = unique(weeklyDF$Site)
@@ -817,6 +778,8 @@ for (i in 1:length(covars)){
           # aes(x=ind,y=values,color=ind), # different color for each species
           aes(y=ind,x=values), # consistent color across species
    )+geom_violin(color="#43a5f0",
+                 fill="#43a5f0",
+                 alpha=0.4,
                  scale="area",
                  trim=FALSE,
                  draw_quantiles=c(0.25, 0.5, 0.75)
@@ -824,7 +787,9 @@ for (i in 1:length(covars)){
           y="Species"
    )+theme(legend.position="none"
    )+coord_cartesian(xlim=c(xmin,xmax)
-   )+theme_minimal()
+   )+theme_minimal(
+   )+theme(panel.grid.major=element_line(color="#CCCCCC"),
+           panel.grid.minor.x=element_blank())
    
    # ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',covars[i],"_SpeciesPresDensity.png",sep=""),
    #        device="png",
@@ -839,5 +804,45 @@ for (i in 1:length(covars)){
           units="px",
           scale=7)
 }
- 
+
+## Compare density curves of covar values experienced across sites ----------------
+
+sites = unique(masterDF$Site)
+# sites = c("HAT","GS","BP","BS")
+# covars = c("Chl0","EKE0","FSLE0","AEddyDist0","CEddyDist0","SSH0","Temp0","Temp700","Sal0","Sal700",
+#           "VelMag0","VelMag700","VelAsp0","VelAsp700")
+covars = c("Chl0","FSLE0","SSH0","Temp0","Sal0","VelMag0","VelAsp0")
+lineOpts = c("dotdash","solid","dotted","dashed",
+             "dotdash","solid","dotted","dashed",
+             "dotdash","solid")
+masterDF$SiteFac = factor(masterDF$Site,levels=sites)
+
+for (i in 1:length(covars)){
+  
+  siteInd = which(masterDF$Site%in%sites)
+  xmin = min(masterDF[[covars[i]]],na.rm=TRUE)
+  xmax = max(masterDF[[covars[i]]],na.rm=TRUE)
+  # yrInd = which(masterDF$WeekDate[siteInd]<as.Date("2017-05-01"))
+  ggplot(masterDF[siteInd,],aes(x=.data[[covars[i]]])
+  )+geom_density(aes(color=SiteFac,linetype=SiteFac)
+  )+scale_linetype_manual(values=lineOpts[1:length(sites)]
+  )+scale_color_manual(values=c("#f05a43","#db51a4","#de76f5","#9b85f2","#56b4fc","#2fc7cc","#3dd17d","#5aba30","#bbc22f","#d6a10f")
+  )+theme(legend.position="none"
+  )+coord_cartesian(xlim=c(xmin,xmax)
+  )+theme_minimal(
+  )+theme(panel.grid.major=element_line(color="#CCCCCC"),
+          panel.grid.minor.x=element_blank())
+  ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',covars[i],"_Density_1.png",sep=""),device="png",
+         width=300,height=150,units="px",scale=7)
+  # ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',"ForLegend.png",sep=""),device="png",
+  #        width=300,height=300,units="px",scale=7)
+  
+}
+
+# # sanity check that values are what we expect
+# for (i in 1:length(sites)){
+#   siteInd = which(masterDF$Site==sites[i])
+#   print(paste(sites[i],":",max(masterDF$Chl0[siteInd],na.rm=TRUE)))
+#   
+# }
  
