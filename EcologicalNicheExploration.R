@@ -706,95 +706,95 @@ while (dev.cur()>1) {dev.off()}
 
 ## Compare presence conditions across species using violinplots ------------------------
 
-fileList = dir('/Users/RebeccaCohen/Downloads/masterDFs/')
-covars = c("Chl0","EKE0","FSLE0","SSH0","Temp0","Temp700","Sal0","Sal700",
+fileList = dir('J:/Chpt_3/ModelData',pattern=".csv")
+covars = c("Chl0","EKE0","FSLE0","SSH0","Temp0","Temp200","Temp400","Temp700","Sal0","Sal200","Sal400","Sal700",
            "VelMag0","VelAsp0","CEddyDist0","AEddyDist0")
 # specs = cbind(c("Blainville","Cuvier","Gervais","Kogia","Risso","Sowerby","SpermWhale","True","UD26","UD28"),
 #               c("Md","Zc","Me","Kg","Gg","Mb","Pm","Mm","Gm","Dd"))
 specs = cbind(rev(c("UD28","Risso","UD26","Blainville","Gervais","Cuvier","Sowerby","True","Kogia","SpermWhale")),
               rev(c("Dd","Gg","Gm","Md","Me","Zc","Mb","Mm","Kg","Pm")))
 
-# masterDF = list()
-# allNames = list()
-# for (i in 1:length(fileList)){
-# 
-#   data = data.frame(read.csv(fileList[i]))
-#   thisSpec = str_remove(fileList[i],'_masterDF.csv')
-#   specAbbrev = specs[which(str_detect(specs[,1],thisSpec)),2]
-# 
-#   # Round presence to get Poisson dist
-#   data$Pres = round(data$Pres)
-# 
-#   # create weekly time series to reduce autocorrelation
-#   stDt = as.Date("2016-05-01")
-#   edDt = as.Date("2019-04-30")
-#   sites = c('HZ','OC','NC','BC','WC','NFC','HAT','GS','BP','BS')
-#   allDates = stDt:edDt
-#   weekDates = seq.Date(stDt,edDt,by=7)
-#   weeklyDF = as.numeric()
-# 
-#   for (l in 1:length(sites)) {
-# 
-#     # Create dataframe to hold data (or NAs) for all dates
-#     fullDatesDF = data.frame(matrix(nrow=length(allDates), ncol=44))
-#     fullDatesDF[,1] = allDates
-# 
-#     # sort the observations we have for this site into the full date range
-#     thisSite = which(!is.na(str_match(data$Site,sites[l])))
-#     matchRow = match(data$Date[thisSite],allDates)
-#     fullDatesDF[matchRow,2:dim(data)[2]] = data[thisSite,2:dim(data)[2]]
-# 
-#     colnames(fullDatesDF) = colnames(data)
-# 
-#     # create grouping variable
-#     weekID = rep(1:length(weekDates),each=7)
-#     weekID = weekID[1:dim(fullDatesDF)[1]]
-#     fullDatesDF$WeekID = weekID
-# 
-#     # sum presence in each week
-#     summaryData = fullDatesDF %>%
-#       group_by(WeekID) %>%
-#       summarize(Pres=sum(Pres,na.rm=TRUE))
-# 
-#     # normalize by effort
-#     effDF = data.frame(count=rep(1,length(allDates)),weekID=weekID)
-#     effDF$count[which(is.na(fullDatesDF$Pres))] = 0
-#     propEff = effDF %>%
-#       group_by(weekID) %>%
-#       summarize(sum(count))
-#     summaryData$propEff = unlist(propEff[,2])/7
-#     summaryData$Pres = summaryData$Pres*(1/summaryData$propEff)
-# 
-#     summaryData$Site = sites[l]
-#     summaryData$WeekDate = weekDates
-# 
-#     for (j in 4:(dim(data)[2])){
-#       var = names(data)[j]
-#       # calculate weekly average for this covar
-#       eval(parse(text=paste('thisCovar=fullDatesDF%>%group_by(WeekID)%>%summarize(',var,'=mean(',var,',na.rm=TRUE))',sep="")))
-#       eval(parse(text='summaryData[[var]]=unlist(thisCovar[,2])'))
-# 
-#     }
-#     weeklyDF = rbind(weeklyDF,summaryData)
-#   }
-# 
-# 
-#   if (i==1){
-#     masterDF$WeekDate = weeklyDF$WeekDate
-#     masterDF$Site = weeklyDF$Site
-#     allNames = c(allNames,"WeekDate","Site")
-#     for (j in 1:length(covars)){
-#       masterDF[[covars[j]]] = weeklyDF[[covars[j]]]
-#       allNames = c(allNames,covars[j])
-#     }
-#   }
-# 
-#   masterDF[[specAbbrev]] = weeklyDF$Pres
-#   allNames = c(allNames,specAbbrev)
-# }
-# 
-# masterDF = data.frame(masterDF)
-# write.csv(masterDF,'MasterWeeklyDF.csv',row.names=FALSE)
+masterDF = list()
+allNames = list()
+for (i in 1:length(fileList)){
+
+  data = data.frame(read.csv(fileList[i]))
+  thisSpec = str_remove(fileList[i],'_masterDF.csv')
+  specAbbrev = specs[which(str_detect(specs[,1],thisSpec)),2]
+
+  # Round presence to get Poisson dist
+  data$Pres = round(data$Pres)
+
+  # create weekly time series to reduce autocorrelation
+  stDt = as.Date("2016-05-01")
+  edDt = as.Date("2019-04-30")
+  sites = c('HZ','OC','NC','BC','WC','NFC','HAT','GS','BP','BS')
+  allDates = stDt:edDt
+  weekDates = seq.Date(stDt,edDt,by=7)
+  weeklyDF = as.numeric()
+
+  for (l in 1:length(sites)) {
+
+    # Create dataframe to hold data (or NAs) for all dates
+    fullDatesDF = data.frame(matrix(nrow=length(allDates), ncol=44))
+    fullDatesDF[,1] = allDates
+
+    # sort the observations we have for this site into the full date range
+    thisSite = which(!is.na(str_match(data$Site,sites[l])))
+    matchRow = match(data$Date[thisSite],allDates)
+    fullDatesDF[matchRow,2:dim(data)[2]] = data[thisSite,2:dim(data)[2]]
+
+    colnames(fullDatesDF) = colnames(data)
+
+    # create grouping variable
+    weekID = rep(1:length(weekDates),each=7)
+    weekID = weekID[1:dim(fullDatesDF)[1]]
+    fullDatesDF$WeekID = weekID
+
+    # sum presence in each week
+    summaryData = fullDatesDF %>%
+      group_by(WeekID) %>%
+      summarize(Pres=sum(Pres,na.rm=TRUE))
+
+    # normalize by effort
+    effDF = data.frame(count=rep(1,length(allDates)),weekID=weekID)
+    effDF$count[which(is.na(fullDatesDF$Pres))] = 0
+    propEff = effDF %>%
+      group_by(weekID) %>%
+      summarize(sum(count))
+    summaryData$propEff = unlist(propEff[,2])/7
+    summaryData$Pres = summaryData$Pres*(1/summaryData$propEff)
+
+    summaryData$Site = sites[l]
+    summaryData$WeekDate = weekDates
+
+    for (j in 4:(dim(data)[2])){
+      var = names(data)[j]
+      # calculate weekly average for this covar
+      eval(parse(text=paste('thisCovar=fullDatesDF%>%group_by(WeekID)%>%summarize(',var,'=mean(',var,',na.rm=TRUE))',sep="")))
+      eval(parse(text='summaryData[[var]]=unlist(thisCovar[,2])'))
+
+    }
+    weeklyDF = rbind(weeklyDF,summaryData)
+  }
+
+
+  if (i==1){
+    masterDF$WeekDate = weeklyDF$WeekDate
+    masterDF$Site = weeklyDF$Site
+    allNames = c(allNames,"WeekDate","Site")
+    for (j in 1:length(covars)){
+      masterDF[[covars[j]]] = weeklyDF[[covars[j]]]
+      allNames = c(allNames,covars[j])
+    }
+  }
+
+  masterDF[[specAbbrev]] = weeklyDF$Pres
+  allNames = c(allNames,specAbbrev)
+}
+
+masterDF = data.frame(masterDF)
+write.csv(masterDF,'MasterWeeklyDF.csv',row.names=FALSE)
 
 # make violin plots for each covar
 
