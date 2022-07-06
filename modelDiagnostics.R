@@ -22,6 +22,7 @@ masterDF$sqrt_EKE0 = sqrt(masterDF$EKE0)
 # Remove incomplete observations (NAs in FSLE)
 badRows = unique(which(is.na(masterDF),arr.ind=TRUE)[,1])
 masterDF = masterDF[-badRows,]
+weeklyDF = masterDF
 
 AllModStats = matrix(ncol=6,nrow=dim(specs)[1])
 colnames(AllModStats) = c("Rho","MAE","MAENorm","MAPE","RMSE","RMSENorm")
@@ -68,6 +69,27 @@ for (i in 1:dim(specs)[1]){
   # calculate root mean square error
   ZeroModStats[i,6] = round(ZeroModStats[i,5]/Ziqr,digits=4)
   AllModStats[i,6] = round(AllModStats[i,5]/Aiqr,digits=4)
+  
+  # re-plot model
+    thisForm = as.character(optWeekMod$formula)[3]
+    startSmooth = str_locate_all(thisForm,'s\\(')[[1]][,1]
+    termInd = str_locate_all(thisForm,'\\+')[[1]][,1]
+    termInd = c(0,termInd,str_length(thisForm)+1)
+    allTerms = character()
+    for (j in 1:length(termInd)-1){
+      thisTerm = str_sub(thisForm,start=termInd[j]+1,end=termInd[j+1]-1)
+      allTerms = c(allTerms,thisTerm)
+    }
+    nullTerm = str_which(allTerms,"1")
+    allTerms = allTerms[-nullTerm]
+    if (length(allTerms)<=4){
+      wd = 600
+    } else if (length(allTerms)>=5){
+      wd=900
+    }
+  png(filename=paste(specs[i,1],'_allSitesWeekly.png',sep=""),width=wd,height=600)
+  plot.gam(optWeekMod,all.terms=TRUE,rug=TRUE,pages=1,scale=0)
+  while (dev.cur()>1) {dev.off()}
 }
 
 ModStats = cbind(ZeroModStats,AllModStats)
@@ -84,7 +106,7 @@ write.csv(ModStats,'ModelStatistics.csv',row.names=TRUE)
 #   nullDev = optWeekMod$null.deviance
 # 
 #   # get model terms
-#   thisForm = as.character(optWeekMod$formula)[3]
+#   thisForm = as.character(optWeekMod$formula)[[3]][[2]]
 #   startSmooth = str_locate_all(thisForm,'s\\(')[[1]][,1]
 #   termInd = str_locate_all(thisForm,'\\+')[[1]][,1]
 #   termInd = c(0,termInd,str_length(thisForm)+1)
