@@ -552,7 +552,8 @@ for (j in 1:length(sites)){
     )+theme_void()
 
     # png(file=paste(outDir,'/',specs[1],"_",specs[2],"/",covars[i],"_at_",sites[j],".png",sep=""),width = 500, height = 400, units = "px",res=125)
-    png(file=paste(getwd(),'/EcologicalNichePlots/',specs[1],"_",specs[2],"_",covars[i],"_at_",sites[j],".png",sep=""),width = 500, height = 400, units = "px",res=125)
+    # png(file=paste(getwd(),'/EcologicalNichePlots/',specs[1],"_",specs[2],"_",covars[i],"_at_",sites[j],".png",sep=""),width = 500, height = 400, units = "px",res=125)
+    pdf(file=paste(getwd(),'/EcologicalNichePlots/',specs[1],"_",specs[2],"_",covars[i],"_at_",sites[j],".pdf",sep=""),width = 3, height = 2.4, pointsize=10)
     grid.arrange(barPlot,legPlot,ncol=5,nrow=4,layout_matrix=rbind(c(rep(1,4),NA),
                                                                c(rep(1,4),2),
                                                                c(rep(1,4),NA),
