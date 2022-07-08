@@ -10,6 +10,8 @@ library(rstatix)
 library(expss)
 library(corrplot)
 library(zoo)
+library(cluster)
+library(ggbiplot)
 
 inDir = 'J:/Chpt_3/ModelData'
 outDir = 'J:/Chpt_3/EcologicalNichePlots'
@@ -842,3 +844,40 @@ corrplot(ACorrMatAn,method='circle')
 corrplot(CCorrMatAn,method='circle')
 while (dev.cur()>1) {dev.off()}
  
+
+# PCA to compare combinations of conditions targeted by competitive species at co-occupied sites --------------
+specs = c("Gm","Gg")
+sites = c("HZ","BC","NFC","HAT")
+covars = c("Chl0","FSLE0","SSH0","Sal0","Temp0","Sal400","Temp400","AEddyDist0","CEddyDist0")
+plotColors = c('#D62A1C','#1C3FD6')
+masterDF = data.frame(read.csv('MasterWeeklyDF.csv'))
+# remove NAs
+badRows = unique(which(is.na(masterDF),arr.ind=TRUE)[,1])
+masterDF = masterDF[-badRows,]
+masterDF$SiteFac = factor(masterDF$Site,levels=sites)
+whichCols= which(colnames(masterDF)%in%covars)
+for (i in 1:length(sites)){
+  siteInd = which(masterDF$Site==sites[i])
+  trainDat = numeric()
+  for (k in 1:length(specs)){
+    thisSpec = which(masterDF[[specs[k]]][siteInd]>0)
+    trainDat = rbind(trainDat,cbind(masterDF[siteInd[thisSpec],whichCols],specs[k]))
+  }
+  colnames(trainDat)[length(covars)+1] = "Spec"
+  pc = prcomp(trainDat[,1:length(whichCols)],center=TRUE,scale=TRUE)
+  g <- ggbiplot(pc,
+                obs.scale = 1,
+                var.scale = 1,
+                groups = trainDat$Spec,
+                ellipse = TRUE,
+                circle = FALSE,
+                ellipse.prob = 0.66,
+                varname.size=4)
+  g = g + scale_color_manual(values=c("#DB51A4","#2FC7CC"))
+  g <- g + theme(legend.direction = 'vertical',
+                 legend.position = 'right')
+  png(filename=paste(getwd(),'/EcologicalNichePlots/',paste(specs,collapse="_"),"_",sites[i],'_PCA.png',sep=""),
+      height=600, width=600,units="px",res=100)
+  print(g)
+  while (dev.cur()>1) {dev.off()}
+}

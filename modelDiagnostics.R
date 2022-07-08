@@ -33,7 +33,7 @@ rownames(ZeroModStats) = specs[,2]
 
 for (i in 1:dim(specs)[1]){
   # load model
-  tempMod = load(paste(getwd(),'/',specs[i,1],'_WeeklyRegionalModel.Rdata',sep=""))
+  load(paste(getwd(),'/',specs[i,1],'_WeeklyRegionalModel.Rdata',sep=""))
   
   # find non-zero input data to compare to associated fitted values
   abbrev = specs[i,2]
@@ -90,6 +90,9 @@ for (i in 1:dim(specs)[1]){
   png(filename=paste(specs[i,1],'_allSitesWeekly.png',sep=""),width=wd,height=600)
   plot.gam(optWeekMod,all.terms=TRUE,rug=TRUE,pages=1,scale=0)
   while (dev.cur()>1) {dev.off()}
+  pdf(file=paste(specs[i,1],'_allSitesWeekly_forPrint.pdf',sep=""),width=wd/100*0.75,height=4.5,pointsize=10)
+  plot.gam(optWeekMod,all.terms=TRUE,rug=TRUE,pages=1,scale=0)
+  while (dev.cur()>1) {dev.off()}
 }
 
 ModStats = cbind(ZeroModStats,AllModStats)
@@ -98,7 +101,7 @@ ModStats = cbind(ZeroModStats,AllModStats)
 write.csv(ModStats,'ModelStatistics.csv',row.names=TRUE)
 
 #   # Calculate deviance explained by each model term -----------
-#   
+# 
 #   # model deviance
 #   modDev = optWeekMod$deviance
 # 
@@ -106,7 +109,7 @@ write.csv(ModStats,'ModelStatistics.csv',row.names=TRUE)
 #   nullDev = optWeekMod$null.deviance
 # 
 #   # get model terms
-#   thisForm = as.character(optWeekMod$formula)[[3]][[2]]
+#   thisForm = as.character(optWeekMod$formula)[3]
 #   startSmooth = str_locate_all(thisForm,'s\\(')[[1]][,1]
 #   termInd = str_locate_all(thisForm,'\\+')[[1]][,1]
 #   termInd = c(0,termInd,str_length(thisForm)+1)
@@ -115,13 +118,31 @@ write.csv(ModStats,'ModelStatistics.csv',row.names=TRUE)
 #     thisTerm = str_sub(thisForm,start=termInd[j]+1,end=termInd[j+1]-1)
 #     allTerms = c(allTerms,thisTerm)
 #   }
+#   
 #   devExp = matrix(nrow=length(allTerms),ncol=1)
 # 
-#   for (i in 1:length(allTerms)){
-#     redMod<-eval(parse(text=paste("update(optWeekMod, . ~ . - ", allTerms[i], ")", sep="")))
+#   for (k in 1:length(allTerms)){
+#     newForm = as.formula(paste(specs[i,2]," ~ ",paste(allTerms[-k],collapse="+"),sep=""))
+#     
+#     redMod<-gam(newForm,
+#                 data=masterDF,
+#                 family=tw,
+#                 gamma=1.4,
+#                 na.action="na.fail",
+#                 method="REML",
+#                 select=TRUE,
+#                 sp=optWeekMod$sp[-k])
 #     redDev = redMod$deviance
-#     devExp[i] = ((redDev-modDev)/(nullDev))*100
+#     devExp2[k] = ((redDev-modDev)/(nullDev))
 #   }
-# 
-#   rownames(devExp)=c("FSLE0","VelAsp0","Temp0","Temp700","Sal0","Intercept")
+#   
+#   termConts = data.frame(allTerms,devExp)
+#   termConts$prop = termConts$devExp/sum(termConts$devExp)
+#   termConts$cont = (termConts$prop*summary(optWeekMod)$dev.expl)*100
+#   
+#   rownames(devExp)=allTerms
+#  devExp = cbind(devExp,NA,NA)
+#  devExp[,2] = devExp[,1]/sum(devExp[,1])
+#  devExp[,3] = devExp[,2]*summary(optWeekMod)$dev.expl*100  
+#  
 # }
