@@ -9,7 +9,6 @@ library(gridGraphics)
 library(rstatix)
 library(expss)
 library(corrplot)
-library(zoo)
 library(cluster)
 library(ggbiplot)
 
@@ -552,45 +551,6 @@ save(WeekOptStats,DayOptStats,file=paste(outDir,'/','OptimumImportance.Rdata',se
 #   }
 # }
 
-## Compare density curves of covar values experienced across sites ----------------
-
-sites = unique(weeklyDF$Site)
-# sites = c("HAT","GS","BP","BS")
-# covars = c("Chl0","EKE0","FSLE0","AEddyDist0","CEddyDist0","SSH0","Temp0","Temp700","Sal0","Sal700",
-#           "VelMag0","VelMag700","VelAsp0","VelAsp700")
-covars = c("Chl0","FSLE0","SSH0","Temp0","Sal0","VelMag0","VelAsp0")
-lineOpts = c("dotdash","solid","dotted","dashed",
-             "dotdash","solid","dotted","dashed",
-             "dotdash","solid")
-weeklyDF$SiteFac = factor(weeklyDF$Site,levels=sites)
-
-for (i in 1:length(covars)){
-
-  siteInd = which(weeklyDF$Site%in%sites)
-  xmin = min(weeklyDF[[covars[i]]],na.rm=TRUE)
-  xmax = max(weeklyDF[[covars[i]]],na.rm=TRUE)
-  # yrInd = which(weeklyDF$WeekDate[siteInd]<as.Date("2017-05-01"))
-  ggplot(weeklyDF[siteInd,],aes(x=.data[[covars[i]]])
-         )+geom_density(aes(color=SiteFac,linetype=SiteFac)
-         )+scale_linetype_manual(values=lineOpts[1:length(sites)]
-  )+scale_color_manual(values=c("#f05a43","#db51a4","#de76f5","#9b85f2","#56b4fc","#2fc7cc","#3dd17d","#5aba30","#bbc22f","#d6a10f")
-  )+theme(legend.position="none"
-  )+coord_cartesian(xlim=c(xmin,xmax)
-  )+theme_minimal()
-  ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',covars[i],"_Density_1.png",sep=""),device="png",
-         width=300,height=150,units="px",scale=7)
-  # ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',"ForLegend.png",sep=""),device="png",
-  #        width=300,height=300,units="px",scale=7)
-  
-}
-
-# # sanity check that values are what we expect
-# for (i in 1:length(sites)){
-#   siteInd = which(weeklyDF$Site==sites[i])
-#   print(paste(sites[i],":",max(weeklyDF$Chl0[siteInd],na.rm=TRUE)))
-#   
-# }
-
 ## Compare presence conditions across species using violinplots ------------------------
 
 fileList = dir('J:/Chpt_3/ModelData',pattern=".csv")
@@ -604,14 +564,14 @@ specs = cbind(rev(c("UD28","Risso","UD26","Blainville","Gervais","Cuvier","Sower
 masterDF = list()
 allNames = list()
 for (i in 1:length(fileList)){
-
+  
   data = data.frame(read.csv(fileList[i]))
   thisSpec = str_remove(fileList[i],'_masterDF.csv')
   specAbbrev = specs[which(str_detect(specs[,1],thisSpec)),2]
-
+  
   # Round presence to get Poisson dist
   data$Pres = round(data$Pres)
-
+  
   # create weekly time series to reduce autocorrelation
   stDt = as.Date("2016-05-01")
   edDt = as.Date("2019-04-30")
@@ -619,30 +579,30 @@ for (i in 1:length(fileList)){
   allDates = stDt:edDt
   weekDates = seq.Date(stDt,edDt,by=7)
   weeklyDF = as.numeric()
-
+  
   for (l in 1:length(sites)) {
-
+    
     # Create dataframe to hold data (or NAs) for all dates
     fullDatesDF = data.frame(matrix(nrow=length(allDates), ncol=44))
     fullDatesDF[,1] = allDates
-
+    
     # sort the observations we have for this site into the full date range
     thisSite = which(!is.na(str_match(data$Site,sites[l])))
     matchRow = match(data$Date[thisSite],allDates)
     fullDatesDF[matchRow,2:dim(data)[2]] = data[thisSite,2:dim(data)[2]]
-
+    
     colnames(fullDatesDF) = colnames(data)
-
+    
     # create grouping variable
     weekID = rep(1:length(weekDates),each=7)
     weekID = weekID[1:dim(fullDatesDF)[1]]
     fullDatesDF$WeekID = weekID
-
+    
     # sum presence in each week
     summaryData = fullDatesDF %>%
       group_by(WeekID) %>%
       summarize(Pres=sum(Pres,na.rm=TRUE))
-
+    
     # normalize by effort
     effDF = data.frame(count=rep(1,length(allDates)),weekID=weekID)
     effDF$count[which(is.na(fullDatesDF$Pres))] = 0
@@ -651,21 +611,21 @@ for (i in 1:length(fileList)){
       summarize(sum(count))
     summaryData$propEff = unlist(propEff[,2])/7
     summaryData$Pres = summaryData$Pres*(1/summaryData$propEff)
-
+    
     summaryData$Site = sites[l]
     summaryData$WeekDate = weekDates
-
+    
     for (j in 4:(dim(data)[2])){
       var = names(data)[j]
       # calculate weekly average for this covar
       eval(parse(text=paste('thisCovar=fullDatesDF%>%group_by(WeekID)%>%summarize(',var,'=mean(',var,',na.rm=TRUE))',sep="")))
       eval(parse(text='summaryData[[var]]=unlist(thisCovar[,2])'))
-
+      
     }
     weeklyDF = rbind(weeklyDF,summaryData)
   }
-
-
+  
+  
   if (i==1){
     masterDF$WeekDate = weeklyDF$WeekDate
     masterDF$Site = weeklyDF$Site
@@ -675,7 +635,7 @@ for (i in 1:length(fileList)){
       allNames = c(allNames,covars[j])
     }
   }
-
+  
   masterDF[[specAbbrev]] = weeklyDF$Pres
   allNames = c(allNames,specAbbrev)
 }
@@ -687,75 +647,114 @@ write.csv(masterDF,'MasterWeeklyDF.csv',row.names=FALSE)
 
 masterDF = data.frame(read.csv('MasterWeeklyDF.csv'))
 for (i in 1:length(covars)){
-   plotDF = list()
-   
-   for (j in 1:dim(specs)[1]){
-     presVals = as.numeric(masterDF[[covars[i]]][(masterDF[[specs[j,2]]]>0 & !is.na(masterDF[[specs[j,2]]]))])
-     # plotDF = rbind(plotDF,cbind(presVals,rep(j,length(presVals))))
-     plotDF[[specs[j,2]]] = presVals
-   }
-   
-   plotDF = data.frame(stack(plotDF))
-   
-   xmin = min(masterDF[[covars[i]]],na.rm=TRUE)
-   xmax = max(masterDF[[covars[i]]],na.rm=TRUE)
-   
-   ggplot(plotDF,
-          # aes(x=ind,y=values,color=ind), # different color for each species
-          aes(y=ind,x=values), # consistent color across species
-   )+geom_violin(color="#43a5f0",
-                 scale="area",
-                 trim=FALSE,
-                 draw_quantiles=c(0.25, 0.5, 0.75)
-   )+labs(x=covars[i],
-          y="Species"
-   )+theme(legend.position="none"
-   )+coord_cartesian(xlim=c(xmin,xmax)
-   )+theme_minimal()
-   
-   # ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',covars[i],"_SpeciesPresDensity.png",sep=""),
-   #        device="png",
-   #        width=600,
-   #        height=300,
-   #        units="px",
-   #        scale=2.5)
-   ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',covars[i],"_SpeciesPresDensity_flipped.png",sep=""),
-          device="png",
-          width=300,
-          height=200,
-          units="px",
-          scale=7)
+  plotDF = list()
+  
+  for (j in 1:dim(specs)[1]){
+    presVals = as.numeric(masterDF[[covars[i]]][(masterDF[[specs[j,2]]]>0 & !is.na(masterDF[[specs[j,2]]]))])
+    # plotDF = rbind(plotDF,cbind(presVals,rep(j,length(presVals))))
+    plotDF[[specs[j,2]]] = presVals
+  }
+  
+  plotDF = data.frame(stack(plotDF))
+  
+  xmin = min(masterDF[[covars[i]]],na.rm=TRUE)
+  xmax = max(masterDF[[covars[i]]],na.rm=TRUE)
+  
+  ggplot(plotDF,
+         # aes(x=ind,y=values,color=ind), # different color for each species
+         aes(y=ind,x=values), # consistent color across species
+  )+geom_violin(color="#43a5f0",
+                fill="#43a5f0",
+                alpha=0.4,
+                scale="area",
+                trim=FALSE,
+                draw_quantiles=c(0.25, 0.5, 0.75)
+  )+labs(x=covars[i],
+         y="Species"
+  )+theme(legend.position="none"
+  )+coord_cartesian(xlim=c(xmin,xmax)
+  )+theme_minimal(
+  )+theme(panel.grid.major=element_line(color="#CCCCCC"),
+          panel.grid.minor.x=element_blank())
+  
+  # ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',covars[i],"_SpeciesPresDensity.png",sep=""),
+  #        device="png",
+  #        width=600,
+  #        height=300,
+  #        units="px",
+  #        scale=2.5)
+  ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',covars[i],"_SpeciesPresDensity_flipped.png",sep=""),
+         device="png",
+         width=300,
+         height=200,
+         units="px",
+         scale=7)
 }
 
 
-## Look at impact of eddies at each site ---------------------
 
+
+## Compare density curves of covar values experienced across sites ----------------
+
+sites = unique(masterDF$Site)
+# sites = c("HAT","GS","BP","BS")
+# covars = c("Chl0","EKE0","FSLE0","AEddyDist0","CEddyDist0","SSH0","Temp0","Temp700","Sal0","Sal700",
+#           "VelMag0","VelMag700","VelAsp0","VelAsp700")
+covars = c("Chl0","FSLE0","SSH0","Temp0","Sal0","VelMag0","VelAsp0")
+lineOpts = c("dotdash","solid","dotted","dashed",
+             "dotdash","solid","dotted","dashed",
+             "dotdash","solid")
+masterDF$SiteFac = factor(masterDF$Site,levels=sites)
+
+for (i in 1:length(covars)){
+  
+  siteInd = which(masterDF$Site%in%sites)
+  xmin = min(masterDF[[covars[i]]],na.rm=TRUE)
+  xmax = max(masterDF[[covars[i]]],na.rm=TRUE)
+  # yrInd = which(masterDF$WeekDate[siteInd]<as.Date("2017-05-01"))
+  ggplot(masterDF[siteInd,],aes(x=.data[[covars[i]]])
+  )+geom_density(aes(color=SiteFac,linetype=SiteFac)
+  )+scale_linetype_manual(values=lineOpts[1:length(sites)]
+  )+scale_color_manual(values=c("#f05a43","#db51a4","#de76f5","#9b85f2","#56b4fc","#2fc7cc","#3dd17d","#5aba30","#bbc22f","#d6a10f")
+  )+theme(legend.position="none"
+  )+coord_cartesian(xlim=c(xmin,xmax)
+  )+theme_minimal(
+  )+theme(panel.grid.major=element_line(color="#CCCCCC"),
+          panel.grid.minor.x=element_blank())
+  ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',covars[i],"_Density_1.png",sep=""),device="png",
+         width=300,height=150,units="px",scale=7)
+  # ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',"ForLegend.png",sep=""),device="png",
+  #        width=300,height=300,units="px",scale=7)
+  
+}
+
+# # sanity check that values are what we expect
+# for (i in 1:length(sites)){
+#   siteInd = which(masterDF$Site==sites[i])
+#   print(paste(sites[i],":",max(masterDF$Chl0[siteInd],na.rm=TRUE)))
+#   
+# }
+## Look at impact of eddies at each site ---------------------
 sites = unique(masterDF$Site)
 covars = c("Chl0","EKE0","FSLE0","SSH0","Temp0","Sal0",
            "VelMag0","VelAsp0")
-
 ACorrMat = matrix(nrow=length(sites),ncol=length(covars))
 CCorrMat = matrix(nrow=length(sites),ncol=length(covars))
 ACorrMatAn = matrix(nrow=length(sites),ncol=length(covars))
 CCorrMatAn = matrix(nrow=length(sites),ncol=length(covars))
-
 for (i in 1:length(sites)){
-  
   siteInd = which(masterDF$Site==sites[i])
   AplotList = list()
   CplotList = list()
   AplotListAnom = list()
   CplotListAnom = list()
-  
   for (j in 1:length(covars)){
-    
     if (covars[j]!="EKE0"){ # don't calculate anomaly for EKE (it's already an anomaly)
       varMean = rollmean(masterDF[[covars[j]]][siteInd],k=5)
       varAnom = masterDF[[covars[j]]][siteInd] - c(NA,NA,varMean,NA,NA)
     } else {
       varAnom = masterDF[[covars[j]]][siteInd]
     }
-    
     plotDF = data.frame(var=masterDF[[covars[j]]][siteInd],A=masterDF$AEddyDist0[siteInd],C=masterDF$CEddyDist0[siteInd])
     Acorr = cor(plotDF$var,plotDF$A,use="complete.obs")
     ACorrMat[i,j] = round(Acorr,digits=4)
@@ -766,7 +765,6 @@ for (i in 1:length(sites)){
     ACorrMatAn[i,j] = round(AcorrAnom,digits=4)
     CcorrAnom = cor(plotDFAnom$anom,plotDFAnom$C,use="complete.obs")
     CCorrMatAn[i,j] = round(CcorrAnom,digits=4)
-    
     AplotList[[covars[j]]] = ggplot(plotDF
     )+geom_point(aes(x=A,y=var)
     )+labs(y=covars[j],x=NULL
@@ -776,7 +774,6 @@ for (i in 1:length(sites)){
                y=(0.5*(max(plotDF$var,na.rm=TRUE)-min(plotDF$var,na.rm=TRUE)))+min(plotDF$var,na.rm=TRUE),
                color="blue",
                size=3.5)
-    
     CplotList[[covars[j]]] = ggplot(plotDF
     )+geom_point(aes(x=C,y=var)
     )+labs(y=covars[j],x=NULL
@@ -786,7 +783,6 @@ for (i in 1:length(sites)){
                y=(0.5*(max(plotDF$var,na.rm=TRUE)-min(plotDF$var,na.rm=TRUE)))+min(plotDF$var,na.rm=TRUE),
                color="blue",
                size=3.5)
-    
     AplotListAnom[[covars[j]]] = ggplot(plotDFAnom
     )+geom_point(aes(x=A,y=anom)
     )+labs(y=covars[j],x=NULL
@@ -796,7 +792,6 @@ for (i in 1:length(sites)){
                y=(0.5*(max(plotDFAnom$anom,na.rm=TRUE)-min(plotDFAnom$anom,na.rm=TRUE)))+min(plotDFAnom$anom,na.rm=TRUE),
                color="blue",
                size=3.5)
-    
     CplotListAnom[[covars[j]]] = ggplot(plotDFAnom
     )+geom_point(aes(x=C,y=anom)
     )+labs(y=covars[j],x=NULL
@@ -806,27 +801,23 @@ for (i in 1:length(sites)){
                y=(0.5*(max(plotDFAnom$anom,na.rm=TRUE)-min(plotDFAnom$anom,na.rm=TRUE)))+min(plotDFAnom$anom,na.rm=TRUE),
                color="blue",
                size=3.5)
-    
   }
-  
   # png(file=paste(getwd(),'/EcologicalNichePlots/',sites[i],'_AEddyInfluence.png',sep=""),height=700,width=600,units="px",res=100)
   # grid.arrange(grobs=AplotList,ncol=2,nrow=5,top=sites[i])
   # while (dev.cur()>1) {dev.off()}
-  # 
+  #
   # png(file=paste(getwd(),'/EcologicalNichePlots/',sites[i],'_CEddyInfluence.png',sep=""),height=700,width=600,units="px",res=100)
   # grid.arrange(grobs=CplotList,ncol=2,nrow=5,top=sites[i])
   # while (dev.cur()>1) {dev.off()}
-  # 
+  #
   # png(file=paste(getwd(),'/EcologicalNichePlots/',sites[i],'_AEddyInfluence_Anom.png',sep=""),height=700,width=600,units="px",res=100)
   # grid.arrange(grobs=AplotListAnom,ncol=2,nrow=5,top=sites[i])
   # while (dev.cur()>1) {dev.off()}
-  # 
+  #
   # png(file=paste(getwd(),'/EcologicalNichePlots/',sites[i],'_CEddyInfluence_Anom.png',sep=""),height=700,width=600,units="px",res=100)
   # grid.arrange(grobs=CplotListAnom,ncol=2,nrow=5,top=sites[i])
   # while (dev.cur()>1) {dev.off()}
-  
 }
-
 rownames(ACorrMat) = paste('AEddyDist_',sites,sep="")
 rownames(CCorrMat) = paste('CEddyDist_',sites,sep="")
 rownames(ACorrMatAn) = paste('AEddyDist_',sites,sep="")
@@ -835,7 +826,6 @@ colnames(ACorrMat) = covars
 colnames(CCorrMat) = covars
 colnames(ACorrMatAn) = covars
 colnames(CCorrMatAn) = covars
-
 png(file='EddyDistCorrelations.png',height=600,width=600,units="px",res=75)
 par(mfrow=c(2,2))
 corrplot(ACorrMat,method='circle')
@@ -843,7 +833,6 @@ corrplot(CCorrMat,method='circle')
 corrplot(ACorrMatAn,method='circle')
 corrplot(CCorrMatAn,method='circle')
 while (dev.cur()>1) {dev.off()}
- 
 
 # PCA to compare combinations of conditions targeted by competitive species at co-occupied sites --------------
 specs = c("Gm","Gg")
