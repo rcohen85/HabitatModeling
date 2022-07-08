@@ -14,9 +14,13 @@ library(ggbiplot)
 
 inDir = 'J:/Chpt_3/ModelData'
 outDir = 'J:/Chpt_3/EcologicalNichePlots'
-fileList = list.files(path=inDir,pattern=paste('_masterDF.csv',sep=""),
+# fileList = list.files(path=inDir,pattern=paste('_masterDF.csv',sep=""),
+#                       full.names=TRUE,recursive=FALSE,
+#                       include.dirs=FALSE,no..=TRUE)
+fileList = list.files(path=getwd(),pattern=paste('_masterDF.csv',sep=""),
                       full.names=TRUE,recursive=FALSE,
                       include.dirs=FALSE,no..=TRUE)
+
 
 ## Plot presence/covar correlations, "optimum" values, etc for each species --------------
 sites = c('HZ','OC','NC','BC','WC','NFC','HAT','GS','BP','BS')
@@ -446,110 +450,117 @@ save(WeekOptStats,DayOptStats,file=paste(outDir,'/','OptimumImportance.Rdata',se
 ## Compare species covar selections at specific sites ------------
 # specs = c("UD26","Risso")
 # sites = c("HZ","BC","NFC","HAT")
-# covars = c("Chl0","FSLE0","SSH0","Sal0","Temp0","Sal300","Temp300","AEddyDist0","CEddyDist0","GSLat","GSDist")
-# plotColors = c('#D62A1C','#1C3FD6')
-# 
-# files = c(str_which(fileList,specs[1]),str_which(fileList,specs[2]))
-# 
-# # if it doesn't already exist, create directory to save figures
-# if (!dir.exists(paste(outDir,'/',specs[1],"_",specs[2],sep=""))){
-#   dir.create(paste(outDir,'/',specs[1],"_",specs[2],sep=""))
-# }
-# 
-# data1 = data.frame(read.csv(fileList[files[1]]))
-# data1$Pres = round(data1$Pres)
-# data2 = data.frame(read.csv(fileList[files[2]]))
-# data2$Pres = round(data2$Pres)
-# 
-# for (j in 1:length(sites)){
-#   for (i in 1:length(covars)){
-# 
-#     # find data at this site
-#     siteInd1 = str_which(data1$Site,sites[j])
-#     siteInd2 = str_which(data2$Site,sites[j])
-# 
-#     # Divide covar range into bins
-#     varMin = min(min(data1[[covars[i]]][siteInd1]),min(data2[[covars[i]]][siteInd2]))
-#     varMin = varMin-abs(0.01*varMin)
-#     varMax = max(max(data1[[covars[i]]][siteInd1]),max(data2[[covars[i]]][siteInd2]))
-#     varMax = varMax+abs(0.01*varMax)
-#     varBins = seq(varMin,varMax,length.out=21)
-# 
-#     # Identify which bin each covar observation falls into
-#     binDat1 = histc(data1[[covars[i]]][siteInd1],varBins)
-#     binDat2 = histc(data2[[covars[i]]][siteInd2],varBins)
-# 
-#     # Calculate average and SD of presence values corresponding to covar obs in each bin
-#     presChar1 = data.frame(pres=data1$Pres[siteInd1],bin=binDat1$bin) %>%
-#       group_by(bin) %>%
-#       summarize(MeanPres=mean(pres,na.rm=TRUE),
-#                 SD=sd(pres,na.rm=TRUE))
-#     presChar2 = data.frame(pres=data2$Pres[siteInd2],bin=binDat2$bin) %>%
-#       group_by(bin) %>%
-#       summarize(MeanPres=mean(pres,na.rm=TRUE),
-#                 SD=sd(pres,na.rm=TRUE))
-# 
-#     # Normalize by max mean presence per species
-#     presChar1$NormMean = presChar1$MeanPres-min(presChar1$MeanPres)
-#     presChar1$NormMean = presChar1$NormMean/max(presChar1$NormMean)
-#     presChar1$NormSD = presChar1$SD-min(presChar1$MeanPres)
-#     presChar1$NormSD = presChar1$NormSD/max(presChar1$NormMean)
-#     presChar2$NormMean = presChar2$MeanPres-min(presChar2$MeanPres)
-#     presChar2$NormMean = presChar2$NormMean/max(presChar2$NormMean)
-#     presChar2$NormSD = presChar2$SD-min(presChar2$MeanPres)
-#     presChar2$NormSD = presChar2$NormSD/max(presChar2$NormMean)
-# 
-#     presChar1$binCenter = varBins[presChar1$bin]+0.5*diff(varBins[1:2])
-#     presChar2$binCenter = varBins[presChar2$bin]+0.5*diff(varBins[1:2])
-# 
-#     # Plot as overlaid bar charts
-#     barPlot = ggplot(
-#     )+geom_col(data=presChar1,
-#                aes(x=binCenter,y=NormMean),
-#                color=plotColors[1],
-#                fill=plotColors[1],
-#                alpha=0.5
-#     )+geom_col(data=presChar2,
-#                aes(x=binCenter,y=NormMean),
-#                color=plotColors[2],
-#                fill=plotColors[2],
-#                alpha=0.5
-#     )+labs(x=covars[i],y="Normalized Mean Presence",title=covars[i]
-#     )+theme_minimal()
-# 
-#     # make legend
-#     legDF = data.frame(x1=c(1,1),
-#                        x2=c(2,2),
-#                        y1=c(1,2),
-#                        y2=c(1.75,2.75),
-#                        cols=plotColors)
-#     legPlot = ggplot(legDF
-#     )+geom_rect(aes(ymin=y1,
-#                     ymax=y2,
-#                     xmin=x1,
-#                     xmax=x2,
-#                     color=cols,
-#                     fill=cols),
-#                 alpha=0.5
-#     )+scale_fill_identity(
-#     )+scale_color_identity(
-#     )+geom_text(aes(x=x2+0.95,
-#                     y=y1+0.5,
-#                     label=specs),
-#                 size=2.75
-#     )+guides(fill='none',color='none'
-#     )+coord_cartesian(xlim=c(1,4)
-#     )+theme_void()
-# 
-#     png(file=paste(outDir,'/',specs[1],"_",specs[2],"/",covars[i],"_at_",sites[j],".png",sep=""),width = 500, height = 400, units = "px",res=125)
-#     grid.arrange(barPlot,legPlot,ncol=5,nrow=4,layout_matrix=rbind(c(rep(1,4),NA),
-#                                                                c(rep(1,4),2),
-#                                                                c(rep(1,4),NA),
-#                                                                c(rep(1,4),NA)))
-#     while (dev.cur()>1) {dev.off()}
-# 
-#   }
-# }
+# covars = c("Chl0","FSLE0","SSH0","Sal0","Sal400","Temp0","Temp400","VelAsp0","VelAsp400","VelMag0","VelMag400","AEddyDist0","CEddyDist0")
+# specs = c("Blainville","Gervais")
+# sites = c("BS")
+specs = c("Sowerby","Cuvier")
+sites = c("HZ","BC","WC")
+covars = c("Chl0","FSLE0","SSH0","Sal0","Sal700","Temp0","Temp700","VelAsp0","VelAsp700","VelMag0","VelMag700","AEddyDist0","CEddyDist0")
+plotColors = c('#D62A1C','#1C3FD6')
+
+files = c(str_which(fileList,specs[1]),str_which(fileList,specs[2]))
+
+# if it doesn't already exist, create directory to save figures
+if (!dir.exists(paste(outDir,'/',specs[1],"_",specs[2],sep=""))){
+  dir.create(paste(outDir,'/',specs[1],"_",specs[2],sep=""))
+}
+
+data1 = data.frame(read.csv(fileList[files[1]]))
+data1$Pres = round(data1$Pres)
+data2 = data.frame(read.csv(fileList[files[2]]))
+data2$Pres = round(data2$Pres)
+
+for (j in 1:length(sites)){
+  for (i in 1:length(covars)){
+
+    # find data at this site
+    siteInd1 = str_which(data1$Site,sites[j])
+    siteInd2 = str_which(data2$Site,sites[j])
+
+    # Divide covar range into bins
+    varMin = min(min(data1[[covars[i]]][siteInd1]),min(data2[[covars[i]]][siteInd2]))
+    varMin = varMin-abs(0.01*varMin)
+    varMax = max(max(data1[[covars[i]]][siteInd1]),max(data2[[covars[i]]][siteInd2]))
+    varMax = varMax+abs(0.01*varMax)
+    varBins = seq(varMin,varMax,length.out=21)
+
+    # Identify which bin each covar observation falls into
+    binDat1 = histc(data1[[covars[i]]][siteInd1],varBins)
+    binDat2 = histc(data2[[covars[i]]][siteInd2],varBins)
+
+    # Calculate average and SD of presence values corresponding to covar obs in each bin
+    presChar1 = data.frame(pres=data1$Pres[siteInd1],bin=binDat1$bin) %>%
+      group_by(bin) %>%
+      summarize(MeanPres=mean(pres,na.rm=TRUE),
+                SD=sd(pres,na.rm=TRUE))
+    presChar2 = data.frame(pres=data2$Pres[siteInd2],bin=binDat2$bin) %>%
+      group_by(bin) %>%
+      summarize(MeanPres=mean(pres,na.rm=TRUE),
+                SD=sd(pres,na.rm=TRUE))
+
+    # Normalize by max mean presence per species
+    presChar1$NormMean = presChar1$MeanPres-min(presChar1$MeanPres)
+    presChar1$NormMean = presChar1$NormMean/max(presChar1$NormMean)
+    presChar1$NormSD = presChar1$SD-min(presChar1$MeanPres)
+    presChar1$NormSD = presChar1$NormSD/max(presChar1$NormMean)
+    presChar2$NormMean = presChar2$MeanPres-min(presChar2$MeanPres)
+    presChar2$NormMean = presChar2$NormMean/max(presChar2$NormMean)
+    presChar2$NormSD = presChar2$SD-min(presChar2$MeanPres)
+    presChar2$NormSD = presChar2$NormSD/max(presChar2$NormMean)
+
+    presChar1$binCenter = varBins[presChar1$bin]+0.5*diff(varBins[1:2])
+    presChar2$binCenter = varBins[presChar2$bin]+0.5*diff(varBins[1:2])
+
+    # Plot as overlaid bar charts
+    barPlot = ggplot(
+    )+geom_col(data=presChar1,
+               aes(x=binCenter,y=NormMean),
+               color=plotColors[1],
+               fill=plotColors[1],
+               alpha=0.5
+    )+geom_col(data=presChar2,
+               aes(x=binCenter,y=NormMean),
+               color=plotColors[2],
+               fill=plotColors[2],
+               alpha=0.5
+    )+coord_cartesian(xlim=c(varMin,varMax)
+    )+labs(x=covars[i],y="Normalized Mean Presence",title=covars[i]
+    )+theme_minimal()
+
+    # make legend
+    legDF = data.frame(x1=c(1,1),
+                       x2=c(2,2),
+                       y1=c(1,2),
+                       y2=c(1.75,2.75),
+                       cols=plotColors)
+    legPlot = ggplot(legDF
+    )+geom_rect(aes(ymin=y1,
+                    ymax=y2,
+                    xmin=x1,
+                    xmax=x2,
+                    color=cols,
+                    fill=cols),
+                alpha=0.5
+    )+scale_fill_identity(
+    )+scale_color_identity(
+    )+geom_text(aes(x=x2+0.95,
+                    y=y1+0.5,
+                    label=specs),
+                size=2.75
+    )+guides(fill='none',color='none'
+    )+coord_cartesian(xlim=c(1,4)
+    )+theme_void()
+
+    # png(file=paste(outDir,'/',specs[1],"_",specs[2],"/",covars[i],"_at_",sites[j],".png",sep=""),width = 500, height = 400, units = "px",res=125)
+    png(file=paste(getwd(),'/EcologicalNichePlots/',specs[1],"_",specs[2],"_",covars[i],"_at_",sites[j],".png",sep=""),width = 500, height = 400, units = "px",res=125)
+    grid.arrange(barPlot,legPlot,ncol=5,nrow=4,layout_matrix=rbind(c(rep(1,4),NA),
+                                                               c(rep(1,4),2),
+                                                               c(rep(1,4),NA),
+                                                               c(rep(1,4),NA)))
+    while (dev.cur()>1) {dev.off()}
+
+  }
+}
 
 ## Compare presence conditions across species using violinplots ------------------------
 
