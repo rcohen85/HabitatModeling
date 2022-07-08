@@ -13,6 +13,47 @@ lat = seq(24,44,by=0.08)
 
 species = list.dirs(modDir,recursive=FALSE)
 load(paste(predDir,'/PredictionData.Rdata',sep=""))
+datList = list(predictFall,predictWinter,predictSpring,predictSummer)
+season = c("Fall","Winter","Spring","Summer")
+
+# for (k in 1:length(datList)){
+for (i in 3:dim(datList[[k]])[2]){
+  
+  thisVar = names(predictFall)[i]
+  varMin = min(c(predictFall[[i]],predictWinter[[i]],predictSpring[[i]],predictSummer[[i]]),na.rm=TRUE)
+  varMax = max(c(predictFall[[i]],predictWinter[[i]],predictSpring[[i]],predictSummer[[i]]),na.rm=TRUE)
+  
+  
+  Fall = ggplot(predictFall,aes(x=lon,y=lat)
+         )+geom_tile(aes(fill=predictFall[[i]])
+         )+scale_fill_viridis(limits=c(varMin,varMax)
+         )+guides(fill = guide_colorbar(title="Fall"))
+  Winter = ggplot(predictWinter,aes(x=lon,y=lat)
+        )+geom_tile(aes(fill=predictWinter[[i]])
+        )+scale_fill_viridis(limits=c(varMin,varMax)
+        )+guides(fill = guide_colorbar(title="Winter"))
+  Spring = ggplot(predictSpring,aes(x=lon,y=lat)
+        )+geom_tile(aes(fill=predictSpring[[i]])
+        )+scale_fill_viridis(limits=c(varMin,varMax)
+        )+guides(fill = guide_colorbar(title="Spring"))
+  Summer = ggplot(predictSummer,aes(x=lon,y=lat)
+        )+geom_tile(aes(fill=predictSummer[[i]])
+        )+scale_fill_viridis(limits=c(varMin,varMax)
+        )+guides(fill = guide_colorbar(title="Summer"))
+  
+  png(file=paste(predDir,"/PredictionData/",thisVar,"Clipped.png",sep=""),height=700,width=700,units="px",res=100)
+  grid.arrange(Fall,Winter,Spring,Summer,ncol=2,nrow=2,top=thisVar,layout_matrix=rbind(c(1,2),c(4,3)))
+  while (dev.cur()>1) {dev.off()}
+  
+  # ggsave(filename=paste(predDir,"/PredictionData/",season[k],"_",thisVar,".png",sep=""),
+  #        device="png",
+  #        width=300,
+  #        height=300,
+  #        units="px",
+  #        scale=7)
+  
+}
+# }
 
 for (i in 1:length(species)){
   
