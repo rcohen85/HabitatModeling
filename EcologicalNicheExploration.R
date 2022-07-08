@@ -9,6 +9,8 @@ library(gridGraphics)
 library(rstatix)
 library(expss)
 library(corrplot)
+library(cluster)
+library(ggbiplot)
 
 inDir = 'J:/Chpt_3/ModelData'
 outDir = 'J:/Chpt_3/EcologicalNichePlots'
@@ -549,122 +551,6 @@ save(WeekOptStats,DayOptStats,file=paste(outDir,'/','OptimumImportance.Rdata',se
 #   }
 # }
 
-## Look at impact of eddies at each site ---------------------
-
-sites = unique(weeklyDF$Site)
-covars = c("Chl0","EKE0","FSLE0","SSH0","Temp0","Sal0",
-           "VelMag0","VelAsp0")
-
-ACorrMat = matrix(nrow=length(sites),ncol=length(covars))
-CCorrMat = matrix(nrow=length(sites),ncol=length(covars))
-ACorrMatAn = matrix(nrow=length(sites),ncol=length(covars))
-CCorrMatAn = matrix(nrow=length(sites),ncol=length(covars))
-
-for (i in 1:length(sites)){
-  
-  siteInd = which(weeklyDF$Site==sites[i])
-  AplotList = list()
-  CplotList = list()
-  AplotListAnom = list()
-  CplotListAnom = list()
-  
-  for (j in 1:length(covars)){
-    
-    if (covars[j]!="EKE0"){ # don't calculate anomaly for EKE (it's already an anomaly)
-    varMean = rollmean(weeklyDF[[covars[j]]][siteInd],k=5)
-    varAnom = weeklyDF[[covars[j]]][siteInd] - c(NA,NA,varMean,NA,NA)
-    } else {
-      varAnom = weeklyDF[[covars[j]]][siteInd]
-    }
-    
-    plotDF = data.frame(var=weeklyDF[[covars[j]]][siteInd],A=weeklyDF$AEddyDist0[siteInd],C=weeklyDF$CEddyDist0[siteInd])
-    Acorr = cor(plotDF$var,plotDF$A,use="complete.obs")
-    ACorrMat[i,j] = round(Acorr,digits=4)
-    Ccorr = cor(plotDF$var,plotDF$C,use="complete.obs")
-    CCorrMat[i,j] = round(Ccorr,digits=4)
-    plotDFAnom = data.frame(anom=varAnom,A=weeklyDF$AEddyDist0[siteInd],C=weeklyDF$CEddyDist0[siteInd])
-    AcorrAnom = cor(plotDFAnom$anom,plotDFAnom$A,use="complete.obs")
-    ACorrMatAn[i,j] = round(AcorrAnom,digits=4)
-    CcorrAnom = cor(plotDFAnom$anom,plotDFAnom$C,use="complete.obs")
-    CCorrMatAn[i,j] = round(CcorrAnom,digits=4)
-    
-    AplotList[[covars[j]]] = ggplot(plotDF
-    )+geom_point(aes(x=A,y=var)
-    )+labs(y=covars[j],x=NULL
-    )+annotate("text",
-               label=as.character(round(Acorr,digits=3)),
-                x=0.85*max(plotDF$A,na.rm=TRUE),
-                y=(0.5*(max(plotDF$var,na.rm=TRUE)-min(plotDF$var,na.rm=TRUE)))+min(plotDF$var,na.rm=TRUE),
-                color="blue",
-                size=3.5)
-    
-    CplotList[[covars[j]]] = ggplot(plotDF
-    )+geom_point(aes(x=C,y=var)
-    )+labs(y=covars[j],x=NULL
-    )+annotate("text",
-               label=as.character(round(Ccorr,digits=3)),
-                x=0.85*max(plotDF$C,na.rm=TRUE),
-                y=(0.5*(max(plotDF$var,na.rm=TRUE)-min(plotDF$var,na.rm=TRUE)))+min(plotDF$var,na.rm=TRUE),
-                color="blue",
-                size=3.5)
-    
-    AplotListAnom[[covars[j]]] = ggplot(plotDFAnom
-    )+geom_point(aes(x=A,y=anom)
-    )+labs(y=covars[j],x=NULL
-    )+annotate("text",
-               label=as.character(round(AcorrAnom,digits=3)),
-                x=0.85*max(plotDFAnom$A,na.rm=TRUE),
-                y=(0.5*(max(plotDFAnom$anom,na.rm=TRUE)-min(plotDFAnom$anom,na.rm=TRUE)))+min(plotDFAnom$anom,na.rm=TRUE),
-                color="blue",
-                size=3.5)
-    
-    CplotListAnom[[covars[j]]] = ggplot(plotDFAnom
-    )+geom_point(aes(x=C,y=anom)
-    )+labs(y=covars[j],x=NULL
-    )+annotate("text",
-               label=as.character(round(CcorrAnom,digits=3)),
-                x=0.85*max(plotDFAnom$C,na.rm=TRUE),
-                y=(0.5*(max(plotDFAnom$anom,na.rm=TRUE)-min(plotDFAnom$anom,na.rm=TRUE)))+min(plotDFAnom$anom,na.rm=TRUE),
-                color="blue",
-                size=3.5)
-    
-  }
-  
-  png(file=paste(getwd(),'/EcologicalNichePlots/',sites[i],'_AEddyInfluence.png',sep=""),height=700,width=600,units="px",res=100)
-  grid.arrange(grobs=AplotList,ncol=2,nrow=5,top=sites[i])
-  while (dev.cur()>1) {dev.off()}
-  
-  png(file=paste(getwd(),'/EcologicalNichePlots/',sites[i],'_CEddyInfluence.png',sep=""),height=700,width=600,units="px",res=100)
-  grid.arrange(grobs=CplotList,ncol=2,nrow=5,top=sites[i])
-  while (dev.cur()>1) {dev.off()}
-  
-  png(file=paste(getwd(),'/EcologicalNichePlots/',sites[i],'_AEddyInfluence_Anom.png',sep=""),height=700,width=600,units="px",res=100)
-  grid.arrange(grobs=AplotListAnom,ncol=2,nrow=5,top=sites[i])
-  while (dev.cur()>1) {dev.off()}
-  
-  png(file=paste(getwd(),'/EcologicalNichePlots/',sites[i],'_CEddyInfluence_Anom.png',sep=""),height=700,width=600,units="px",res=100)
-  grid.arrange(grobs=CplotListAnom,ncol=2,nrow=5,top=sites[i])
-  while (dev.cur()>1) {dev.off()}
-  
-}
-
-rownames(ACorrMat) = paste('AEddyDist_',sites,sep="")
-rownames(CCorrMat) = paste('CEddyDist_',sites,sep="")
-rownames(ACorrMatAn) = paste('AEddyDist_',sites,sep="")
-rownames(CCorrMatAn) = paste('CEddyDist_',sites,sep="")
-colnames(ACorrMat) = covars
-colnames(CCorrMat) = covars
-colnames(ACorrMatAn) = covars
-colnames(CCorrMatAn) = covars
-
-png(file='EddyDistCorrelations.png',height=600,width=600,units="px",res=75)
-par(mfrow=c(2,2))
-corrplot(ACorrMat,method='circle')
-corrplot(CCorrMat,method='circle')
-corrplot(ACorrMatAn,method='circle')
-corrplot(CCorrMatAn,method='circle')
-while (dev.cur()>1) {dev.off()}
-
 ## Compare presence conditions across species using violinplots ------------------------
 
 fileList = dir('J:/Chpt_3/ModelData',pattern=".csv")
@@ -805,6 +691,9 @@ for (i in 1:length(covars)){
           scale=7)
 }
 
+
+
+
 ## Compare density curves of covar values experienced across sites ----------------
 
 sites = unique(masterDF$Site)
@@ -845,4 +734,139 @@ for (i in 1:length(covars)){
 #   print(paste(sites[i],":",max(masterDF$Chl0[siteInd],na.rm=TRUE)))
 #   
 # }
- 
+## Look at impact of eddies at each site ---------------------
+sites = unique(masterDF$Site)
+covars = c("Chl0","EKE0","FSLE0","SSH0","Temp0","Sal0",
+           "VelMag0","VelAsp0")
+ACorrMat = matrix(nrow=length(sites),ncol=length(covars))
+CCorrMat = matrix(nrow=length(sites),ncol=length(covars))
+ACorrMatAn = matrix(nrow=length(sites),ncol=length(covars))
+CCorrMatAn = matrix(nrow=length(sites),ncol=length(covars))
+for (i in 1:length(sites)){
+  siteInd = which(masterDF$Site==sites[i])
+  AplotList = list()
+  CplotList = list()
+  AplotListAnom = list()
+  CplotListAnom = list()
+  for (j in 1:length(covars)){
+    if (covars[j]!="EKE0"){ # don't calculate anomaly for EKE (it's already an anomaly)
+      varMean = rollmean(masterDF[[covars[j]]][siteInd],k=5)
+      varAnom = masterDF[[covars[j]]][siteInd] - c(NA,NA,varMean,NA,NA)
+    } else {
+      varAnom = masterDF[[covars[j]]][siteInd]
+    }
+    plotDF = data.frame(var=masterDF[[covars[j]]][siteInd],A=masterDF$AEddyDist0[siteInd],C=masterDF$CEddyDist0[siteInd])
+    Acorr = cor(plotDF$var,plotDF$A,use="complete.obs")
+    ACorrMat[i,j] = round(Acorr,digits=4)
+    Ccorr = cor(plotDF$var,plotDF$C,use="complete.obs")
+    CCorrMat[i,j] = round(Ccorr,digits=4)
+    plotDFAnom = data.frame(anom=varAnom,A=masterDF$AEddyDist0[siteInd],C=masterDF$CEddyDist0[siteInd])
+    AcorrAnom = cor(plotDFAnom$anom,plotDFAnom$A,use="complete.obs")
+    ACorrMatAn[i,j] = round(AcorrAnom,digits=4)
+    CcorrAnom = cor(plotDFAnom$anom,plotDFAnom$C,use="complete.obs")
+    CCorrMatAn[i,j] = round(CcorrAnom,digits=4)
+    AplotList[[covars[j]]] = ggplot(plotDF
+    )+geom_point(aes(x=A,y=var)
+    )+labs(y=covars[j],x=NULL
+    )+annotate("text",
+               label=as.character(round(Acorr,digits=3)),
+               x=0.85*max(plotDF$A,na.rm=TRUE),
+               y=(0.5*(max(plotDF$var,na.rm=TRUE)-min(plotDF$var,na.rm=TRUE)))+min(plotDF$var,na.rm=TRUE),
+               color="blue",
+               size=3.5)
+    CplotList[[covars[j]]] = ggplot(plotDF
+    )+geom_point(aes(x=C,y=var)
+    )+labs(y=covars[j],x=NULL
+    )+annotate("text",
+               label=as.character(round(Ccorr,digits=3)),
+               x=0.85*max(plotDF$C,na.rm=TRUE),
+               y=(0.5*(max(plotDF$var,na.rm=TRUE)-min(plotDF$var,na.rm=TRUE)))+min(plotDF$var,na.rm=TRUE),
+               color="blue",
+               size=3.5)
+    AplotListAnom[[covars[j]]] = ggplot(plotDFAnom
+    )+geom_point(aes(x=A,y=anom)
+    )+labs(y=covars[j],x=NULL
+    )+annotate("text",
+               label=as.character(round(AcorrAnom,digits=3)),
+               x=0.85*max(plotDFAnom$A,na.rm=TRUE),
+               y=(0.5*(max(plotDFAnom$anom,na.rm=TRUE)-min(plotDFAnom$anom,na.rm=TRUE)))+min(plotDFAnom$anom,na.rm=TRUE),
+               color="blue",
+               size=3.5)
+    CplotListAnom[[covars[j]]] = ggplot(plotDFAnom
+    )+geom_point(aes(x=C,y=anom)
+    )+labs(y=covars[j],x=NULL
+    )+annotate("text",
+               label=as.character(round(CcorrAnom,digits=3)),
+               x=0.85*max(plotDFAnom$C,na.rm=TRUE),
+               y=(0.5*(max(plotDFAnom$anom,na.rm=TRUE)-min(plotDFAnom$anom,na.rm=TRUE)))+min(plotDFAnom$anom,na.rm=TRUE),
+               color="blue",
+               size=3.5)
+  }
+  # png(file=paste(getwd(),'/EcologicalNichePlots/',sites[i],'_AEddyInfluence.png',sep=""),height=700,width=600,units="px",res=100)
+  # grid.arrange(grobs=AplotList,ncol=2,nrow=5,top=sites[i])
+  # while (dev.cur()>1) {dev.off()}
+  #
+  # png(file=paste(getwd(),'/EcologicalNichePlots/',sites[i],'_CEddyInfluence.png',sep=""),height=700,width=600,units="px",res=100)
+  # grid.arrange(grobs=CplotList,ncol=2,nrow=5,top=sites[i])
+  # while (dev.cur()>1) {dev.off()}
+  #
+  # png(file=paste(getwd(),'/EcologicalNichePlots/',sites[i],'_AEddyInfluence_Anom.png',sep=""),height=700,width=600,units="px",res=100)
+  # grid.arrange(grobs=AplotListAnom,ncol=2,nrow=5,top=sites[i])
+  # while (dev.cur()>1) {dev.off()}
+  #
+  # png(file=paste(getwd(),'/EcologicalNichePlots/',sites[i],'_CEddyInfluence_Anom.png',sep=""),height=700,width=600,units="px",res=100)
+  # grid.arrange(grobs=CplotListAnom,ncol=2,nrow=5,top=sites[i])
+  # while (dev.cur()>1) {dev.off()}
+}
+rownames(ACorrMat) = paste('AEddyDist_',sites,sep="")
+rownames(CCorrMat) = paste('CEddyDist_',sites,sep="")
+rownames(ACorrMatAn) = paste('AEddyDist_',sites,sep="")
+rownames(CCorrMatAn) = paste('CEddyDist_',sites,sep="")
+colnames(ACorrMat) = covars
+colnames(CCorrMat) = covars
+colnames(ACorrMatAn) = covars
+colnames(CCorrMatAn) = covars
+png(file='EddyDistCorrelations.png',height=600,width=600,units="px",res=75)
+par(mfrow=c(2,2))
+corrplot(ACorrMat,method='circle')
+corrplot(CCorrMat,method='circle')
+corrplot(ACorrMatAn,method='circle')
+corrplot(CCorrMatAn,method='circle')
+while (dev.cur()>1) {dev.off()}
+
+# PCA to compare combinations of conditions targeted by competitive species at co-occupied sites --------------
+specs = c("Gm","Gg")
+sites = c("HZ","BC","NFC","HAT")
+covars = c("Chl0","FSLE0","SSH0","Sal0","Temp0","Sal400","Temp400","AEddyDist0","CEddyDist0")
+plotColors = c('#D62A1C','#1C3FD6')
+masterDF = data.frame(read.csv('MasterWeeklyDF.csv'))
+# remove NAs
+badRows = unique(which(is.na(masterDF),arr.ind=TRUE)[,1])
+masterDF = masterDF[-badRows,]
+masterDF$SiteFac = factor(masterDF$Site,levels=sites)
+whichCols= which(colnames(masterDF)%in%covars)
+for (i in 1:length(sites)){
+  siteInd = which(masterDF$Site==sites[i])
+  trainDat = numeric()
+  for (k in 1:length(specs)){
+    thisSpec = which(masterDF[[specs[k]]][siteInd]>0)
+    trainDat = rbind(trainDat,cbind(masterDF[siteInd[thisSpec],whichCols],specs[k]))
+  }
+  colnames(trainDat)[length(covars)+1] = "Spec"
+  pc = prcomp(trainDat[,1:length(whichCols)],center=TRUE,scale=TRUE)
+  g <- ggbiplot(pc,
+                obs.scale = 1,
+                var.scale = 1,
+                groups = trainDat$Spec,
+                ellipse = TRUE,
+                circle = FALSE,
+                ellipse.prob = 0.66,
+                varname.size=4)
+  g = g + scale_color_manual(values=c("#DB51A4","#2FC7CC"))
+  g <- g + theme(legend.direction = 'vertical',
+                 legend.position = 'right')
+  png(filename=paste(getwd(),'/EcologicalNichePlots/',paste(specs,collapse="_"),"_",sites[i],'_PCA.png',sep=""),
+      height=600, width=600,units="px",res=100)
+  print(g)
+  while (dev.cur()>1) {dev.off()}
+}
