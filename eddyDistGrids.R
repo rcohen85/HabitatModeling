@@ -1,4 +1,5 @@
 # Calculate distance to nearest eddy for each lat/lon point in the region
+library(stringr)
 library(geodist)
 
 inDir = 'J:/Chpt_3/Eddies'
@@ -18,7 +19,7 @@ gridDF = data.frame(latitude=rep(lats,length.out=length(lons)*length(lats)),
 eddyData = data.frame(read.csv(paste(inDir,'/AllEddies.csv',sep="")))
 eddyData$date = as.Date(eddyData$date,'%d-%b-%Y')
 
-for (j in 1:length(dateRange)){
+for (j in 465:length(dateRange)){
   
   data = numeric()
   
