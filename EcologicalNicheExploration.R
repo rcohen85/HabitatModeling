@@ -470,12 +470,33 @@ data1$Pres = round(data1$Pres)
 data2 = data.frame(read.csv(fileList[files[2]]))
 data2$Pres = round(data2$Pres)
 
+signifMat1 = matrix(nrow=length(sites),ncol=length(covars))
+rownames(signifMat1) = sites
+colnames(signifMat1) = covars
+signifMat2 = matrix(nrow=length(sites),ncol=length(covars))
+rownames(signifMat2) = sites
+colnames(signifMat2) = covars
+
 for (j in 1:length(sites)){
   for (i in 1:length(covars)){
 
     # find data at this site
     siteInd1 = str_which(data1$Site,sites[j])
     siteInd2 = str_which(data2$Site,sites[j])
+    
+    # find presence of each species at this site
+    pres1 = which(data1$Pres[siteInd1]>0)
+    pres2 = which(data2$Pres[siteInd2]>0)
+    
+    # Bootstrap the covar at this site to produce a sample of the same size as pres
+    refDist1 = sample(data1[[covars[i]]][siteInd1],size=length(pres1),replace=TRUE)
+    refDist2 = sample(data2[[covars[i]]][siteInd2],size=length(pres2),replace=TRUE)
+    
+    # Compare empirical cumulative distribution functions with a Kolomogorov Smirnov test
+    KS.out1 = ks.test(data1[[covars[i]]][siteInd1[pres1]],refDist1,simulate.p.value=TRUE)
+    KS.out2 = ks.test(data2[[covars[i]]][siteInd2[pres2]],refDist2,simulate.p.value=TRUE)
+    signifMat1[j,i] = round(KS.out1$p.value,digits=4)
+    signifMat2[j,i] = round(KS.out2$p.value,digits=4)
 
     # Divide covar range into bins
     varMin = min(min(data1[[covars[i]]][siteInd1]),min(data2[[covars[i]]][siteInd2]))
@@ -553,12 +574,12 @@ for (j in 1:length(sites)){
 
     # png(file=paste(outDir,'/',specs[1],"_",specs[2],"/",covars[i],"_at_",sites[j],".png",sep=""),width = 500, height = 400, units = "px",res=125)
     # png(file=paste(getwd(),'/EcologicalNichePlots/',specs[1],"_",specs[2],"_",covars[i],"_at_",sites[j],".png",sep=""),width = 500, height = 400, units = "px",res=125)
-    pdf(file=paste(getwd(),'/EcologicalNichePlots/',specs[1],"_",specs[2],"_",covars[i],"_at_",sites[j],".pdf",sep=""),width = 3, height = 2.4, pointsize=10)
-    grid.arrange(barPlot,legPlot,ncol=5,nrow=4,layout_matrix=rbind(c(rep(1,4),NA),
-                                                               c(rep(1,4),2),
-                                                               c(rep(1,4),NA),
-                                                               c(rep(1,4),NA)))
-    while (dev.cur()>1) {dev.off()}
+    # pdf(file=paste(getwd(),'/EcologicalNichePlots/',specs[1],"_",specs[2],"_",covars[i],"_at_",sites[j],".pdf",sep=""),width = 3, height = 2.4, pointsize=10)
+    # grid.arrange(barPlot,legPlot,ncol=5,nrow=4,layout_matrix=rbind(c(rep(1,4),NA),
+    #                                                            c(rep(1,4),2),
+    #                                                            c(rep(1,4),NA),
+    #                                                            c(rep(1,4),NA)))
+    # while (dev.cur()>1) {dev.off()}
 
   }
 }
@@ -658,12 +679,26 @@ write.csv(masterDF,'MasterWeeklyDF.csv',row.names=FALSE)
 # make violin plots for each covar
 
 masterDF = data.frame(read.csv('MasterWeeklyDF.csv'))
+signifMat = matrix(nrow=dim(specs)[1],ncol=length(covars))
+rownames(signifMat) = specs[,1]
+colnames(signifMat) = covars
+
 for (i in 1:length(covars)){
   plotDF = list()
-  
+
   for (j in 1:dim(specs)[1]){
-    presVals = as.numeric(masterDF[[covars[i]]][(masterDF[[specs[j,2]]]>0 & !is.na(masterDF[[specs[j,2]]]))])
-    # plotDF = rbind(plotDF,cbind(presVals,rep(j,length(presVals))))
+    
+    # find instances of presence for this species
+    thisPres = which(masterDF[[specs[j,2]]]>0 & !is.na(masterDF[[specs[j,2]]]))
+    
+    # Bootstrap the covar to produce a sample of the same size as pres
+    refDist = sample(masterDF[[covars[i]]],size=length(thisPres),replace=TRUE)
+    
+    # Compare empirical cumulative distribution functions with a Kolomogorov Smirnov test
+    KS.out = ks.test(masterDF[[covars[i]]][thisPres],refDist,simulate.p.value=TRUE)
+    signifMat[j,i] = round(KS.out$p.value,digits=4)
+    
+    presVals = as.numeric(masterDF[[covars[i]]][thisPres])
     plotDF[[specs[j,2]]] = presVals
   }
   
@@ -703,6 +738,7 @@ for (i in 1:length(covars)){
          scale=7)
 }
 
+write.csv(signifMat,file=paste(getwd(),'/EcologicalNichePlots/PresenceSelectivitySignificance.csv',sep=""),row.names=TRUE)
 
 
 
@@ -726,6 +762,7 @@ for (i in 1:length(covars)){
   # yrInd = which(masterDF$WeekDate[siteInd]<as.Date("2017-05-01"))
   ggplot(masterDF[siteInd,],aes(x=.data[[covars[i]]])
   )+geom_density(aes(color=SiteFac,linetype=SiteFac)
+  )+geom_density(color="#030303"
   )+scale_linetype_manual(values=lineOpts[1:length(sites)]
   )+scale_color_manual(values=c("#f05a43","#db51a4","#de76f5","#9b85f2","#56b4fc","#2fc7cc","#3dd17d","#5aba30","#bbc22f","#d6a10f")
   )+theme(legend.position="none"
@@ -733,7 +770,9 @@ for (i in 1:length(covars)){
   )+theme_minimal(
   )+theme(panel.grid.major=element_line(color="#CCCCCC"),
           panel.grid.minor.x=element_blank())
-  ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',covars[i],"_Density_1.png",sep=""),device="png",
+  # ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',covars[i],"_Density_Null.png",sep=""),device="png",
+  #        width=300,height=150,units="px",scale=7)
+  ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',covars[i],"_Density_Null.pdf",sep=""),device="pdf",
          width=300,height=150,units="px",scale=7)
   # ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',"ForLegend.png",sep=""),device="png",
   #        width=300,height=300,units="px",scale=7)
