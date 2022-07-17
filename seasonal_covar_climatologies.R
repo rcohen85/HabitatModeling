@@ -326,7 +326,7 @@ colnames(predictFall) = c("lat","lon","EKE0","SSH0","Sal0","Sal200","Sal400","Sa
 
 # transform data as necessary
 # -Inf will occur in Chl0 + FSLE0 due to 0 values, set to NA
-
+predictWinter$Chl0[predictWinter$Chl0>10] = 10 # cap crazy high values near coast
 predictWinter$log_Chl0 = log10(predictWinter$Chl0)
 predictWinter$log_Chl0[is.infinite(predictWinter$log_Chl0)] = NA
 predictWinter$log_abs_FSLE0 = log10(abs(predictWinter$FSLE0))
@@ -335,7 +335,9 @@ predictWinter$sqrt_CEddyDist0 = sqrt(predictWinter$CEddyDist0)
 predictWinter$sqrt_AEddyDist0 = sqrt(predictWinter$AEddyDist0)
 predictWinter$sqrt_VelAsp0 = sqrt(predictWinter$VelAsp0)
 predictWinter$sqrt_VelAsp700 = sqrt(predictWinter$VelAsp700)
+predictWinter$sqrt_EKE0 = sqrt(predictWinter$EKE0)
 
+predictSpring$Chl0[predictSpring$Chl0>10] = 10
 predictSpring$log_Chl0 = log10(predictSpring$Chl0)
 predictSpring$log_Chl0[is.infinite(predictSpring$log_Chl0)] = NA
 predictSpring$log_abs_FSLE0 = log10(abs(predictSpring$FSLE0))
@@ -344,7 +346,9 @@ predictSpring$sqrt_CEddyDist0 = sqrt(predictSpring$CEddyDist0)
 predictSpring$sqrt_AEddyDist0 = sqrt(predictSpring$AEddyDist0)
 predictSpring$sqrt_VelAsp0 = sqrt(predictSpring$VelAsp0)
 predictSpring$sqrt_VelAsp700 = sqrt(predictSpring$VelAsp700)
+predictSpring$sqrt_EKE0 = sqrt(predictSpring$EKE0)
 
+predictSummer$Chl0[predictSummer$Chl0>10] = 10
 predictSummer$log_Chl0 = log10(predictSummer$Chl0)
 predictSummer$log_Chl0[is.infinite(predictSummer$log_Chl0)] = NA
 predictSummer$log_abs_FSLE0 = log10(abs(predictSummer$FSLE0))
@@ -353,7 +357,9 @@ predictSummer$sqrt_CEddyDist0 = sqrt(predictSummer$CEddyDist0)
 predictSummer$sqrt_AEddyDist0 = sqrt(predictSummer$AEddyDist0)
 predictSummer$sqrt_VelAsp0 = sqrt(predictSummer$VelAsp0)
 predictSummer$sqrt_VelAsp700 = sqrt(predictSummer$VelAsp700)
+predictSummer$sqrt_EKE0 = sqrt(predictSummer$EKE0)
 
+predictFall$Chl0[predictFall$Chl0>10] = 10
 predictFall$log_Chl0 = log10(predictFall$Chl0)
 predictFall$log_Chl0[is.infinite(predictFall$log_Chl0)] = NA
 predictFall$log_abs_FSLE0 = log10(abs(predictFall$FSLE0))
@@ -362,6 +368,7 @@ predictFall$sqrt_CEddyDist0 = sqrt(predictFall$CEddyDist0)
 predictFall$sqrt_AEddyDist0 = sqrt(predictFall$AEddyDist0)
 predictFall$sqrt_VelAsp0 = sqrt(predictFall$VelAsp0)
 predictFall$sqrt_VelAsp700 = sqrt(predictFall$VelAsp700)
+predictFall$sqrt_EKE0 = sqrt(predictFall$EKE0)
 
 # get elevation values to later remove prediction values on land
 load('J:/Chpt_3/GEBCO/DownsampledGrid_08deg.Rdata')
@@ -373,5 +380,27 @@ predictWinter$Depth = depth
 predictSpring$Depth = depth
 predictSummer$Depth = depth
 predictFall$Depth = depth
+
+# set margin values = NA
+lim300 = which(predictWinter$Depth>-300)
+var200 = which(str_detect(colnames(predictWinter),"200"))
+predictWinter[lim300,var200] = NA
+predictSpring[lim300,var200] = NA
+predictSummer[lim300,var200] = NA
+predictFall[lim300,var200] = NA
+
+lim500 = which(predictWinter$Depth>-500)
+var400 = which(str_detect(colnames(predictWinter),"400"))
+predictWinter[lim500,var400] = NA
+predictSpring[lim500,var400] = NA
+predictSummer[lim500,var400] = NA
+predictFall[lim500,var400] = NA
+
+lim800 = which(predictWinter$Depth>-800)
+var700 = which(str_detect(colnames(predictWinter),"700"))
+predictWinter[lim800,var700] = NA
+predictSpring[lim800,var700] = NA
+predictSummer[lim800,var700] = NA
+predictFall[lim800,var700] = NA
 
 save(predictWinter,predictSummer,predictSpring,predictFall,file=paste(outDir,'/PredictionData.Rdata',sep=""))
