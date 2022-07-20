@@ -805,17 +805,17 @@ for (i in 1:length(covars)){
 # specs = c("Blainville","Gervais")
 # plotColors = c('#D62A1C','#1C3FD6',"#030303") # colors will be applied alphabetically, make sure black corresponds to "Null"
 # sites = c("BS")
-specs = c("Sowerby","Cuvier")
-plotColors = c('#D62A1C',"#030303",'#1C3FD6')# colors will be applied alphabetically, make sure black corresponds to "Null"
-sites = c("HZ","BC","WC")
-# specs = c("Sowerby","Cuvier","True")
-# plotColors = c('#D62A1C',"#030303",'#1C3FD6','#3DCF08') # colors will be applied alphabetically, make sure black corresponds to "Null"
-# sites = "NC"
-# covars = c("Chl0","FSLE0","SSH0","Sal0","Sal700","Temp0","Temp700","VelAsp0","VelAsp700","VelMag0","VelMag700","AEddyDist0","CEddyDist0")
+# specs = c("Sowerby","Cuvier")
+# plotColors = c('#D62A1C',"#030303",'#1C3FD6')# colors will be applied alphabetically, make sure black corresponds to "Null"
+# sites = c("HZ","BC","WC")
+specs = c("Sowerby","Cuvier","True")
+plotColors = c('#D62A1C',"#030303",'#1C3FD6','#3DCF08') # colors will be applied alphabetically, make sure black corresponds to "Null"
+sites = "NC"
+covars = c("Chl0","FSLE0","SSH0","Sal0","Sal700","Temp0","Temp700","VelAsp0","VelAsp700","VelMag0","VelMag700","AEddyDist0","CEddyDist0")
 
 
-# files = c(str_which(fileList,specs[1]),str_which(fileList,specs[2]))
-files = c(str_which(fileList,specs[1]),str_which(fileList,specs[2]),str_which(fileList,specs[3]))
+files = c(str_which(fileList,specs[1]),str_which(fileList,specs[2]))
+# files = c(str_which(fileList,specs[1]),str_which(fileList,specs[2]),str_which(fileList,specs[3]))
 
 data1 = data.frame(read.csv(fileList[files[1]]))
 data1$Pres = round(data1$Pres)
@@ -849,6 +849,11 @@ for (j in 1:length(sites)){
   
   for (i in 1:length(covars)){
     
+    # find presence of each species at this site
+    pres1 = which(data1$Pres[siteInd1]>0)
+    pres2 = which(data2$Pres[siteInd2]>0)
+    # pres3 = which(data3$Pres[siteInd3]>0)
+    
     # get distribution of values observed during presence
     obs1 = data1[[covars[i]]][siteInd1[pres1]]
     obs2 = data2[[covars[i]]][siteInd2[pres2]]
@@ -864,7 +869,7 @@ for (j in 1:length(sites)){
     KS.out2 = ks.test(obs2,samp2,simulate.p.value=TRUE)
     # KS.out3 = ks.test(obs3,samp3,simulate.p.value=TRUE)
     KS.outComp1 = ks.test(obs1,obs2,simulate.p.value=TRUE)
-    # KS.outComp2 = ks.test(obs1,obs3,simulate.p.value=TRUE)
+    KS.outComp2 = ks.test(obs1,obs3,simulate.p.value=TRUE)
     # KS.outComp3 = ks.test(obs2,obs3,simulate.p.value=TRUE)
     signifMat1[j,i] = round(KS.out1$p.value,digits=4)
     signifMat2[j,i] = round(KS.out2$p.value,digits=4)
