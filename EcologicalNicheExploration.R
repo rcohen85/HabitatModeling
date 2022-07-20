@@ -449,16 +449,20 @@ save(WeekOptStats,DayOptStats,file=paste(outDir,'/','OptimumImportance.Rdata',se
 
 ## Compare species covar selections at specific sites ------------
 # specs = c("UD26","Risso")
-# sites = c("HZ","BC","NFC","HAT")
+# sites = c("HZ","OC","NC","BC","WC","NFC","HAT")
 # covars = c("Chl0","FSLE0","SSH0","Sal0","Sal400","Temp0","Temp400","VelAsp0","VelAsp400","VelMag0","VelMag400","AEddyDist0","CEddyDist0")
 specs = c("Blainville","Gervais")
 sites = c("BS")
 # specs = c("Sowerby","Cuvier")
 # sites = c("HZ","BC","WC")
+# specs = c("Sowerby","Cuvier","True")
+# sites = "NC"
 covars = c("Chl0","FSLE0","SSH0","Sal0","Sal700","Temp0","Temp700","VelAsp0","VelAsp700","VelMag0","VelMag700","AEddyDist0","CEddyDist0")
 plotColors = c('#D62A1C','#1C3FD6')
+# plotColors = c('#D62A1C','#1C3FD6','#3DCF08')
 
 files = c(str_which(fileList,specs[1]),str_which(fileList,specs[2]))
+# files = c(str_which(fileList,specs[1]),str_which(fileList,specs[2]),str_which(fileList,specs[3]))
 
 # if it doesn't already exist, create directory to save figures
 if (!dir.exists(paste(outDir,'/',specs[1],"_",specs[2],sep=""))){
@@ -469,6 +473,8 @@ data1 = data.frame(read.csv(fileList[files[1]]))
 data1$Pres = round(data1$Pres)
 data2 = data.frame(read.csv(fileList[files[2]]))
 data2$Pres = round(data2$Pres)
+# data3 = data.frame(read.csv(fileList[files[3]]))
+# data3$Pres = round(data3$Pres)
 
 signifMat1 = matrix(nrow=length(sites),ncol=length(covars))
 rownames(signifMat1) = sites
@@ -476,6 +482,15 @@ colnames(signifMat1) = covars
 signifMat2 = matrix(nrow=length(sites),ncol=length(covars))
 rownames(signifMat2) = sites
 colnames(signifMat2) = covars
+# signifMat3 = matrix(nrow=length(sites),ncol=length(covars))
+# rownames(signifMat3) = sites
+# colnames(signifMat3) = covars
+signifMatComp = matrix(nrow=length(sites),ncol=length(covars))
+rownames(signifMatComp) = sites
+colnames(signifMatComp) = covars
+# signifMatComp = matrix(nrow=3*length(sites),ncol=length(covars))
+# rownames(signifMatComp) = rep(sites,each=3)
+# colnames(signifMatComp) = covars
 
 for (j in 1:length(sites)){
   for (i in 1:length(covars)){
@@ -483,95 +498,121 @@ for (j in 1:length(sites)){
     # find data at this site
     siteInd1 = str_which(data1$Site,sites[j])
     siteInd2 = str_which(data2$Site,sites[j])
+    # siteInd3 = str_which(data3$Site,sites[j])
     
     # find presence of each species at this site
     pres1 = which(data1$Pres[siteInd1]>0)
     pres2 = which(data2$Pres[siteInd2]>0)
+    # pres3 = which(data3$Pres[siteInd3]>0)
     
-    # Bootstrap the covar at this site to produce a sample of the same size as pres
-    refDist1 = sample(data1[[covars[i]]][siteInd1],size=length(pres1),replace=TRUE)
-    refDist2 = sample(data2[[covars[i]]][siteInd2],size=length(pres2),replace=TRUE)
+    # # create distribution of values observed during presence in which each covar value is represented proportionate 
+    # # to the level of presence it was associated with
+    # obs1 = rep(data1[[covars[i]]][siteInd1[pres1]],times=data1$Pres[siteInd1[pres1]])
+    # obs2 = rep(data2[[covars[i]]][siteInd2[pres2]],times=data2$Pres[siteInd2[pres2]])
+    
+    # get distribution of values observed during presence
+    obs1 = data1[[covars[i]]][siteInd1[pres1]]
+    obs2 = data2[[covars[i]]][siteInd2[pres2]]
+    # obs3 = data3[[covars[i]]][siteInd3[pres3]]
+
+    # # Bootstrap the covar at this site to produce a random sample of the same size as pres (null distribution)
+    # samp1 = sample(data1[[covars[i]]][siteInd1],size=length(pres1),replace=TRUE)
+    # samp2 = sample(data2[[covars[i]]][siteInd2],size=length(pres2),replace=TRUE)
+    # samp3 = sample(data3[[covars[i]]][siteInd3],size=length(pres3),replace=TRUE)
+    
+    # Get null distribution of covar at this site
+    samp1 = data1[[covars[i]]][siteInd1]
+    samp2 = data2[[covars[i]]][siteInd2]
+    # samp3 = data3[[covars[i]]][siteInd3]
     
     # Compare empirical cumulative distribution functions with a Kolomogorov Smirnov test
-    KS.out1 = ks.test(data1[[covars[i]]][siteInd1[pres1]],refDist1,simulate.p.value=TRUE)
-    KS.out2 = ks.test(data2[[covars[i]]][siteInd2[pres2]],refDist2,simulate.p.value=TRUE)
+    KS.out1 = ks.test(obs1,samp1,simulate.p.value=TRUE)
+    KS.out2 = ks.test(obs2,samp2,simulate.p.value=TRUE)
+    # KS.out3 = ks.test(obs3,samp3,simulate.p.value=TRUE)
+    KS.outComp1 = ks.test(obs1,obs2,simulate.p.value=TRUE)
+    # KS.outComp2 = ks.test(obs1,obs3,simulate.p.value=TRUE)
+    # KS.outComp3 = ks.test(obs2,obs3,simulate.p.value=TRUE)
     signifMat1[j,i] = round(KS.out1$p.value,digits=4)
     signifMat2[j,i] = round(KS.out2$p.value,digits=4)
+    # signifMat3[j,i] = round(KS.out3$p.value,digits=4)
+    signifMatComp[j,i] = round(KS.outComp1$p.value,digits=4)
+    # signifMatComp[j+1,i] = round(KS.outComp2$p.value,digits=4)
+    # signifMatComp[j+2,i] = round(KS.outComp3$p.value,digits=4)
 
     # Divide covar range into bins
-    varMin = min(min(data1[[covars[i]]][siteInd1]),min(data2[[covars[i]]][siteInd2]))
-    varMin = varMin-abs(0.01*varMin)
-    varMax = max(max(data1[[covars[i]]][siteInd1]),max(data2[[covars[i]]][siteInd2]))
-    varMax = varMax+abs(0.01*varMax)
-    varBins = seq(varMin,varMax,length.out=21)
-
-    # Identify which bin each covar observation falls into
-    binDat1 = histc(data1[[covars[i]]][siteInd1],varBins)
-    binDat2 = histc(data2[[covars[i]]][siteInd2],varBins)
-
-    # Calculate average and SD of presence values corresponding to covar obs in each bin
-    presChar1 = data.frame(pres=data1$Pres[siteInd1],bin=binDat1$bin) %>%
-      group_by(bin) %>%
-      summarize(MeanPres=mean(pres,na.rm=TRUE),
-                SD=sd(pres,na.rm=TRUE))
-    presChar2 = data.frame(pres=data2$Pres[siteInd2],bin=binDat2$bin) %>%
-      group_by(bin) %>%
-      summarize(MeanPres=mean(pres,na.rm=TRUE),
-                SD=sd(pres,na.rm=TRUE))
-
-    # Normalize by max mean presence per species
-    presChar1$NormMean = presChar1$MeanPres-min(presChar1$MeanPres)
-    presChar1$NormMean = presChar1$NormMean/max(presChar1$NormMean)
-    presChar1$NormSD = presChar1$SD-min(presChar1$MeanPres)
-    presChar1$NormSD = presChar1$NormSD/max(presChar1$NormMean)
-    presChar2$NormMean = presChar2$MeanPres-min(presChar2$MeanPres)
-    presChar2$NormMean = presChar2$NormMean/max(presChar2$NormMean)
-    presChar2$NormSD = presChar2$SD-min(presChar2$MeanPres)
-    presChar2$NormSD = presChar2$NormSD/max(presChar2$NormMean)
-
-    presChar1$binCenter = varBins[presChar1$bin]+0.5*diff(varBins[1:2])
-    presChar2$binCenter = varBins[presChar2$bin]+0.5*diff(varBins[1:2])
-
-    # Plot as overlaid bar charts
-    barPlot = ggplot(
-    )+geom_col(data=presChar1,
-               aes(x=binCenter,y=NormMean),
-               color=plotColors[1],
-               fill=plotColors[1],
-               alpha=0.5
-    )+geom_col(data=presChar2,
-               aes(x=binCenter,y=NormMean),
-               color=plotColors[2],
-               fill=plotColors[2],
-               alpha=0.5
-    )+coord_cartesian(xlim=c(varMin,varMax)
-    )+labs(x=covars[i],y="Normalized Mean Presence",title=covars[i]
-    )+theme_minimal()
-
-    # make legend
-    legDF = data.frame(x1=c(1,1),
-                       x2=c(2,2),
-                       y1=c(1,2),
-                       y2=c(1.75,2.75),
-                       cols=plotColors)
-    legPlot = ggplot(legDF
-    )+geom_rect(aes(ymin=y1,
-                    ymax=y2,
-                    xmin=x1,
-                    xmax=x2,
-                    color=cols,
-                    fill=cols),
-                alpha=0.5
-    )+scale_fill_identity(
-    )+scale_color_identity(
-    )+geom_text(aes(x=x2+0.95,
-                    y=y1+0.5,
-                    label=specs),
-                size=2.75
-    )+guides(fill='none',color='none'
-    )+coord_cartesian(xlim=c(1,4)
-    )+theme_void()
-
+    # varMin = min(min(data1[[covars[i]]][siteInd1]),min(data2[[covars[i]]][siteInd2]))
+    # varMin = varMin-abs(0.01*varMin)
+    # varMax = max(max(data1[[covars[i]]][siteInd1]),max(data2[[covars[i]]][siteInd2]))
+    # varMax = varMax+abs(0.01*varMax)
+    # varBins = seq(varMin,varMax,length.out=21)
+    # 
+    # # Identify which bin each covar observation falls into
+    # binDat1 = histc(data1[[covars[i]]][siteInd1],varBins)
+    # binDat2 = histc(data2[[covars[i]]][siteInd2],varBins)
+    # 
+    # # Calculate average and SD of presence values corresponding to covar obs in each bin
+    # presChar1 = data.frame(pres=data1$Pres[siteInd1],bin=binDat1$bin) %>%
+    #   group_by(bin) %>%
+    #   summarize(MeanPres=mean(pres,na.rm=TRUE),
+    #             SD=sd(pres,na.rm=TRUE))
+    # presChar2 = data.frame(pres=data2$Pres[siteInd2],bin=binDat2$bin) %>%
+    #   group_by(bin) %>%
+    #   summarize(MeanPres=mean(pres,na.rm=TRUE),
+    #             SD=sd(pres,na.rm=TRUE))
+    # 
+    # # Normalize by max mean presence per species
+    # presChar1$NormMean = presChar1$MeanPres-min(presChar1$MeanPres)
+    # presChar1$NormMean = presChar1$NormMean/max(presChar1$NormMean)
+    # presChar1$NormSD = presChar1$SD-min(presChar1$MeanPres)
+    # presChar1$NormSD = presChar1$NormSD/max(presChar1$NormMean)
+    # presChar2$NormMean = presChar2$MeanPres-min(presChar2$MeanPres)
+    # presChar2$NormMean = presChar2$NormMean/max(presChar2$NormMean)
+    # presChar2$NormSD = presChar2$SD-min(presChar2$MeanPres)
+    # presChar2$NormSD = presChar2$NormSD/max(presChar2$NormMean)
+    # 
+    # presChar1$binCenter = varBins[presChar1$bin]+0.5*diff(varBins[1:2])
+    # presChar2$binCenter = varBins[presChar2$bin]+0.5*diff(varBins[1:2])
+    # 
+    # # Plot as overlaid bar charts
+    # barPlot = ggplot(
+    # )+geom_col(data=presChar1,
+    #            aes(x=binCenter,y=NormMean),
+    #            color=plotColors[1],
+    #            fill=plotColors[1],
+    #            alpha=0.5
+    # )+geom_col(data=presChar2,
+    #            aes(x=binCenter,y=NormMean),
+    #            color=plotColors[2],
+    #            fill=plotColors[2],
+    #            alpha=0.5
+    # )+coord_cartesian(xlim=c(varMin,varMax)
+    # )+labs(x=covars[i],y="Normalized Mean Presence",title=covars[i]
+    # )+theme_minimal()
+    # 
+    # # make legend
+    # legDF = data.frame(x1=c(1,1),
+    #                    x2=c(2,2),
+    #                    y1=c(1,2),
+    #                    y2=c(1.75,2.75),
+    #                    cols=plotColors)
+    # legPlot = ggplot(legDF
+    # )+geom_rect(aes(ymin=y1,
+    #                 ymax=y2,
+    #                 xmin=x1,
+    #                 xmax=x2,
+    #                 color=cols,
+    #                 fill=cols),
+    #             alpha=0.5
+    # )+scale_fill_identity(
+    # )+scale_color_identity(
+    # )+geom_text(aes(x=x2+0.95,
+    #                 y=y1+0.5,
+    #                 label=specs),
+    #             size=2.75
+    # )+guides(fill='none',color='none'
+    # )+coord_cartesian(xlim=c(1,4)
+    # )+theme_void()
+    # 
     # png(file=paste(outDir,'/',specs[1],"_",specs[2],"/",covars[i],"_at_",sites[j],".png",sep=""),width = 500, height = 400, units = "px",res=125)
     # png(file=paste(getwd(),'/EcologicalNichePlots/',specs[1],"_",specs[2],"_",covars[i],"_at_",sites[j],".png",sep=""),width = 500, height = 400, units = "px",res=125)
     # pdf(file=paste(getwd(),'/EcologicalNichePlots/',specs[1],"_",specs[2],"_",covars[i],"_at_",sites[j],".pdf",sep=""),width = 3, height = 2.4, pointsize=10)
@@ -785,6 +826,81 @@ for (i in 1:length(covars)){
 #   print(paste(sites[i],":",max(masterDF$Chl0[siteInd],na.rm=TRUE)))
 #   
 # }
+
+## Compare density curves of background vs pres covar values at each site -----------------------
+specs = c("UD26","Risso")
+plotColors = c("#030303",'#D62A1C','#1C3FD6') # colors will be applied alphabetically, make sure black corresponds to "Null"
+sites = c("HZ","OC","NC","BC","WC","NFC","HAT")
+covars = c("Chl0","FSLE0","SSH0","Sal0","Sal400","Temp0","Temp400","VelAsp0","VelAsp400","VelMag0","VelMag400","AEddyDist0","CEddyDist0")
+# specs = c("Blainville","Gervais")
+# plotColors = c('#D62A1C','#1C3FD6',"#030303") # colors will be applied alphabetically, make sure black corresponds to "Null"
+# sites = c("BS")
+# specs = c("Sowerby","Cuvier")
+# plotColors = c('#D62A1C','#1C3FD6',"#030303")# colors will be applied alphabetically, make sure black corresponds to "Null"
+# sites = c("HZ","BC","WC")
+# specs = c("Sowerby","Cuvier","True")
+# plotColors = c('#D62A1C',"#030303",'#1C3FD6','#3DCF08') # colors will be applied alphabetically, make sure black corresponds to "Null"
+# sites = "NC"
+# covars = c("Chl0","FSLE0","SSH0","Sal0","Sal700","Temp0","Temp700","VelAsp0","VelAsp700","VelMag0","VelMag700","AEddyDist0","CEddyDist0")
+
+
+# files = c(str_which(fileList,specs[1]),str_which(fileList,specs[2]))
+files = c(str_which(fileList,specs[1]),str_which(fileList,specs[2]),str_which(fileList,specs[3]))
+
+data1 = data.frame(read.csv(fileList[files[1]]))
+data1$Pres = round(data1$Pres)
+data2 = data.frame(read.csv(fileList[files[2]]))
+data2$Pres = round(data2$Pres)
+# data3 = data.frame(read.csv(fileList[files[3]]))
+# data3$Pres = round(data3$Pres)
+
+for (j in 1:length(sites)){
+  
+  # find data at this site
+  siteInd1 = str_which(data1$Site,sites[j])
+  siteInd2 = str_which(data2$Site,sites[j])
+  # siteInd3 = str_which(data3$Site,sites[j])
+  
+  for (i in 1:length(covars)){
+    
+    # get distribution of values observed during presence
+    obs1 = data1[[covars[i]]][siteInd1[pres1]]
+    obs2 = data2[[covars[i]]][siteInd2[pres2]]
+    # obs3 = data3[[covars[i]]][siteInd3[pres3]]
+    
+    # Get null distribution of covar at this site (should be the same in all data sets)
+    samp1 = data1[[covars[i]]][siteInd1]
+    # samp2 = data2[[covars[i]]][siteInd2]
+    # samp3 = data3[[covars[i]]][siteInd3]
+    
+    covarVals = t(cbind(t(obs1),t(obs2),t(samp1)))
+    whichDist = rep(c(specs,"Null"),times=c(length(obs1),length(obs2),length(samp1)))
+    # covarVals = t(cbind(t(obs1),t(obs2),t(obs3),t(samp1)))
+    # whichDist = rep(c(specs,"Null"),times=c(length(obs1),length(obs2),length(obs3),length(samp1)))
+    plotDF = data.frame(covar=covarVals, dist=whichDist)
+    
+    xmin=min(plotDF$covar,na.rm=TRUE)
+    xmax=max(plotDF$covar,na.rm=TRUE)
+    
+    # Plot kernel densities
+    ggplot(plotDF,aes(x=covar)
+    )+geom_density(aes(color=whichDist)
+    )+scale_color_manual(values=plotColors
+    )+theme(legend.position="none"
+    )+coord_cartesian(xlim=c(xmin,xmax)
+    )+labs(color=sites[j],x=covars[i],y="Density"
+    )+theme_minimal(
+    )+theme(panel.grid.major=element_line(color="#CCCCCC"),
+            panel.grid.minor.x=element_blank(),
+            axis.text.x = element_text(size=12),
+            axis.text.y = element_text(size=12))
+    ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',specs[1],"_",specs[2],"_",covars[i],"_",sites[j],"_Density.png",sep=""),device="png",
+           width=300,height=150,units="px",scale=7)
+    ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',specs[1],"_",specs[2],"_",covars[i],"_",sites[j],"_Density.pdf",sep=""),device="pdf",
+           width=300,height=150,units="px",scale=7)
+  }
+}
+
 ## Look at impact of eddies at each site ---------------------
 sites = unique(masterDF$Site)
 covars = c("Chl0","EKE0","FSLE0","SSH0","Temp0","Sal0",

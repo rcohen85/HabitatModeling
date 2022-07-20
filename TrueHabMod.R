@@ -21,7 +21,7 @@ if (!dir.exists(paste(outDir,'/',spec,sep=""))){
   dir.create(paste(outDir,'/',spec,sep=""))
 }
 
-data = data.frame(read.csv('J:/Chpt_3/ModelData/True_masterDF.csv'))
+data = data.frame(read.csv('True_masterDF.csv'))
 # Round presence to get Poisson dist
 data$Pres = round(data$Pres)
 
