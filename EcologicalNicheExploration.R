@@ -808,21 +808,21 @@ for (i in 1:length(covars)){
 # specs = c("Sowerby","Cuvier")
 # plotColors = c('#D62A1C',"#030303",'#1C3FD6')# colors will be applied alphabetically, make sure black corresponds to "Null"
 # sites = c("HZ","BC","WC")
-specs = c("Sowerby","Cuvier","True")
+specs = c("Sowerby","Cuvier","True") # CHANGE SAVE NAME FOR PLOTS TO INCLUDE 3 SPECIES
 plotColors = c('#D62A1C',"#030303",'#1C3FD6','#3DCF08') # colors will be applied alphabetically, make sure black corresponds to "Null"
 sites = "NC"
 covars = c("Chl0","FSLE0","SSH0","Sal0","Sal700","Temp0","Temp700","VelAsp0","VelAsp700","VelMag0","VelMag700","AEddyDist0","CEddyDist0")
 
 
-files = c(str_which(fileList,specs[1]),str_which(fileList,specs[2]))
-# files = c(str_which(fileList,specs[1]),str_which(fileList,specs[2]),str_which(fileList,specs[3]))
+# files = c(str_which(fileList,specs[1]),str_which(fileList,specs[2]))
+files = c(str_which(fileList,specs[1]),str_which(fileList,specs[2]),str_which(fileList,specs[3]))
 
 data1 = data.frame(read.csv(fileList[files[1]]))
 data1$Pres = round(data1$Pres)
 data2 = data.frame(read.csv(fileList[files[2]]))
 data2$Pres = round(data2$Pres)
-# data3 = data.frame(read.csv(fileList[files[3]]))
-# data3$Pres = round(data3$Pres)
+data3 = data.frame(read.csv(fileList[files[3]]))
+data3$Pres = round(data3$Pres)
 
 signifMat1 = matrix(nrow=length(sites),ncol=length(covars))
 rownames(signifMat1) = sites
@@ -830,58 +830,58 @@ colnames(signifMat1) = covars
 signifMat2 = matrix(nrow=length(sites),ncol=length(covars))
 rownames(signifMat2) = sites
 colnames(signifMat2) = covars
-# signifMat3 = matrix(nrow=length(sites),ncol=length(covars))
-# rownames(signifMat3) = sites
-# colnames(signifMat3) = covars
-signifMatComp = matrix(nrow=length(sites),ncol=length(covars))
-rownames(signifMatComp) = sites
-colnames(signifMatComp) = covars
-# signifMatComp = matrix(nrow=3*length(sites),ncol=length(covars))
-# rownames(signifMatComp) = rep(sites,each=3)
+signifMat3 = matrix(nrow=length(sites),ncol=length(covars))
+rownames(signifMat3) = sites
+colnames(signifMat3) = covars
+# signifMatComp = matrix(nrow=length(sites),ncol=length(covars))
+# rownames(signifMatComp) = sites
 # colnames(signifMatComp) = covars
+signifMatComp = matrix(nrow=3*length(sites),ncol=length(covars))
+rownames(signifMatComp) = rep(sites,each=3)
+colnames(signifMatComp) = covars
 
 for (j in 1:length(sites)){
   
   # find data at this site
   siteInd1 = str_which(data1$Site,sites[j])
   siteInd2 = str_which(data2$Site,sites[j])
-  # siteInd3 = str_which(data3$Site,sites[j])
+  siteInd3 = str_which(data3$Site,sites[j])
   
   for (i in 1:length(covars)){
     
     # find presence of each species at this site
     pres1 = which(data1$Pres[siteInd1]>0)
     pres2 = which(data2$Pres[siteInd2]>0)
-    # pres3 = which(data3$Pres[siteInd3]>0)
+    pres3 = which(data3$Pres[siteInd3]>0)
     
     # get distribution of values observed during presence
     obs1 = data1[[covars[i]]][siteInd1[pres1]]
     obs2 = data2[[covars[i]]][siteInd2[pres2]]
-    # obs3 = data3[[covars[i]]][siteInd3[pres3]]
+    obs3 = data3[[covars[i]]][siteInd3[pres3]]
     
     # Get null distribution of covar at this site (should be the same in all data sets)
     samp1 = data1[[covars[i]]][siteInd1]
     samp2 = data2[[covars[i]]][siteInd2]
-    # samp3 = data3[[covars[i]]][siteInd3]
+    samp3 = data3[[covars[i]]][siteInd3]
     
     # Compare empirical cumulative distribution functions with a Kolomogorov Smirnov test
     KS.out1 = ks.test(obs1,samp1,simulate.p.value=TRUE)
     KS.out2 = ks.test(obs2,samp2,simulate.p.value=TRUE)
-    # KS.out3 = ks.test(obs3,samp3,simulate.p.value=TRUE)
+    KS.out3 = ks.test(obs3,samp3,simulate.p.value=TRUE)
     KS.outComp1 = ks.test(obs1,obs2,simulate.p.value=TRUE)
     KS.outComp2 = ks.test(obs1,obs3,simulate.p.value=TRUE)
-    # KS.outComp3 = ks.test(obs2,obs3,simulate.p.value=TRUE)
+    KS.outComp3 = ks.test(obs2,obs3,simulate.p.value=TRUE)
     signifMat1[j,i] = round(KS.out1$p.value,digits=4)
     signifMat2[j,i] = round(KS.out2$p.value,digits=4)
-    # signifMat3[j,i] = round(KS.out3$p.value,digits=4)
+    signifMat3[j,i] = round(KS.out3$p.value,digits=4)
     signifMatComp[j,i] = round(KS.outComp1$p.value,digits=4)
-    # signifMatComp[j+1,i] = round(KS.outComp2$p.value,digits=4)
-    # signifMatComp[j+2,i] = round(KS.outComp3$p.value,digits=4)
+    signifMatComp[j+1,i] = round(KS.outComp2$p.value,digits=4)
+    signifMatComp[j+2,i] = round(KS.outComp3$p.value,digits=4)
     
-    covarVals = t(cbind(t(obs1),t(obs2),t(samp1)))
-    whichDist = rep(c(specs,"Null"),times=c(length(obs1),length(obs2),length(samp1)))
-    # covarVals = t(cbind(t(obs1),t(obs2),t(obs3),t(samp1)))
-    # whichDist = rep(c(specs,"Null"),times=c(length(obs1),length(obs2),length(obs3),length(samp1)))
+    # covarVals = t(cbind(t(obs1),t(obs2),t(samp1)))
+    # whichDist = rep(c(specs,"Null"),times=c(length(obs1),length(obs2),length(samp1)))
+    covarVals = t(cbind(t(obs1),t(obs2),t(obs3),t(samp1)))
+    whichDist = rep(c(specs,"Null"),times=c(length(obs1),length(obs2),length(obs3),length(samp1)))
     plotDF = data.frame(covar=covarVals, dist=whichDist)
     
     xmin=min(plotDF$covar,na.rm=TRUE)
@@ -899,10 +899,17 @@ for (j in 1:length(sites)){
             panel.grid.minor.x=element_blank(),
             axis.text.x = element_text(size=12),
             axis.text.y = element_text(size=12))
-    ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',specs[1],"_",specs[2],"_",covars[i],"_",sites[j],"_Density.png",sep=""),device="png",
+    
+    # ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',specs[1],"_",specs[2],"_",covars[i],"_",sites[j],"_Density.png",sep=""),device="png",
+    #        width=300,height=150,units="px",scale=7)
+    # ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',specs[1],"_",specs[2],"_",covars[i],"_",sites[j],"_Density.pdf",sep=""),device="pdf",
+    #        width=300,height=150,units="px",scale=7)
+    ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',specs[1],"_",specs[2],"_",specs[3],"_",covars[i],"_",sites[j],"_Density.png",sep=""),device="png",
            width=300,height=150,units="px",scale=7)
-    ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',specs[1],"_",specs[2],"_",covars[i],"_",sites[j],"_Density.pdf",sep=""),device="pdf",
+    ggsave(filename=paste(getwd(),'/EcologicalNichePlots/',specs[1],"_",specs[2],"_",specs[3],"_",covars[i],"_",sites[j],"_Density.pdf",sep=""),device="pdf",
            width=300,height=150,units="px",scale=7)
+
+    
   }
 }
 
