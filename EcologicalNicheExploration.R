@@ -451,18 +451,18 @@ save(WeekOptStats,DayOptStats,file=paste(outDir,'/','OptimumImportance.Rdata',se
 # specs = c("UD26","Risso")
 # sites = c("HZ","OC","NC","BC","WC","NFC","HAT")
 # covars = c("Chl0","FSLE0","SSH0","Sal0","Sal400","Temp0","Temp400","VelAsp0","VelAsp400","VelMag0","VelMag400","AEddyDist0","CEddyDist0")
-specs = c("Blainville","Gervais")
-sites = c("BS")
+# specs = c("Blainville","Gervais")
+# sites = c("BS")
 # specs = c("Sowerby","Cuvier")
 # sites = c("HZ","BC","WC")
-# specs = c("Sowerby","Cuvier","True")
-# sites = "NC"
+specs = c("Sowerby","Cuvier","True")
+sites = "NC"
 covars = c("Chl0","FSLE0","SSH0","Sal0","Sal700","Temp0","Temp700","VelAsp0","VelAsp700","VelMag0","VelMag700","AEddyDist0","CEddyDist0")
-plotColors = c('#D62A1C','#1C3FD6')
-# plotColors = c('#D62A1C','#1C3FD6','#3DCF08')
+# plotColors = c('#D62A1C','#1C3FD6')
+plotColors = c('#1C3FD6','#D62A1C','#3DCF08')
 
-files = c(str_which(fileList,specs[1]),str_which(fileList,specs[2]))
-# files = c(str_which(fileList,specs[1]),str_which(fileList,specs[2]),str_which(fileList,specs[3]))
+# files = c(str_which(fileList,specs[1]),str_which(fileList,specs[2]))
+files = c(str_which(fileList,specs[1]),str_which(fileList,specs[2]),str_which(fileList,specs[3]))
 
 # if it doesn't already exist, create directory to save figures
 if (!dir.exists(paste(outDir,'/',specs[1],"_",specs[2],sep=""))){
@@ -473,8 +473,8 @@ data1 = data.frame(read.csv(fileList[files[1]]))
 data1$Pres = round(data1$Pres)
 data2 = data.frame(read.csv(fileList[files[2]]))
 data2$Pres = round(data2$Pres)
-# data3 = data.frame(read.csv(fileList[files[3]]))
-# data3$Pres = round(data3$Pres)
+data3 = data.frame(read.csv(fileList[files[3]]))
+data3$Pres = round(data3$Pres)
 
 for (j in 1:length(sites)){
   for (i in 1:length(covars)){
@@ -482,7 +482,7 @@ for (j in 1:length(sites)){
     # find data at this site
     siteInd1 = str_which(data1$Site,sites[j])
     siteInd2 = str_which(data2$Site,sites[j])
-    # siteInd3 = str_which(data3$Site,sites[j])
+    siteInd3 = str_which(data3$Site,sites[j])
     
     # # find presence of each species at this site
     # pres1 = which(data1$Pres[siteInd1]>0)
@@ -511,14 +511,17 @@ for (j in 1:length(sites)){
     
     # Divide covar range into bins
     varMin = min(min(data1[[covars[i]]][siteInd1]),min(data2[[covars[i]]][siteInd2]))
+    # varMin = min(min(data1[[covars[i]]][siteInd1]),min(data2[[covars[i]]][siteInd2]),min(data3[[covars[i]]][siteInd3]))
     varMin = varMin-abs(0.01*varMin)
     varMax = max(max(data1[[covars[i]]][siteInd1]),max(data2[[covars[i]]][siteInd2]))
+    # varMax = max(max(data1[[covars[i]]][siteInd1]),max(data2[[covars[i]]][siteInd2]),max(data3[[covars[i]]][siteInd3]))
     varMax = varMax+abs(0.01*varMax)
     varBins = seq(varMin,varMax,length.out=21)
 
     # Identify which bin each covar observation falls into
     binDat1 = histc(data1[[covars[i]]][siteInd1],varBins)
     binDat2 = histc(data2[[covars[i]]][siteInd2],varBins)
+    # binDat3 = histc(data3[[covars[i]]][siteInd3],varBins)
 
     # Calculate average and SD of presence values corresponding to covar obs in each bin
     presChar1 = data.frame(pres=data1$Pres[siteInd1],bin=binDat1$bin) %>%
@@ -529,6 +532,10 @@ for (j in 1:length(sites)){
       group_by(bin) %>%
       summarize(MeanPres=mean(pres,na.rm=TRUE),
                 SD=sd(pres,na.rm=TRUE))
+    # presChar3 = data.frame(pres=data3$Pres[siteInd3],bin=binDat3$bin) %>%
+    #   group_by(bin) %>%
+    #   summarize(MeanPres=mean(pres,na.rm=TRUE),
+    #             SD=sd(pres,na.rm=TRUE))
 
     # Normalize by max mean presence per species
     presChar1$NormMean = presChar1$MeanPres-min(presChar1$MeanPres)
@@ -539,9 +546,14 @@ for (j in 1:length(sites)){
     presChar2$NormMean = presChar2$NormMean/max(presChar2$NormMean)
     presChar2$NormSD = presChar2$SD-min(presChar2$MeanPres)
     presChar2$NormSD = presChar2$NormSD/max(presChar2$NormMean)
+    # presChar3$NormMean = presChar3$MeanPres-min(presChar3$MeanPres)
+    # presChar3$NormMean = presChar3$NormMean/max(presChar3$NormMean)
+    # presChar3$NormSD = presChar3$SD-min(presChar3$MeanPres)
+    # presChar3$NormSD = presChar3$NormSD/max(presChar3$NormMean)
 
     presChar1$binCenter = varBins[presChar1$bin]+0.5*diff(varBins[1:2])
     presChar2$binCenter = varBins[presChar2$bin]+0.5*diff(varBins[1:2])
+    # presChar3$binCenter = varBins[presChar3$bin]+0.5*diff(varBins[1:2])
 
     # Plot as overlaid bar charts
     barPlot = ggplot(
@@ -555,6 +567,11 @@ for (j in 1:length(sites)){
                color=plotColors[2],
                fill=plotColors[2],
                alpha=0.5
+    # )+geom_col(data=presChar3,
+    #            aes(x=binCenter,y=NormMean),
+    #            color=plotColors[3],
+    #            fill=plotColors[3],
+    #            alpha=0.5
     )+coord_cartesian(xlim=c(varMin,varMax)
     )+labs(x=covars[i],y="Normalized Mean Presence",title=covars[i]
     )+theme_minimal()
@@ -565,6 +582,11 @@ for (j in 1:length(sites)){
                        y1=c(1,2),
                        y2=c(1.75,2.75),
                        cols=plotColors)
+    # legDF = data.frame(x1=c(1,1,1),
+    #                    x2=c(2,2,2),
+    #                    y1=c(1,2,3),
+    #                    y2=c(1.75,2.75,3.75),
+    #                   cols=plotColors)
     legPlot = ggplot(legDF
     )+geom_rect(aes(ymin=y1,
                     ymax=y2,
@@ -583,9 +605,11 @@ for (j in 1:length(sites)){
     )+coord_cartesian(xlim=c(1,4)
     )+theme_void()
 
-    png(file=paste(outDir,'/',specs[1],"_",specs[2],"/",covars[i],"_at_",sites[j],".png",sep=""),width = 500, height = 400, units = "px",res=125)
+    # png(file=paste(outDir,'/',specs[1],"_",specs[2],"/",covars[i],"_at_",sites[j],".png",sep=""),width = 500, height = 400, units = "px",res=125)
     png(file=paste(getwd(),'/EcologicalNichePlots/',specs[1],"_",specs[2],"_",covars[i],"_at_",sites[j],".png",sep=""),width = 500, height = 400, units = "px",res=125)
+    # png(file=paste(getwd(),'/EcologicalNichePlots/',specs[1],"_",specs[2],"_",specs[3],"_",covars[i],"_at_",sites[j],".png",sep=""),width = 500, height = 400, units = "px",res=125)
     pdf(file=paste(getwd(),'/EcologicalNichePlots/',specs[1],"_",specs[2],"_",covars[i],"_at_",sites[j],".pdf",sep=""),width = 3, height = 2.4, pointsize=10)
+    # pdf(file=paste(getwd(),'/EcologicalNichePlots/',specs[1],"_",specs[2],"_",specs[3],"_",covars[i],"_at_",sites[j],".pdf",sep=""),width = 3, height = 2.4, pointsize=10)
     grid.arrange(barPlot,legPlot,ncol=5,nrow=4,layout_matrix=rbind(c(rep(1,4),NA),
                                                                c(rep(1,4),2),
                                                                c(rep(1,4),NA),
@@ -799,17 +823,17 @@ for (i in 1:length(covars)){
 
 ## Compare density curves of background vs pres covar values at each site -----------------------
 # specs = c("UD26","Risso")
-# plotColors = c("#030303",'#D62A1C','#1C3FD6') # colors will be applied alphabetically, make sure black corresponds to "Null"
+# plotColors = c("#030303",'#D62A1C','#1C3FD6') # colors applied alphabetically, make sure black corresponds to "Null"
 # sites = c("HZ","OC","NC","BC","WC","NFC","HAT")
 # covars = c("Chl0","FSLE0","SSH0","Sal0","Sal400","Temp0","Temp400","VelAsp0","VelAsp400","VelMag0","VelMag400","AEddyDist0","CEddyDist0")
 # specs = c("Blainville","Gervais")
-# plotColors = c('#D62A1C','#1C3FD6',"#030303") # colors will be applied alphabetically, make sure black corresponds to "Null"
+# plotColors = c('#D62A1C','#1C3FD6',"#030303") # colors applied alphabetically, make sure black corresponds to "Null"
 # sites = c("BS")
 # specs = c("Sowerby","Cuvier")
-# plotColors = c('#D62A1C',"#030303",'#1C3FD6')# colors will be applied alphabetically, make sure black corresponds to "Null"
+# plotColors = c('#D62A1C',"#030303",'#1C3FD6')# colors  applied alphabetically, make sure black corresponds to "Null"
 # sites = c("HZ","BC","WC")
 specs = c("Sowerby","Cuvier","True") # CHANGE SAVE NAME FOR PLOTS TO INCLUDE 3 SPECIES
-plotColors = c('#D62A1C',"#030303",'#1C3FD6','#3DCF08') # colors will be applied alphabetically, make sure black corresponds to "Null"
+plotColors = c('#D62A1C',"#030303",'#1C3FD6','#3DCF08') # colors applied alphabetically, make sure black corresponds to "Null"
 sites = "NC"
 covars = c("Chl0","FSLE0","SSH0","Sal0","Sal700","Temp0","Temp700","VelAsp0","VelAsp700","VelMag0","VelMag700","AEddyDist0","CEddyDist0")
 
