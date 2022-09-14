@@ -19,30 +19,34 @@ season = c("Fall","Winter","Spring","Summer")
 # Plot prediction data -----------------------------
 # for (i in 3:dim(predictWinter)[2]){
 # 
-#   thisVar = names(predictFall)[i]
-#   varMin = min(c(predictFall[[i]],predictWinter[[i]],predictSpring[[i]],predictSummer[[i]]),na.rm=TRUE)
-#   varMax = max(c(predictFall[[i]],predictWinter[[i]],predictSpring[[i]],predictSummer[[i]]),na.rm=TRUE)
-# 
-# 
-#   Fall = ggplot(predictFall,aes(x=lon,y=lat)
-#          )+geom_tile(aes(fill=predictFall[[i]])
-#          )+scale_fill_viridis(limits=c(varMin,varMax)
-#          )+guides(fill = guide_colorbar(title="Fall"))
-#   Winter = ggplot(predictWinter,aes(x=lon,y=lat)
-#         )+geom_tile(aes(fill=predictWinter[[i]])
-#         )+scale_fill_viridis(limits=c(varMin,varMax)
-#         )+guides(fill = guide_colorbar(title="Winter"))
-#   Spring = ggplot(predictSpring,aes(x=lon,y=lat)
-#         )+geom_tile(aes(fill=predictSpring[[i]])
-#         )+scale_fill_viridis(limits=c(varMin,varMax)
-#         )+guides(fill = guide_colorbar(title="Spring"))
-#   Summer = ggplot(predictSummer,aes(x=lon,y=lat)
-#         )+geom_tile(aes(fill=predictSummer[[i]])
-#         )+scale_fill_viridis(limits=c(varMin,varMax)
-#         )+guides(fill = guide_colorbar(title="Summer"))
+  # thisVar = names(predictFall)[i]
+  # varMin = min(c(predictFall[[i]],predictWinter[[i]],predictSpring[[i]],predictSummer[[i]]),na.rm=TRUE)
+  # varMax = max(c(predictFall[[i]],predictWinter[[i]],predictSpring[[i]],predictSummer[[i]]),na.rm=TRUE)
+  # 
+  # 
+  # Fall = ggplot(predictFall,aes(x=lon-360,y=lat)
+  #        )+geom_tile(aes(fill=predictFall[[i]])
+  #        )+scale_fill_viridis(limits=c(varMin,varMax)
+  #        )+guides(fill = guide_colorbar(title="Fall")
+  #        )+geom_point(data=HARPs,aes(x=lon, y=lat),color="#FDFEFE",size=2,shape=19)
+  # Winter = ggplot(predictWinter,aes(x=lon-360,y=lat)
+  #       )+geom_tile(aes(fill=predictWinter[[i]])
+  #       )+scale_fill_viridis(limits=c(varMin,varMax)
+  #       )+guides(fill = guide_colorbar(title="Winter")
+  #       )+geom_point(data=HARPs,aes(x=lon, y=lat),color="#FDFEFE",size=2,shape=19)
+  # Spring = ggplot(predictSpring,aes(x=lon-360,y=lat)
+  #       )+geom_tile(aes(fill=predictSpring[[i]])
+  #       )+scale_fill_viridis(limits=c(varMin,varMax)
+  #       )+guides(fill = guide_colorbar(title="Spring")
+  #       )+geom_point(data=HARPs,aes(x=lon, y=lat),color="#FDFEFE",size=2,shape=19)
+  # Summer = ggplot(predictSummer,aes(x=lon-360,y=lat)
+  #       )+geom_tile(aes(fill=predictSummer[[i]])
+  #       )+scale_fill_viridis(limits=c(varMin,varMax)
+  #       )+guides(fill = guide_colorbar(title="Summer")
+  #       )+geom_point(data=HARPs,aes(x=lon, y=lat),color="#FDFEFE",size=2,shape=19)
 # 
 #   png(file=paste(predDir,"/PredictionData/",thisVar,".png",sep=""),height=700,width=700,units="px",res=100)
-#   grid.arrange(Winter,Spring,Summer,Fall,ncol=2,nrow=2,top=thisVar,layout_matrix=rbind(c(1,2),c(4,3)))
+  # grid.arrange(Winter,Spring,Summer,Fall,ncol=2,nrow=2,top=thisVar,layout_matrix=rbind(c(1,2),c(4,3)))
 #   while (dev.cur()>1) {dev.off()}
 # 
 #   # ggsave(filename=paste(predDir,"/PredictionData/",season[k],"_",thisVar,".png",sep=""),
@@ -75,7 +79,7 @@ for (i in 1:length(species)){
   
   specName = str_remove(species[i],paste(modDir,'/',sep=""))
   load(paste(species[i],"/",specName,'_WeeklyRegionalModel.Rdata',sep=""))
-  load(paste(specName,'_AlternateModel.Rdata',sep=""))
+  load(paste(species[i],"/",specName,'_AlternateModel.Rdata',sep=""))
   
   DEOpt = ((optWeekMod$null.deviance-optWeekMod$deviance)/optWeekMod$null.deviance)*100
   DEAlt = ((altMod$null.deviance-altMod$deviance)/altMod$null.deviance)*100
@@ -89,14 +93,19 @@ for (i in 1:length(species)){
   sumPred = predict.gam(altMod,predictSummer,type="response",na.action=na.pass)
   fallPred = predict.gam(altMod,predictFall,type="response",na.action=na.pass)
   
+  # winPred = predict.gam(optWeekMod,predictWinter,type="response",na.action=na.pass)
+  # sprPred = predict.gam(optWeekMod,predictSpring,type="response",na.action=na.pass)
+  # sumPred = predict.gam(optWeekMod,predictSummer,type="response",na.action=na.pass)
+  # fallPred = predict.gam(optWeekMod,predictFall,type="response",na.action=na.pass)
+  
   # # undo link function on predictions, if predictions are type="link"
   # winPred = exp(winPred)
   # sprPred = exp(sprPred)
   # sumPred = exp(sumPred)
   # fallPred = exp(fallPred)
   
-  # clip presence to max actually possible per week for Md
-  if (specName=="Blainville"){
+  
+  if (specName=="Blainville"){ # clip presence to max actually possible per week for Md
   winPred[winPred>2016] = 2016
   sprPred[sprPred>2016] = 2016
   sumPred[sumPred>2016] = 2016
@@ -125,7 +134,7 @@ for (i in 1:length(species)){
     winPred[winPred>350] = 350
     sprPred[sprPred>350] = 350
     sumPred[sumPred>350] = 350
-    fallPred[fallPred>300] = 300
+    fallPred[fallPred>350] = 350
   } else if (specName=="SpermWhale"){ 
     winPred[winPred>800] = 800
     sprPred[sprPred>800] = 800
@@ -145,30 +154,30 @@ for (i in 1:length(species)){
   sumPred[which(mask==0)] = NA
   fallPred[which(mask==0)] = NA
   
-  # # get rid of any predictions in cells not deep enough for the covars in this model
-  # thisForm = as.character(optWeekMod$formula)[3]
-  # startSmooth = str_locate_all(thisForm,'s\\(')[[1]][,1]
-  # termInd = str_locate_all(thisForm,'\\+')[[1]][,1]
-  # termInd = c(0,termInd,str_length(thisForm)+1)
-  # allTerms = character()
-  # for (j in 1:length(termInd)-1){
-  #   thisTerm = str_sub(thisForm,start=termInd[j]+1,end=termInd[j+1]-1)
-  #   allTerms = c(allTerms,thisTerm)
-  # }
-  # nullTerm = str_which(allTerms,"1")
-  # allTerms = allTerms[-nullTerm]
-  # if (any(str_detect(allTerms,"700"))){
-  #   dLim = -800
-  # } else if (any(str_detect(allTerms,"400"))){
-  #   dLim = -500
-  # } else if (any(str_detect(allTerms,"200"))){
-  #   dLim = -300
-  # }
-  # 
-  # winPred[which(predictWinter$Depth>dLim)] = NA
-  # sprPred[which(predictSpring$Depth>dLim)] = NA
-  # sumPred[which(predictSummer$Depth>dLim)] = NA
-  # fallPred[which(predictFall$Depth>dLim)] = NA
+  # get rid of any predictions in cells not deep enough for the covars in this model
+  thisForm = as.character(optWeekMod$formula)[3]
+  startSmooth = str_locate_all(thisForm,'s\\(')[[1]][,1]
+  termInd = str_locate_all(thisForm,'\\+')[[1]][,1]
+  termInd = c(0,termInd,str_length(thisForm)+1)
+  allTerms = character()
+  for (j in 1:length(termInd)-1){
+    thisTerm = str_sub(thisForm,start=termInd[j]+1,end=termInd[j+1]-1)
+    allTerms = c(allTerms,thisTerm)
+  }
+  nullTerm = str_which(allTerms,"1")
+  allTerms = allTerms[-nullTerm]
+  if (any(str_detect(allTerms,"700"))){
+    dLim = -800
+  } else if (any(str_detect(allTerms,"400"))){
+    dLim = -500
+  } else if (any(str_detect(allTerms,"200"))){
+    dLim = -300
+  }
+
+  winPred[which(predictWinter$Depth>dLim)] = NA
+  sprPred[which(predictSpring$Depth>dLim)] = NA
+  sumPred[which(predictSummer$Depth>dLim)] = NA
+  fallPred[which(predictFall$Depth>dLim)] = NA
 
   # make consistent fill limits
   low = min(c(winPred,sprPred,sumPred,fallPred),na.rm=TRUE)
@@ -223,18 +232,18 @@ for (i in 1:length(species)){
           axis.text.y=element_text(size=12),
           legend.title=element_blank())
   
-  if (i==1){ # plot coastline on its own to later overlay on top of prediction maps
-    Coast = ggplot(FallDF,aes(x=lon,y=lat)
-    )+borders(xlim=c(min(lon),max(lon)),
-              ylim=c(min(lat),max(lat)),
-              fill=NA,colour="black"
-    )+coord_cartesian(xlim=c(min(lon),max(lon)),
-                      ylim=c(min(lat),max(lat)),
-    )+theme(panel.grid.major.x=element_blank(),
-            panel.grid.minor.x=element_blank()
-    )+theme_minimal()
-    ggsave(Coast,file=paste(predDir,'/',"Coastline.pdf",sep=""),device="pdf")
-  }
+  # if (i==1){ # plot coastline on its own to later overlay on top of prediction maps
+  #   Coast = ggplot(FallDF,aes(x=lon,y=lat)
+  #   )+borders(xlim=c(min(lon),max(lon)),
+  #             ylim=c(min(lat),max(lat)),
+  #             fill=NA,colour="black"
+  #   )+coord_cartesian(xlim=c(min(lon),max(lon)),
+  #                     ylim=c(min(lat),max(lat)),
+  #   )+theme(panel.grid.major.x=element_blank(),
+  #           panel.grid.minor.x=element_blank()
+  #   )+theme_minimal()
+  #   ggsave(Coast,file=paste(predDir,'/',"Coastline.pdf",sep=""),device="pdf")
+  # }
   
   # arrange plots in grid and save
   png(file=paste(predDir,'/',specName,'.png',sep=""),width=750,height=800)
