@@ -4,8 +4,8 @@
 library(zoo)
 library(stringr)
 
-inDir = 'J:/Chpt_3/HYCOM/0.08deg'
-outDir = 'J:/Chpt_3/CovarTS'
+inDir = 'E:/Chpt_3/HYCOM/0.08deg'
+outDir = 'E:/Chpt_3/CovarTS'
 sites = c('HZ','OC','NC','BC','WC','NFC','HAT','GS','BP','BS','JAX')
 depths = c(seq(0,100,by=10),seq(150,300,by=50),seq(400,800,by=100))
 
@@ -30,8 +30,8 @@ HARPs$Lon2 = HARPs$Lon2+360
 
 for (k in 1:length(depths)){
 
-  fileListU = list.files(Indir,pattern = paste('U_Velocity_',as.character(depths[k]),'_',sep=""),full.names = TRUE,recursive=FALSE)
-  fileListV = list.files(Indir,pattern=paste('V_Velocity_',as.character(depths[k]),'_',sep=""),full.names=TRUE, recursive=FALSE)
+  fileListU = list.files(inDir,pattern = paste('U_Velocity_',as.character(depths[k]),'_',sep=""),full.names = TRUE,recursive=FALSE)
+  fileListV = list.files(inDir,pattern=paste('V_Velocity_',as.character(depths[k]),'_',sep=""),full.names=TRUE, recursive=FALSE)
 
   masterData.Data = double()
   masterData.Lat = double()
@@ -135,7 +135,7 @@ for (k in 1:length(depths)){
       }
       
       # grab data values at this HARP site
-      thisDateEKE[m,1] = mean(data[(sitelat-2):(sitelat-1),(sitelon+1):(sitelon+2)],na.rm=TRUE)
+      thisDateEKE[m,1] = mean(data[(sitelat-1):(sitelat),(sitelon):(sitelon+1)],na.rm=TRUE)
     }
     
     masterData.Data = cbind(masterData.Data, thisDateEKE)
@@ -146,5 +146,5 @@ for (k in 1:length(depths)){
   }
   
   save(masterData.Data,masterData.Lat,masterData.Lon,masterData.Time,
-       file=paste(outDir,'/','EKE','_',as.character(depths[k]),'_TS_ES_new.Rdata',sep=""))
+       file=paste(outDir,'/','EKE','_',as.character(depths[k]),'_TS.Rdata',sep=""))
 }

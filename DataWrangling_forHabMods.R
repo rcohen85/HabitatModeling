@@ -8,8 +8,8 @@ library(stats)
 library(pracma)
 library(splines)
 
-inDir = 'J:/Chpt_3/CovarTS'
-outDir = 'J:/Chpt_3/CovarPlots'
+inDir = 'E:/Chpt_3/CovarTS'
+outDir = 'E:/Chpt_3/CovarPlots'
 
 fileList = dir(inDir,pattern=".Rdata")
 # lags = c(7,14,21,28,42,56)
@@ -70,9 +70,9 @@ fileList = dir(inDir,pattern=".Rdata")
 
 ## Clean HYCOM data --------------------------------
 # Downloaded HYCOM data are daily at 2/25th (0.08) degrees irregular spatial resolution, re-gridded to 0.08deg
-# vars = c('SSH','Salinity','Temperature','VelocityMag','VelocityAsp','EKE')
-vars = 'EKE'
-lon = "ES"
+vars = c('SSH','Salinity','Temperature','VelocityMag','VelocityAsp','EKE')
+# vars = 'EKE'
+lon = ".Rdata"
 
 for (j in 1:length(vars)){
   
@@ -129,10 +129,11 @@ for (j in 1:length(vars)){
     
   } else { # Multi-depth Variables
     
-    TSind = which(!is.na(str_match(fileList,paste(vars[j],'_Profiles',sep=""))) & !is.na(str_match(fileList,lon)))
+    TSind = which(!is.na(str_match(fileList,paste(vars[j],'_Profiles.Rdata',sep=""))))# & !is.na(str_match(fileList,lon)))
     load(paste(inDir,'/',fileList[TSind],sep=""))
     outDFs = c('fullSalinity','fullTemperature','fullVelocityMag','fullVelocityAsp','fullEKE')
-    depths = c(0,100,200,300,400,500,600,700,800) # desired depth layers
+    # depths = c(0,100,200,300,400,500,600,700,800) # desired depth layers
+    depths=0
     units = c("PPT",paste(intToUtf8(176),"C",sep=""),"m/s",intToUtf8(176),paste(expression("cm"^2),'/',expression("s"^2),sep=""))
     
     eval(parse(text=paste('full',vars[j],' = data.frame(Time=seq.Date(from=as.Date("2016-02-01",origin="1970-01-01"),to=as.Date("2019-04-30",origin="1970-01-01"),by=1))',sep="")))
@@ -186,7 +187,7 @@ for (j in 1:length(vars)){
       #     eval(parse(text=paste('full',vars[j],'$',sites[i],' = (approx(x=masterData.Time[datBins],y=Temp[datBins,i],xout=full',vars[j],'[,1],method="linear"))$y',sep="")))
       #   }
       # } else {
-        for (i in 1:10){
+        for (i in 1:11){
           datBins = which(!is.na(Temp[,i]))
           eval(parse(text=paste('full',vars[j],'$',sites[i],'=NA',sep="")))
           eval(parse(text=paste('full',vars[j],'$',sites[i],' = (approx(x=masterData.Time[datBins],y=Temp[datBins,i],xout=full',vars[j],'[,1],method="linear"))$y',sep="")))
@@ -216,7 +217,7 @@ for (j in 1:length(vars)){
     # }
     
     # Save data as .csv
-    eval(parse(text=paste("write.csv(full",vars[j],",file=\"J:/Chpt_3/CovarTS/",vars[j],"_TS.csv\",row.names=FALSE)",sep="")))
+    eval(parse(text=paste("write.csv(full",vars[j],",file=\"E:/Chpt_3/CovarTS/",vars[j],"_TS.csv\",row.names=FALSE)",sep="")))
     
   }
 }

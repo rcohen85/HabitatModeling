@@ -1,0 +1,57 @@
+
+Family: Tweedie(p=1.467) 
+Link function: log 
+
+Formula:
+Pres ~ s(CEddyDist0, bs = "ts") + s(EKE0, bs = "ts") + s(FSLE0, 
+    bs = "ts") + s(Sal0, bs = "ts") + s(Temp0, bs = "ts") + s(VelAsp0, 
+    bs = "cc", k = 4) + s(VelMag0, bs = "ts") + 1
+
+Parametric coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept)   -9.368      1.372  -6.829  1.2e-11 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Approximate significance of smooth terms:
+                  edf Ref.df      F  p-value    
+s(CEddyDist0) 0.71022      9  0.268   0.0628 .  
+s(EKE0)       2.39586      9  7.973  < 2e-16 ***
+s(FSLE0)      4.17953      9  2.669 3.02e-05 ***
+s(Sal0)       1.15916      9 13.993  < 2e-16 ***
+s(Temp0)      1.05211      9  3.396  < 2e-16 ***
+s(VelAsp0)    0.03034      2  0.016   0.3315    
+s(VelMag0)    2.15393      9 27.941  < 2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+R-sq.(adj) =  0.416   Deviance explained = 82.5%
+-REML = 1238.9  Scale est. = 8.7438    n = 1633
+
+Family: Tweedie(p=1.468) 
+Link function: log 
+
+Formula:
+Pres ~ s(CEddyDist0, bs = "ts") + s(EKE0, bs = "ts") + s(FSLE0, 
+    bs = "ts") + s(Sal0, bs = "ts") + s(Temp0, bs = "ts") + s(VelMag0, 
+    bs = "ts") + 1
+
+Parametric coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept)   -9.373      1.373  -6.828 1.21e-11 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Approximate significance of smooth terms:
+                 edf Ref.df      F  p-value    
+s(CEddyDist0) 0.7094      9  0.267   0.0631 .  
+s(EKE0)       2.3969      9  8.016  < 2e-16 ***
+s(FSLE0)      4.1769      9  2.665 3.06e-05 ***
+s(Sal0)       1.1591      9 13.995  < 2e-16 ***
+s(Temp0)      1.0521      9  3.397  < 2e-16 ***
+s(VelMag0)    2.1547      9 28.166  < 2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+R-sq.(adj) =  0.415   Deviance explained = 82.5%
+-REML = 1238.9  Scale est. = 8.7448    n = 1633

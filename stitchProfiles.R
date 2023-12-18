@@ -1,10 +1,11 @@
 # NOTE: If remaking profile files, delete old ones from inDir, or they will be concatenated with new ones
 library(pracma)
-inDir = 'J:/Chpt_3/CovarTS'
+inDir = 'E:/Chpt_3/CovarTS'
 fileList = dir(inDir)
-covar = "EKE"
-lon = "ES"
-depths=c(seq(0,100,by=10),seq(150,300,by=50),seq(400,800,by=100))
+covar = "VelocityAsp"
+lon = "TS.Rdata"
+# depths=c(seq(0,100,by=10),seq(150,300,by=50),seq(400,800,by=100))
+depths = 0
 
 whichInd = which(!is.na(str_match(fileList,covar)) & !is.na(str_match(fileList,lon)))
 HZProfile = numeric()
@@ -25,7 +26,7 @@ for (i in 1:length(depths)){
   if (!isempty(thisDepth)){
   load(paste(inDir,'/',fileList[whichInd[thisDepth]],sep=""))
   } else {
-      masterData.Data = rep(NA,nrow=11,ncol=1191)
+      masterData.Data = rep(NA,nrow=11,ncol=1190)
     }
   
   HZProfile = rbind(HZProfile,masterData.Data[1,])
@@ -54,4 +55,4 @@ save(HZProfile,
      JAXProfile,
      masterData.Time,
      depths,
-     file=paste(inDir,'/',covar,'_Profiles_ES.Rdata',sep=""))
+     file=paste(inDir,'/',covar,'_Profiles.Rdata',sep=""))

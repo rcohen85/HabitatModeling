@@ -22,7 +22,7 @@ library(SimDesign)
 library(multitaper)
 source("getPvalues.R")
 
-data = data.frame(read.csv('J:/Chpt_3/ModelData/Cuvier_masterDF.csv'))
+data = data.frame(read.csv('Cuvier_masterDF.csv'))
 lagID = 44 
 numClust = length(data$Pres)/(lagID-1)
 if (numClust<length(data$Pres)){
@@ -54,7 +54,7 @@ covarList = c("Chl0",
               "Slope",
               "Aspect")
 
-profileDir = 'E:/ModelingCovarData/Profiles'
+profileDir = 'D:/Chpt_3/CovarTS'
 profileList = dir(profileDir,pattern="Profiles_ES.Rdata",full.names=TRUE)
 sites = unique(data$Site)
 
@@ -142,7 +142,7 @@ covarList = c("Chl0",
               "Slope",
               "Aspect")
 
-profileDir = 'J:/Chpt_3/CovarTS'
+profileDir = 'D:/Chpt_3/CovarTS'
 profileList = dir(profileDir,pattern="Profiles_ES.Rdata",full.names=TRUE)
 sites = c("HZ","WC","HAT")
 k=7

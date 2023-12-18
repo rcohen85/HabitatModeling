@@ -8,10 +8,10 @@ library(stringr)
 library(R.matlab)
 library(lubridate)
 
-presDir = 'J:/Chpt_2/TimeSeries_ScaledByEffortError'
-covarDir = 'J:/Chpt_3/CovarTS'
-outDir = 'J:/Chpt_3/ModelData'
-sites = c('HZ','OC','NC','BC','WC','NFC','HAT','GS','BP','BS')
+presDir = 'E:/Chpt_2/TimeSeries_ScaledByEffortError'
+covarDir = 'E:/Chpt_3/CovarTS'
+outDir = 'C:/Users/rec297/Documents/GitHub/Chpt3Data/ModelData'
+sites = c('HZ','OC','NC','BC','WC','NFC','HAT','GS','BP','BS','JAX')
 covarAbbrev = cbind(c("Chl","FSLE","Salinity","SSH","Temperature","VelocityAsp","VelocityMag","EKE","AEddyDist","CEddyDist"),
                     c("Chl","FSLE","Sal","SSH","Temp","VelAsp","VelMag","EKE","AEddyDist","CEddyDist"))
 # lags = c(7,14,21,28,42,56)
@@ -45,9 +45,9 @@ for (i in goodFiles) {
   }
   
   # stack presence data from all sites
-  thisSpecies = data.frame(Date=as.numeric(rep(as.numeric(as.Date(thisFile[,1],"%d-%b-%Y",origin="1970-01-01")),times=10)),
-                           Pres=as.numeric(stack(thisFile[,2:11])[,1]),
-                           Site=as.character(rep(sites[1:10],each=dim(thisFile)[1])))
+  thisSpecies = data.frame(Date=as.numeric(rep(as.numeric(as.Date(thisFile[,1],"%d-%b-%Y",origin="1970-01-01")),times=11)),
+                           Pres=as.numeric(stack(thisFile[,2:12])[,1]),
+                           Site=as.character(rep(sites,each=dim(thisFile)[1])))
 
   # add GS latitudinal position time series
   load(staticFiles[1])
@@ -142,11 +142,11 @@ for (i in goodFiles) {
     thisVarName = str_remove(str_remove(varFiles[j],paste(covarDir,'/',sep="")),'_TS.csv')
     abbrev = covarAbbrev[which(str_detect(covarAbbrev[,1],thisVarName)),2]
     
-    if (abbrev%in%c("Sal","Temp","VelAsp","VelMag")){
-      depths = c(0,100,200,300,400,500,600,700)
-    } else {
+    # if (abbrev%in%c("Sal","Temp","VelAsp","VelMag")){
+    #   depths = c(0,100,200,300,400,500,600,700)
+    # } else {
       depths = 0
-    }
+    # }
     
     for (k in 1:length(sites)){ # For each site find data points at this site from all depths and time stamps, plus lags
       
@@ -195,7 +195,7 @@ for (i in goodFiles) {
   }
   
   thisSpecies = apply(thisSpecies,2,as.character)
-  saveName = paste(outDir,'/',species,'_masterDF.csv',sep="")
+  saveName = paste(outDir,'/',species,'_masterDF_plusJAX.csv',sep="")
   write.csv(thisSpecies,saveName,row.names=FALSE)
   
 }

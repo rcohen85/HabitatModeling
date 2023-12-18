@@ -13,7 +13,7 @@ library(AER)
 ## GAM approach ---------------------
 # Regional model
 spec = 'Gervais'
-outDir = "J:/Chpt_3/GAM_Output"
+outDir = "E:/Chpt_3/GAM_Output"
 
 # if it doesn't already exist, create directory to save models and figures
 if (!dir.exists(paste(outDir,'/',spec,sep=""))){

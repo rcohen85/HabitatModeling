@@ -2,99 +2,100 @@ library(stringr)
 library(lubridate)
 library(EFDR)
 
-outDir = 'J:/Chpt_3/Predictions'
-predictWinter = list()
-predictSpring = list()
-predictSummer = list()
-predictFall = list()
-
-# HYCOM vars -----------------------------------
-varList = c("EKE","SSH","Salinity","Temperature","VelocityAsp","VelocityMag")
-depths = c('_0_','_200_','_400_','_700_')
-inDir = 'J:/Chpt_3/HYCOM/0.08deg'
-fileList = dir(inDir,".Rdata",full.names=TRUE,recursive=FALSE)
-latMat = numeric()
-lonMat = numeric()
-
-for (i in 1:length(varList)){
-  
-  if (varList[i]=='SSH' | varList[i]=="EKE"){
-    depth = '_0_'
-  } else {
-    depth = depths
-  }
-  
-  for (j in 1:length(depth)){
-    
-    varFiles = which(str_detect(fileList,varList[i]) & str_detect(fileList,depth[j]))
-    eval(parse(text=paste('thisVar_Winter = numeric()',sep="")))
-    eval(parse(text=paste('thisVar_Spring = numeric()',sep="")))
-    eval(parse(text=paste('thisVar_Summer = numeric()',sep="")))
-    eval(parse(text=paste('thisVar_Fall = numeric()',sep="")))
-    varName = str_remove_all(paste(varList[i],depth[j],sep=""),'_')
-    
-    
-    for (k in 1:length(varFiles)){
-      # get 6-digit datestamps from file names
-      fileDate = str_extract(fileList[varFiles[k]],"\\d\\d\\d\\d\\d\\d\\d\\d") 
-      time_temp = paste(str_sub(fileDate,start=1L,end=4L),'-',
-                        str_sub(fileDate,start=5L,end=6L),'-',
-                        str_sub(fileDate,start=7L,end=8L),sep="")
-      
-      thisTime = as.Date(time_temp,format='%Y-%m-%d',tz="UTC")
-      
-      if (month(thisTime)==1){
-        load(fileList[varFiles[k]])
-        dataVec = stack(data.frame(data))[,1]
-        eval(parse(text=paste('thisVar_Winter = rbind(thisVar_Winter,dataVec)',sep="")))
-        latMat = cbind(latMat,lats)
-        lonMat = cbind(lonMat,lons)
-      } else if (month(thisTime)==4){
-        load(fileList[varFiles[k]])
-        dataVec = stack(data.frame(data))[,1]
-        eval(parse(text=paste('thisVar_Spring = rbind(thisVar_Spring,dataVec)',sep="")))
-        latMat = cbind(latMat,lats)
-        lonMat = cbind(lonMat,lons)
-      } else if (month(thisTime)==7){
-        load(fileList[varFiles[k]])
-        dataVec = stack(data.frame(data))[,1]
-        eval(parse(text=paste('thisVar_Summer = rbind(thisVar_Summer,dataVec)',sep="")))
-        latMat = cbind(latMat,lats)
-        lonMat = cbind(lonMat,lons)
-      } else if (month(thisTime)==10){
-        load(fileList[varFiles[k]])
-        dataVec = stack(data.frame(data))[,1]
-        eval(parse(text=paste('thisVar_Fall = rbind(thisVar_Fall,dataVec)',sep="")))
-        latMat = cbind(latMat,lats)
-        lonMat = cbind(lonMat,lons)
-      }
-      
-    }
-    
-    matplot(latMat,main=paste(varName," Latitudes"),type="p")
-    matplot(lonMat,main=paste(varName," Longitudes"),type="p")
-    
-    predictWinter$lat = rep(lats,length.out=length(lons)*length(lats))
-    predictWinter$lon = rep(lons,each=length(lats))
-    eval(parse(text=paste('predictWinter$',varName,'=apply(thisVar_Winter,MARGIN=2,mean,na.rm=TRUE)',sep="")))
-    predictSpring$lat = rep(lats,length.out=length(lons)*length(lats))
-    predictSpring$lon = rep(lons,each=length(lats))
-    eval(parse(text=paste('predictSpring$',varName,'=apply(thisVar_Spring,MARGIN=2,mean,na.rm=TRUE)',sep="")))
-    predictSummer$lat = rep(lats,length.out=length(lons)*length(lats))
-    predictSummer$lon = rep(lons,each=length(lats))
-    eval(parse(text=paste('predictSummer$',varName,'=apply(thisVar_Summer,MARGIN=2,mean,na.rm=TRUE)',sep="")))
-    predictFall$lat = rep(lats,length.out=length(lons)*length(lats))
-    predictFall$lon = rep(lons,each=length(lats))
-    eval(parse(text=paste('predictFall$',varName,'=apply(thisVar_Fall,MARGIN=2,mean,na.rm=TRUE)',sep="")))
-    
-  }
-}
-
-save(predictWinter,predictSummer,predictSpring,predictFall,file=paste(outDir,'/PredictionData.Rdata',sep=""))
+# outDir = 'E:/Chpt_3/Predictions'
+# predictWinter = list()
+# predictSpring = list()
+# predictSummer = list()
+# predictFall = list()
+# 
+# # HYCOM vars -----------------------------------
+# varList = c("EKE","SSH","Salinity","Temperature","VelocityAsp","VelocityMag")
+# # depths = c('_0_','_200_','_400_','_700_')
+# depths = '_0_'
+# inDir = 'E:/Chpt_3/HYCOM/0.08deg'
+# fileList = dir(inDir,".Rdata",full.names=TRUE,recursive=FALSE)
+# latMat = numeric()
+# lonMat = numeric()
+# 
+# for (i in 1:length(varList)){
+#   
+#   if (varList[i]=='SSH' | varList[i]=="EKE"){
+#     depth = '_0_'
+#   } else {
+#     depth = depths
+#   }
+#   
+#   for (j in 1:length(depth)){
+#     
+#     varFiles = which(str_detect(fileList,varList[i]) & str_detect(fileList,depth[j]))
+#     eval(parse(text=paste('thisVar_Winter = numeric()',sep="")))
+#     eval(parse(text=paste('thisVar_Spring = numeric()',sep="")))
+#     eval(parse(text=paste('thisVar_Summer = numeric()',sep="")))
+#     eval(parse(text=paste('thisVar_Fall = numeric()',sep="")))
+#     varName = str_remove_all(paste(varList[i],depth[j],sep=""),'_')
+#     
+#     
+#     for (k in 1:length(varFiles)){
+#       # get 6-digit datestamps from file names
+#       fileDate = str_extract(fileList[varFiles[k]],"\\d\\d\\d\\d\\d\\d\\d\\d") 
+#       time_temp = paste(str_sub(fileDate,start=1L,end=4L),'-',
+#                         str_sub(fileDate,start=5L,end=6L),'-',
+#                         str_sub(fileDate,start=7L,end=8L),sep="")
+#       
+#       thisTime = as.Date(time_temp,format='%Y-%m-%d',tz="UTC")
+#       
+#       if (month(thisTime)==1){
+#         load(fileList[varFiles[k]])
+#         dataVec = stack(data.frame(data))[,1]
+#         eval(parse(text=paste('thisVar_Winter = rbind(thisVar_Winter,dataVec)',sep="")))
+#         latMat = cbind(latMat,lats)
+#         lonMat = cbind(lonMat,lons)
+#       } else if (month(thisTime)==4){
+#         load(fileList[varFiles[k]])
+#         dataVec = stack(data.frame(data))[,1]
+#         eval(parse(text=paste('thisVar_Spring = rbind(thisVar_Spring,dataVec)',sep="")))
+#         latMat = cbind(latMat,lats)
+#         lonMat = cbind(lonMat,lons)
+#       } else if (month(thisTime)==7){
+#         load(fileList[varFiles[k]])
+#         dataVec = stack(data.frame(data))[,1]
+#         eval(parse(text=paste('thisVar_Summer = rbind(thisVar_Summer,dataVec)',sep="")))
+#         latMat = cbind(latMat,lats)
+#         lonMat = cbind(lonMat,lons)
+#       } else if (month(thisTime)==10){
+#         load(fileList[varFiles[k]])
+#         dataVec = stack(data.frame(data))[,1]
+#         eval(parse(text=paste('thisVar_Fall = rbind(thisVar_Fall,dataVec)',sep="")))
+#         latMat = cbind(latMat,lats)
+#         lonMat = cbind(lonMat,lons)
+#       }
+#       
+#     }
+#     
+#     matplot(latMat,main=paste(varName," Latitudes"),type="p")
+#     matplot(lonMat,main=paste(varName," Longitudes"),type="p")
+#     
+#     predictWinter$lat = rep(lats,length.out=length(lons)*length(lats))
+#     predictWinter$lon = rep(lons,each=length(lats))
+#     eval(parse(text=paste('predictWinter$',varName,'=apply(thisVar_Winter,MARGIN=2,mean,na.rm=TRUE)',sep="")))
+#     predictSpring$lat = rep(lats,length.out=length(lons)*length(lats))
+#     predictSpring$lon = rep(lons,each=length(lats))
+#     eval(parse(text=paste('predictSpring$',varName,'=apply(thisVar_Spring,MARGIN=2,mean,na.rm=TRUE)',sep="")))
+#     predictSummer$lat = rep(lats,length.out=length(lons)*length(lats))
+#     predictSummer$lon = rep(lons,each=length(lats))
+#     eval(parse(text=paste('predictSummer$',varName,'=apply(thisVar_Summer,MARGIN=2,mean,na.rm=TRUE)',sep="")))
+#     predictFall$lat = rep(lats,length.out=length(lons)*length(lats))
+#     predictFall$lon = rep(lons,each=length(lats))
+#     eval(parse(text=paste('predictFall$',varName,'=apply(thisVar_Fall,MARGIN=2,mean,na.rm=TRUE)',sep="")))
+#     
+#   }
+# }
+# 
+# save(predictWinter,predictSummer,predictSpring,predictFall,file=paste(outDir,'/PredictionData.Rdata',sep=""))
 
 # FSLE ------------------------------------
 
-inDir = 'J:/Chpt_3/FSLE/0.08deg'
+inDir = 'E:/Chpt_3/FSLE/0.08deg'
 fileList = dir(inDir,".Rdata",full.names=TRUE,recursive=FALSE)
 
 FSLE_Winter = numeric()
@@ -102,9 +103,9 @@ FSLE_Spring = numeric()
 FSLE_Summer = numeric()
 FSLE_Fall = numeric()
 
-for (k in 1:length(fileList)-1){
+for (k in 1:(length(fileList)-1)){
   # get 6-digit datestamps from file names
-  fileDate = str_extract(fileList[k],"\\d\\d\\d\\d\\d\\d\\d\\d") 
+  fileDate = str_extract(fileList[k],'\\d{8}') 
   time_temp = paste(str_sub(fileDate,start=1L,end=4L),'-',
                     str_sub(fileDate,start=5L,end=6L),'-',
                     str_sub(fileDate,start=7L,end=8L),sep="")
@@ -140,7 +141,7 @@ save(predictWinter,predictSummer,predictSpring,predictFall,file=paste(outDir,'/P
 
 # Chl ------------------------------------------------------
 
-inDir = 'J:/Chpt_3/Chla/0.0466deg'
+inDir = 'E:/Chpt_3/Chla/0.0466deg'
 fileList = dir(inDir,".Rdata",full.names=TRUE,recursive=FALSE)
 
 Chl_Winter = numeric()
@@ -212,7 +213,7 @@ save(predictWinter,predictSummer,predictSpring,predictFall,file=paste(outDir,'/P
 
 # Eddy Dist -----------------------------------------------------
 
-inDir = 'J:/Chpt_3/Eddies/Grids'
+inDir = 'E:/Chpt_3/Eddies/Grids'
 
 # anticyclonic eddies
 AfileList = dir(inDir,"AEddy",full.names=TRUE,recursive=FALSE)
@@ -307,68 +308,72 @@ predictSummer = data.frame(predictSummer)
 predictFall = data.frame(predictFall)
 
 # rename columns to match model covars
-colnames(predictWinter) = c("lat","lon","EKE0","SSH0","Sal0","Sal200","Sal400","Sal700",
-                            "Temp0","Temp200","Temp400","Temp700","VelAsp0","VelAsp200",
-                            "VelAsp400","VelAsp700","VelMag0","VelMag200","VelMag400",
-                            "VelMag700","FSLE0","Chl0","AEddyDist0","CEddyDist0")
-colnames(predictSpring) = c("lat","lon","EKE0","SSH0","Sal0","Sal200","Sal400","Sal700",
-                            "Temp0","Temp200","Temp400","Temp700","VelAsp0","VelAsp200",
-                            "VelAsp400","VelAsp700","VelMag0","VelMag200","VelMag400",
-                            "VelMag700","FSLE0","Chl0","AEddyDist0","CEddyDist0")
-colnames(predictSummer) = c("lat","lon","EKE0","SSH0","Sal0","Sal200","Sal400","Sal700",
-                            "Temp0","Temp200","Temp400","Temp700","VelAsp0","VelAsp200",
-                            "VelAsp400","VelAsp700","VelMag0","VelMag200","VelMag400",
-                            "VelMag700","FSLE0","Chl0","AEddyDist0","CEddyDist0")
-colnames(predictFall) = c("lat","lon","EKE0","SSH0","Sal0","Sal200","Sal400","Sal700",
-                            "Temp0","Temp200","Temp400","Temp700","VelAsp0","VelAsp200",
-                            "VelAsp400","VelAsp700","VelMag0","VelMag200","VelMag400",
-                            "VelMag700","FSLE0","Chl0","AEddyDist0","CEddyDist0")
+# colnames(predictWinter) = c("lat","lon","EKE0","SSH0","Sal0","Sal200","Sal400","Sal700",
+#                             "Temp0","Temp200","Temp400","Temp700","VelAsp0","VelAsp200",
+#                             "VelAsp400","VelAsp700","VelMag0","VelMag200","VelMag400",
+#                             "VelMag700","FSLE0","Chl0","AEddyDist0","CEddyDist0")
+# colnames(predictSpring) = c("lat","lon","EKE0","SSH0","Sal0","Sal200","Sal400","Sal700",
+#                             "Temp0","Temp200","Temp400","Temp700","VelAsp0","VelAsp200",
+#                             "VelAsp400","VelAsp700","VelMag0","VelMag200","VelMag400",
+#                             "VelMag700","FSLE0","Chl0","AEddyDist0","CEddyDist0")
+# colnames(predictSummer) = c("lat","lon","EKE0","SSH0","Sal0","Sal200","Sal400","Sal700",
+#                             "Temp0","Temp200","Temp400","Temp700","VelAsp0","VelAsp200",
+#                             "VelAsp400","VelAsp700","VelMag0","VelMag200","VelMag400",
+#                             "VelMag700","FSLE0","Chl0","AEddyDist0","CEddyDist0")
+# colnames(predictFall) = c("lat","lon","EKE0","SSH0","Sal0","Sal200","Sal400","Sal700",
+#                             "Temp0","Temp200","Temp400","Temp700","VelAsp0","VelAsp200",
+#                             "VelAsp400","VelAsp700","VelMag0","VelMag200","VelMag400",
+#                             "VelMag700","FSLE0","Chl0","AEddyDist0","CEddyDist0")
+colnames(predictWinter) = c("lat","lon","EKE0","SSH0","Sal0","Temp0","VelAsp0","VelMag0","FSLE0","Chl0","AEddyDist0","CEddyDist0")
+colnames(predictSpring) = c("lat","lon","EKE0","SSH0","Sal0","Temp0","VelAsp0","VelMag0","FSLE0","Chl0","AEddyDist0","CEddyDist0")
+colnames(predictSummer) = c("lat","lon","EKE0","SSH0","Sal0","Temp0","VelAsp0","VelMag0","FSLE0","Chl0","AEddyDist0","CEddyDist0")
+colnames(predictFall) = c("lat","lon","EKE0","SSH0","Sal0","Temp0","VelAsp0","VelMag0","FSLE0","Chl0","AEddyDist0","CEddyDist0")
 
 # transform data as necessary
-# -Inf will occur in Chl0 + FSLE0 due to 0 values, set to NA
-predictWinter$Chl0[predictWinter$Chl0>10] = 10 # cap crazy high values near coast
-predictWinter$log_Chl0 = log10(predictWinter$Chl0)
-predictWinter$log_Chl0[is.infinite(predictWinter$log_Chl0)] = NA
-predictWinter$log_abs_FSLE0 = log10(abs(predictWinter$FSLE0))
-predictWinter$log_abs_FSLE0[is.infinite(predictWinter$log_abs_FSLE0)] = NA
-predictWinter$sqrt_CEddyDist0 = sqrt(predictWinter$CEddyDist0)
-predictWinter$sqrt_AEddyDist0 = sqrt(predictWinter$AEddyDist0)
-predictWinter$sqrt_VelAsp0 = sqrt(predictWinter$VelAsp0)
-predictWinter$sqrt_VelAsp700 = sqrt(predictWinter$VelAsp700)
-predictWinter$sqrt_EKE0 = sqrt(predictWinter$EKE0)
-
-predictSpring$Chl0[predictSpring$Chl0>10] = 10
-predictSpring$log_Chl0 = log10(predictSpring$Chl0)
-predictSpring$log_Chl0[is.infinite(predictSpring$log_Chl0)] = NA
-predictSpring$log_abs_FSLE0 = log10(abs(predictSpring$FSLE0))
-predictSpring$log_abs_FSLE0[is.infinite(predictSpring$log_abs_FSLE0)] = NA
-predictSpring$sqrt_CEddyDist0 = sqrt(predictSpring$CEddyDist0)
-predictSpring$sqrt_AEddyDist0 = sqrt(predictSpring$AEddyDist0)
-predictSpring$sqrt_VelAsp0 = sqrt(predictSpring$VelAsp0)
-predictSpring$sqrt_VelAsp700 = sqrt(predictSpring$VelAsp700)
-predictSpring$sqrt_EKE0 = sqrt(predictSpring$EKE0)
-
-predictSummer$Chl0[predictSummer$Chl0>10] = 10
-predictSummer$log_Chl0 = log10(predictSummer$Chl0)
-predictSummer$log_Chl0[is.infinite(predictSummer$log_Chl0)] = NA
-predictSummer$log_abs_FSLE0 = log10(abs(predictSummer$FSLE0))
-predictSummer$log_abs_FSLE0[is.infinite(predictSummer$log_abs_FSLE0)] = NA
-predictSummer$sqrt_CEddyDist0 = sqrt(predictSummer$CEddyDist0)
-predictSummer$sqrt_AEddyDist0 = sqrt(predictSummer$AEddyDist0)
-predictSummer$sqrt_VelAsp0 = sqrt(predictSummer$VelAsp0)
-predictSummer$sqrt_VelAsp700 = sqrt(predictSummer$VelAsp700)
-predictSummer$sqrt_EKE0 = sqrt(predictSummer$EKE0)
-
-predictFall$Chl0[predictFall$Chl0>10] = 10
-predictFall$log_Chl0 = log10(predictFall$Chl0)
-predictFall$log_Chl0[is.infinite(predictFall$log_Chl0)] = NA
-predictFall$log_abs_FSLE0 = log10(abs(predictFall$FSLE0))
-predictFall$log_abs_FSLE0[is.infinite(predictFall$log_abs_FSLE0)] = NA
-predictFall$sqrt_CEddyDist0 = sqrt(predictFall$CEddyDist0)
-predictFall$sqrt_AEddyDist0 = sqrt(predictFall$AEddyDist0)
-predictFall$sqrt_VelAsp0 = sqrt(predictFall$VelAsp0)
-predictFall$sqrt_VelAsp700 = sqrt(predictFall$VelAsp700)
-predictFall$sqrt_EKE0 = sqrt(predictFall$EKE0)
+# # -Inf will occur in Chl0 + FSLE0 due to 0 values, set to NA
+# predictWinter$Chl0[predictWinter$Chl0>10] = 10 # cap crazy high values near coast
+# predictWinter$log_Chl0 = log10(predictWinter$Chl0)
+# predictWinter$log_Chl0[is.infinite(predictWinter$log_Chl0)] = NA
+# predictWinter$log_abs_FSLE0 = log10(abs(predictWinter$FSLE0))
+# predictWinter$log_abs_FSLE0[is.infinite(predictWinter$log_abs_FSLE0)] = NA
+# predictWinter$sqrt_CEddyDist0 = sqrt(predictWinter$CEddyDist0)
+# predictWinter$sqrt_AEddyDist0 = sqrt(predictWinter$AEddyDist0)
+# predictWinter$sqrt_VelAsp0 = sqrt(predictWinter$VelAsp0)
+# predictWinter$sqrt_VelAsp700 = sqrt(predictWinter$VelAsp700)
+# predictWinter$sqrt_EKE0 = sqrt(predictWinter$EKE0)
+# 
+# predictSpring$Chl0[predictSpring$Chl0>10] = 10
+# predictSpring$log_Chl0 = log10(predictSpring$Chl0)
+# predictSpring$log_Chl0[is.infinite(predictSpring$log_Chl0)] = NA
+# predictSpring$log_abs_FSLE0 = log10(abs(predictSpring$FSLE0))
+# predictSpring$log_abs_FSLE0[is.infinite(predictSpring$log_abs_FSLE0)] = NA
+# predictSpring$sqrt_CEddyDist0 = sqrt(predictSpring$CEddyDist0)
+# predictSpring$sqrt_AEddyDist0 = sqrt(predictSpring$AEddyDist0)
+# predictSpring$sqrt_VelAsp0 = sqrt(predictSpring$VelAsp0)
+# predictSpring$sqrt_VelAsp700 = sqrt(predictSpring$VelAsp700)
+# predictSpring$sqrt_EKE0 = sqrt(predictSpring$EKE0)
+# 
+# predictSummer$Chl0[predictSummer$Chl0>10] = 10
+# predictSummer$log_Chl0 = log10(predictSummer$Chl0)
+# predictSummer$log_Chl0[is.infinite(predictSummer$log_Chl0)] = NA
+# predictSummer$log_abs_FSLE0 = log10(abs(predictSummer$FSLE0))
+# predictSummer$log_abs_FSLE0[is.infinite(predictSummer$log_abs_FSLE0)] = NA
+# predictSummer$sqrt_CEddyDist0 = sqrt(predictSummer$CEddyDist0)
+# predictSummer$sqrt_AEddyDist0 = sqrt(predictSummer$AEddyDist0)
+# predictSummer$sqrt_VelAsp0 = sqrt(predictSummer$VelAsp0)
+# predictSummer$sqrt_VelAsp700 = sqrt(predictSummer$VelAsp700)
+# predictSummer$sqrt_EKE0 = sqrt(predictSummer$EKE0)
+# 
+# predictFall$Chl0[predictFall$Chl0>10] = 10
+# predictFall$log_Chl0 = log10(predictFall$Chl0)
+# predictFall$log_Chl0[is.infinite(predictFall$log_Chl0)] = NA
+# predictFall$log_abs_FSLE0 = log10(abs(predictFall$FSLE0))
+# predictFall$log_abs_FSLE0[is.infinite(predictFall$log_abs_FSLE0)] = NA
+# predictFall$sqrt_CEddyDist0 = sqrt(predictFall$CEddyDist0)
+# predictFall$sqrt_AEddyDist0 = sqrt(predictFall$AEddyDist0)
+# predictFall$sqrt_VelAsp0 = sqrt(predictFall$VelAsp0)
+# predictFall$sqrt_VelAsp700 = sqrt(predictFall$VelAsp700)
+# predictFall$sqrt_EKE0 = sqrt(predictFall$EKE0)
 
 # get elevation values to later remove prediction values on land
 load('J:/Chpt_3/GEBCO/DownsampledGrid_08deg.Rdata')

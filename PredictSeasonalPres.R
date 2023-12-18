@@ -8,7 +8,7 @@ library(viridis)
 library(maps)
 
 modDir = 'J:/Chpt_3/GAM_Output'
-predDir = 'J:/Chpt_3/Predictions'
+predDir = 'E:/Chpt_3/Predictions'
 lon = seq(278,297,by=0.08)-360
 lat = seq(24,44,by=0.08)
 
@@ -58,7 +58,7 @@ season = c("Fall","Winter","Spring","Summer")
 # 
 # }
 
-DEdelta = matrix(nrow=length(species),ncol=2)
+# DEdelta = matrix(nrow=length(species),ncol=2)
 
 # Predict and plot ---------------------------
 
@@ -75,6 +75,12 @@ HARPs = data.frame(t(data.frame(c(41.06165, -66.35155), # WAT_HZ
 colnames(HARPs) = c("lat","lon")
 rownames(HARPs) = c("HZ","OC","NC","BC","WC","NFC","HAT","GS","BP","BS")
 
+# Center & scale prediction data
+predictWinter[,3:12] = scale(predictWinter[,3:12],center=TRUE,scale=TRUE)
+predictSpring[,3:12] = scale(predictSpring[,3:12],center=TRUE,scale=TRUE)
+predictSummer[,3:12] = scale(predictSummer[,3:12],center=TRUE,scale=TRUE)
+predictFall[,3:12] = scale(predictFall[,3:12],center=TRUE,scale=TRUE)
+
 for (i in 1:length(species)){
   
   specName = str_remove(species[i],paste(modDir,'/',sep=""))
@@ -82,16 +88,21 @@ for (i in 1:length(species)){
   load(paste(species[i],"/",specName,'_AlternateModel.Rdata',sep=""))
   
   DEOpt = ((optWeekMod$null.deviance-optWeekMod$deviance)/optWeekMod$null.deviance)*100
-  DEAlt = ((altMod$null.deviance-altMod$deviance)/altMod$null.deviance)*100
-  DEchange = DEOpt - DEAlt
-  
-  DEdelta[i,] = cbind(specName,round(DEchange,digits=1))
+  # DEAlt = ((altMod$null.deviance-altMod$deviance)/altMod$null.deviance)*100
+  # DEchange = DEOpt - DEAlt
+  # 
+  # DEdelta[i,] = cbind(specName,round(DEchange,digits=1))
   
   # predict presence
-  winPred = predict.gam(altMod,predictWinter,type="response",na.action=na.pass)
-  sprPred = predict.gam(altMod,predictSpring,type="response",na.action=na.pass)
-  sumPred = predict.gam(altMod,predictSummer,type="response",na.action=na.pass)
-  fallPred = predict.gam(altMod,predictFall,type="response",na.action=na.pass)
+  winPred = predict.gam(topMods[['96']],predictWinter,type="response",na.action=na.pass)
+  sprPred = predict.gam(topMods[['96']],predictSpring,type="response",na.action=na.pass)
+  sumPred = predict.gam(topMods[['96']],predictSummer,type="response",na.action=na.pass)
+  fallPred = predict.gam(topMods[['96']],predictFall,type="response",na.action=na.pass)
+  
+  winPred = predict(avgValMod,predictWinter,full=TRUE,type="link",backtransform=TRUE)
+  sprPred = predict(avgValMod,predictSpring,full=TRUE,type="link",backtransform=TRUE)
+  sumPred = predict(avgValMod,predictSummer,full=TRUE,type="link",backtransform=TRUE)
+  fallPred = predict(avgValMod,predictFall,full=TRUE,type="link",backtransform=TRUE)
   
   # winPred = predict.gam(optWeekMod,predictWinter,type="response",na.action=na.pass)
   # sprPred = predict.gam(optWeekMod,predictSpring,type="response",na.action=na.pass)
@@ -106,10 +117,10 @@ for (i in 1:length(species)){
   
   
   if (specName=="Blainville"){ # clip presence to max actually possible per week for Md
-  winPred[winPred>2016] = 2016
-  sprPred[sprPred>2016] = 2016
-  sumPred[sumPred>2016] = 2016
-  fallPred[fallPred>2016] = 2016
+  # winPred[winPred>2016] = 2016
+  # sprPred[sprPred>2016] = 2016
+  # sumPred[sumPred>2016] = 2016
+  # fallPred[fallPred>2016] = 2016
   } else if (specName=="Kogia"){ # cap these species to improve dynamic range of color scale
     winPred[winPred>30] = 30
     sprPred[sprPred>30] = 30
@@ -154,30 +165,30 @@ for (i in 1:length(species)){
   sumPred[which(mask==0)] = NA
   fallPred[which(mask==0)] = NA
   
-  # get rid of any predictions in cells not deep enough for the covars in this model
-  thisForm = as.character(optWeekMod$formula)[3]
-  startSmooth = str_locate_all(thisForm,'s\\(')[[1]][,1]
-  termInd = str_locate_all(thisForm,'\\+')[[1]][,1]
-  termInd = c(0,termInd,str_length(thisForm)+1)
-  allTerms = character()
-  for (j in 1:length(termInd)-1){
-    thisTerm = str_sub(thisForm,start=termInd[j]+1,end=termInd[j+1]-1)
-    allTerms = c(allTerms,thisTerm)
-  }
-  nullTerm = str_which(allTerms,"1")
-  allTerms = allTerms[-nullTerm]
-  if (any(str_detect(allTerms,"700"))){
-    dLim = -800
-  } else if (any(str_detect(allTerms,"400"))){
-    dLim = -500
-  } else if (any(str_detect(allTerms,"200"))){
-    dLim = -300
-  }
-
-  winPred[which(predictWinter$Depth>dLim)] = NA
-  sprPred[which(predictSpring$Depth>dLim)] = NA
-  sumPred[which(predictSummer$Depth>dLim)] = NA
-  fallPred[which(predictFall$Depth>dLim)] = NA
+  # # get rid of any predictions in cells not deep enough for the covars in this model
+  # thisForm = as.character(optWeekMod$formula)[3]
+  # startSmooth = str_locate_all(thisForm,'s\\(')[[1]][,1]
+  # termInd = str_locate_all(thisForm,'\\+')[[1]][,1]
+  # termInd = c(0,termInd,str_length(thisForm)+1)
+  # allTerms = character()
+  # for (j in 1:length(termInd)-1){
+  #   thisTerm = str_sub(thisForm,start=termInd[j]+1,end=termInd[j+1]-1)
+  #   allTerms = c(allTerms,thisTerm)
+  # }
+  # nullTerm = str_which(allTerms,"1")
+  # allTerms = allTerms[-nullTerm]
+  # if (any(str_detect(allTerms,"700"))){
+  #   dLim = -800
+  # } else if (any(str_detect(allTerms,"400"))){
+  #   dLim = -500
+  # } else if (any(str_detect(allTerms,"200"))){
+  #   dLim = -300
+  # }
+# 
+#   winPred[which(predictWinter$Depth>dLim)] = NA
+#   sprPred[which(predictSpring$Depth>dLim)] = NA
+#   sumPred[which(predictSummer$Depth>dLim)] = NA
+#   fallPred[which(predictFall$Depth>dLim)] = NA
 
   # make consistent fill limits
   low = min(c(winPred,sprPred,sumPred,fallPred),na.rm=TRUE)

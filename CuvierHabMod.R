@@ -13,7 +13,7 @@ library(AER)
 ## GAM approach ---------------------
 # Regional model
 spec = 'Cuvier'
-outDir = "J:/Chpt_3/GAM_Output"
+outDir = "E:/Chpt_3/GAM_Output"
 
 # if it doesn't already exist, create directory to save models and figures
 if (!dir.exists(paste(outDir,'/',spec,sep=""))){
@@ -398,10 +398,10 @@ weekModCompTable = dredge(weekMod,
 optWeekMod = get.models(weekModCompTable,subset=1)
 optWeekMod = optWeekMod[[names(optWeekMod)]]
 # save(optWeekMod,weekModCompTable,file=paste(outDir,'/',spec,'/','WeeklyRegionalModel.Rdata',sep=""))
-save(optWeekMod,weekModCompTable,file=paste(spec,'_','WeeklyRegionalModel.Rdata',sep=""))
+save(optWeekMod,weekModCompTable,file=paste(spec,'_','WeeklyRegionalModel_Updated.Rdata',sep=""))
 
 # sink(paste(outDir,'/',spec,'/','WeeklyRegionalModelSummary.txt',sep=""))
-sink(paste(spec,'_','WeeklyRegionalModelSummary.txt',sep=""))
+sink(paste(spec,'_','WeeklyRegionalModelSummary_Updated.txt',sep=""))
 print(summary(optWeekMod))
 sink()
 
@@ -454,11 +454,11 @@ summary(optWeekMod)
 #   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 # 
 # Approximate significance of smooth terms:
-#   edf Ref.df      F  p-value    
-# s(Sal700)       3.100      4  34.00  < 2e-16 ***
-#   s(sqrt_VelAsp0) 2.248      3  10.72 1.71e-08 ***
-#   s(SSH0)         3.942      4 277.79  < 2e-16 ***
-#   s(Temp0)        2.643      3  13.81 6.75e-10 ***
+#   edf Ref.df      F p-value    
+# s(Sal700)       3.100      4  34.00  <2e-16 ***
+#   s(sqrt_VelAsp0) 2.248      3  10.72  <2e-16 ***
+#   s(SSH0)         3.942      4 277.79  <2e-16 ***
+#   s(Temp0)        2.643      3  13.81  <2e-16 ***
 #   ---
 #   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 # 
@@ -470,10 +470,17 @@ summary(optWeekMod)
 # plot.gam(optDayMod,all.terms=TRUE,rug=TRUE,pages=1,scale=0)
 # while (dev.cur()>1) {dev.off()}
 # png(filename=paste(outDir,'/',spec,'/',spec,'_allSitesWeekly.png',sep=""),width=600,height=600)
-png(filename=paste(spec,'_allSitesWeekly.png',sep=""),width=600,height=600)
+png(filename=paste(spec,'_allSitesWeekly_Updated.png',sep=""),width=600,height=600)
 plot.gam(optWeekMod,all.terms=TRUE,rug=TRUE,pages=1,scale=0)
 while (dev.cur()>1) {dev.off()}
 
+# Retrain model with 2/3 of data, then validate by predicting remaining 1/3
+trainInd = sample(1:nrow(weeklyDF),floor(nrow(weeklyDF)*.66))
+testInd = setdiff(1:nrow(weeklyDF),trainInd)
+
+valMod = update(optWeekMod,data=weeklyDF[trainInd,])
+plot.gam(valMod,all.terms=TRUE,rug=TRUE,pages=1,scale=0)
+save(valMod,weekModCompTable,file=paste(spec,'_','ValidationModel.Rdata',sep=""))
 
 # Site-specific models ---------------
 sites = unique(data$Site)
