@@ -13,7 +13,7 @@ library(AER)
 ## GAM approach ---------------------
 # Regional model
 spec = 'SFPW'
-outDir = "J:/Chpt_3/GAM_Output"
+outDir = "/Users/rec297/Documents/Chpt3"
 
 # if it doesn't already exist, create directory to save models and figures
 if (!dir.exists(paste(outDir,'/',spec,sep=""))){
@@ -23,6 +23,7 @@ if (!dir.exists(paste(outDir,'/',spec,sep=""))){
 data = data.frame(read.csv('UD26_masterDF.csv'))
 # Round presence to get Poisson dist
 data$Pres = round(data$Pres)
+data$Date = as.Date(data$Date)
 
 # create weekly time series to reduce autocorrelation
 stDt = as.Date("2016-05-01")
@@ -106,10 +107,10 @@ smoothVarList = c ("sqrt_AEddyDist0",
                    "sqrt_EKE0",
                    "log_Chl0",
                    "Sal0",
-                   "Sal400",
+                   "Sal700",
                    "SSH0",
                    "Temp0",
-                   "Temp400")
+                   "Temp700")
 
 # check residual autocorrelation of weekly data
 sites = unique(weeklyDF$Site)
