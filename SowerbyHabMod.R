@@ -1,48 +1,38 @@
 library(tidyverse)
-library(mgcv.helper)
-library(splines2)
-library(splines)
+library(stringr)
 library(mgcv)
-library(MuMIn)
-library(gratia)
-library(forecast)
-library(nlme)
-library(itsadug)
+library(splines)
 library(AER)
-
-# library(tidyverse)
-# library(splines2)
-# library(geepack)
-# source("getPvalues.R")
-
-
+library(MuMIn)
+library(pracma)
 
 ## GAM approach ---------------------
 # Regional model
 spec = 'Sowerby'
-outDir = "J:/Chpt_3/GAM_Output"
+outDir = "E:/Chpt_3/GAM_Output"
 
 # if it doesn't already exist, create directory to save models and figures
 if (!dir.exists(paste(outDir,'/',spec,sep=""))){
   dir.create(paste(outDir,'/',spec,sep=""))
 }
 
-data = data.frame(read.csv('Sowerby_masterDF.csv'))
+data = data.frame(read.csv('Sowerby_masterDF_plusJAX.csv'))
 # Round presence to get Poisson dist
 data$Pres = round(data$Pres)
+data$Date = as.Date(data$Date,origin='1970-01-01')
 
 # create weekly time series to reduce autocorrelation
 stDt = as.Date("2016-05-01")
 edDt = as.Date("2019-04-30")
-sites = c('HZ','OC','NC','BC','WC','NFC','HAT','GS','BP','BS')
-allDates = stDt:edDt
+sites = c('HZ','OC','NC','BC','WC','NFC','HAT','GS','BP','BS','JAX')
+allDates = seq.Date(stDt,edDt,by=1)
 weekDates = seq.Date(stDt,edDt,by=7)
 weeklyDF = as.numeric()
 
 for (l in 1:length(sites)) {
   
   # Create dataframe to hold data (or NAs) for all dates
-  fullDatesDF = data.frame(matrix(nrow=length(allDates), ncol=44))
+  fullDatesDF = data.frame(matrix(nrow=length(allDates), ncol=dim(data)[2]))
   fullDatesDF[,1] = allDates
   
   # sort the observations we have for this site into the full date range
@@ -84,23 +74,10 @@ for (l in 1:length(sites)) {
   weeklyDF = rbind(weeklyDF,summaryData)
 }
 
-# Remove zeros in FSLE data to prepare for later transformation
-data$FSLE0[data$FSLE0==0] = NA
-weeklyDF$FSLE0[weeklyDF$FSLE0==0] = NA
-
-# Transform data to fix skew, get all predictors on a similar scale
-weeklyDF$log_Chl0 = log10(weeklyDF$Chl0)
-weeklyDF$log_abs_FSLE0 = log10(abs(weeklyDF$FSLE0))
-weeklyDF$sqrt_CEddyDist0 = sqrt(weeklyDF$CEddyDist0)
-weeklyDF$sqrt_AEddyDist0 = sqrt(weeklyDF$AEddyDist0)
-weeklyDF$sqrt_VelAsp0 = sqrt(weeklyDF$VelAsp0)
-weeklyDF$sqrt_VelAsp700 = sqrt(weeklyDF$VelAsp700)
-weeklyDF$sqrt_EKE0 = sqrt(weeklyDF$EKE0)
-weeklyDF$GSDist_div100 = weeklyDF$GSDist/100
+# Center and scale all predictors
+weeklyDF[,6:19] = scale(weeklyDF[,6:19],center=TRUE,scale=TRUE)
 
 # Remove incomplete observations (NAs in FSLE)
-badRows = which(is.na(data),arr.ind=TRUE)[,1]
-data = data[-badRows,]
 badRows = unique(which(is.na(weeklyDF),arr.ind=TRUE)[,1])
 weeklyDF = weeklyDF[-badRows,]
 
@@ -109,13 +86,9 @@ weeklyDF$Pres = round(weeklyDF$Pres)
 
 
 # Check which covars are correlated w presence to determine starting covar list
-smoothVarList = c("sqrt_CEddyDist0",
-                  "sqrt_EKE0",
-                  "Sal0",
-                  "Sal700", 
+smoothVarList = c("Sal0",
                   "SSH0",
-                  "Temp0",
-                  "Temp700")
+                  "Temp0")
 
 # check residual autocorrelation of weekly data
 sites = unique(weeklyDF$Site)
