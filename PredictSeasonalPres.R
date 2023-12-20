@@ -99,10 +99,15 @@ for (i in 1:length(species)){
   sumPred = predict.gam(topMods[['96']],predictSummer,type="response",na.action=na.pass)
   fallPred = predict.gam(topMods[['96']],predictFall,type="response",na.action=na.pass)
   
-  winPred = predict(avgValMod,predictWinter,full=TRUE,type="link",backtransform=TRUE)
-  sprPred = predict(avgValMod,predictSpring,full=TRUE,type="link",backtransform=TRUE)
-  sumPred = predict(avgValMod,predictSummer,full=TRUE,type="link",backtransform=TRUE)
-  fallPred = predict(avgValMod,predictFall,full=TRUE,type="link",backtransform=TRUE)
+  winPred = predict(optWeekMod,predictWinter,full=TRUE,type="response",backtransform=FALSE)
+  sprPred = predict(optWeekMod,predictSpring,full=TRUE,type="response",backtransform=FALSE)
+  sumPred = predict(optWeekMod,predictSummer,full=TRUE,type="response",backtransform=FALSE)
+  fallPred = predict(optWeekMod,predictFall,full=TRUE,type="response",backtransform=FALSE)
+  
+  winPred = predict(optWeekMod,predictWinter,full=TRUE,type="link",backtransform=TRUE)
+  sprPred = predict(optWeekMod,predictSpring,full=TRUE,type="link",backtransform=TRUE)
+  sumPred = predict(optWeekMod,predictSummer,full=TRUE,type="link",backtransform=TRUE)
+  fallPred = predict(optWeekMod,predictFall,full=TRUE,type="link",backtransform=TRUE)
   
   # winPred = predict.gam(optWeekMod,predictWinter,type="response",na.action=na.pass)
   # sprPred = predict.gam(optWeekMod,predictSpring,type="response",na.action=na.pass)

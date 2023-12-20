@@ -1,15 +1,10 @@
 library(tidyverse)
 library(stringr)
-# library(mgcv.helper)
-library(splines)
-library(splines2)
 library(mgcv)
-library(MuMIn)
-library(gratia)
-library(forecast)
-library(nlme)
-library(itsadug)
+library(splines)
 library(AER)
+library(MuMIn)
+library(pracma)
 
 ## GAM approach ---------------------
 # Regional model
@@ -30,7 +25,6 @@ data$Date = as.Date(data$Date,origin='1970-01-01')
 stDt = as.Date("2016-05-01")
 edDt = as.Date("2019-04-30")
 sites = c('HZ','OC','NC','BC','WC','NFC','HAT','GS','BP','BS','JAX')
-# allDates = stDt:edDt
 allDates = seq.Date(stDt,edDt,by=1)
 weekDates = seq.Date(stDt,edDt,by=7)
 weeklyDF = as.numeric()
@@ -129,7 +123,6 @@ for (j in 1:length(sites)){
   }
 }
 residAutocorr
-
 # HZ    NA
 # OC    NA
 # NC    NA
@@ -166,20 +159,20 @@ dispersiontest(dispMod,alternative='two.sided')
 modFam=tw
 
 # run full model
-weekMod = gam(Pres ~ s(CEddyDist0,bs="ts")
-              + s(EKE0,bs="ts")
-              + s(FSLE0,bs="ts")
-              + s(Sal0,bs="ts")
-              + s(SSH0,bs="ts")
-              + s(Temp0,bs="ts")
+weekMod = gam(Pres ~ s(CEddyDist0,bs="ts",k=4)
+              + s(EKE0,bs="ts",k=4)
+              + s(FSLE0,bs="ts",k=4)
+              + s(Sal0,bs="ts",k=4)
+              + s(SSH0,bs="ts",k=4)
+              + s(Temp0,bs="ts",k=4)
               + s(VelAsp0,bs="cc",k=4) # including as smooth so it can be cyclic
-              + s(VelMag0,bs="ts"),
+              + s(VelMag0,bs="ts",k=4),
               data=weeklyDF,
               family=modFam,
               gamma=1.4,
               na.action="na.fail",
               method="REML",
-              optimizer='efs',
+              optimizer=c('outer','bfgs'),
               select=TRUE)
 
 # check convergence
@@ -190,37 +183,35 @@ weekMod$converged
 conCurv = concurvity(weekMod,full=FALSE)
 round(conCurv$estimate,digits=4)
 
-#                 para s(CEddyDist0) s(EKE0) s(FSLE0) s(Sal0) s(SSH0) s(Temp0) s(VelAsp0) s(VelMag0)
+#               para s(CEddyDist0) s(EKE0) s(FSLE0) s(Sal0) s(SSH0) s(Temp0) s(VelAsp0) s(VelMag0)
 # para             1        0.0000  0.0000   0.0000  0.0000  0.0000   0.0000     0.0000     0.0000
-# s(CEddyDist0)    0        1.0000  0.0196   0.0398  0.1731  0.1848   0.1138     0.0826     0.1384
-# s(EKE0)          0        0.0439  1.0000   0.0398  0.1250  0.0618   0.0381     0.0490     0.0972
-# s(FSLE0)         0        0.0476  0.0274   1.0000  0.2345  0.1802   0.1477     0.1777     0.1743
-# s(Sal0)          0        0.1647  0.0265   0.1685  1.0000  0.6539   0.4614     0.3133     0.4178
-# s(SSH0)          0        0.1538  0.0246   0.1141  0.5826  1.0000   0.6029     0.3054     0.4172
-# s(Temp0)         0        0.0954  0.0140   0.0674  0.3568  0.4683   1.0000     0.1880     0.2051
-# s(VelAsp0)       0        0.0792  0.0122   0.1183  0.3689  0.2137   0.2562     1.0000     0.4223
-# s(VelMag0)       0        0.0818  0.0480   0.1429  0.3419  0.1439   0.2442     0.3253     1.0000
+# s(CEddyDist0)    0        1.0000  0.0230   0.0346  0.1824  0.1974   0.1164     0.0695     0.1097
+# s(EKE0)          0        0.0403  1.0000   0.0366  0.1266  0.0496   0.0377     0.0427     0.0862
+# s(FSLE0)         0        0.0304  0.0259   1.0000  0.2263  0.1687   0.1374     0.1548     0.2002
+# s(Sal0)          0        0.1899  0.0449   0.1182  1.0000  0.6840   0.4449     0.2632     0.2912
+# s(SSH0)          0        0.1906  0.0298   0.1005  0.4942  1.0000   0.6452     0.2678     0.3969
+# s(Temp0)         0        0.0989  0.0211   0.0694  0.3406  0.4541   1.0000     0.1823     0.2363
+# s(VelAsp0)       0        0.0977  0.0221   0.1378  0.3904  0.2285   0.2782     1.0000     0.4971
+# s(VelMag0)       0        0.0821  0.0689   0.1570  0.3295  0.1107   0.2374     0.2995     1.0000
 
-# Sal0 problematic w SSH
 # SSH concurved w Sal0
 # Temp0 concurved w SSH0
-
-
 # Taking out SSH0
-weekMod = gam(Pres ~ s(CEddyDist0,bs="ts")
-              + s(EKE0,bs="ts")
-              + s(FSLE0,bs="ts")
-              + s(Sal0,bs="ts")
-              # + s(SSH0,bs="ts")
-              + s(Temp0,bs="ts")
+
+weekMod = gam(Pres ~ s(CEddyDist0,bs="ts",k=4)
+              + s(EKE0,bs="ts",k=4)
+              + s(FSLE0,bs="ts",k=4)
+              + s(Sal0,bs="ts",k=4)
+              # + s(SSH0,bs="ts",k=4)
+              + s(Temp0,bs="ts",k=4)
               + s(VelAsp0,bs="cc",k=4) # including as smooth so it can be cyclic
-              + s(VelMag0,bs="ts"),
+              + s(VelMag0,bs="ts",k=4),
               data=weeklyDF,
               family=modFam,
               gamma=1.4,
               na.action="na.fail",
               method="REML",
-              optimizer='efs',
+              optimizer=c('outer','bfgs'),
               select=TRUE)
 
 # check convergence
@@ -233,13 +224,13 @@ round(conCurv$estimate,digits=4)
 
 #                para s(CEddyDist0) s(EKE0) s(FSLE0) s(Sal0) s(Temp0) s(VelAsp0) s(VelMag0)
 # para             1        0.0000  0.0000   0.0000  0.0000   0.0000     0.0000     0.0000
-# s(CEddyDist0)    0        1.0000  0.0196   0.0398  0.1731   0.1138     0.0826     0.1384
-# s(EKE0)          0        0.0439  1.0000   0.0398  0.1250   0.0381     0.0490     0.0972
-# s(FSLE0)         0        0.0476  0.0274   1.0000  0.2345   0.1477     0.1777     0.1743
-# s(Sal0)          0        0.1647  0.0265   0.1685  1.0000   0.4614     0.3133     0.4178
-# s(Temp0)         0        0.0954  0.0140   0.0674  0.3568   1.0000     0.1880     0.2051
-# s(VelAsp0)       0        0.0792  0.0122   0.1183  0.3689   0.2562     1.0000     0.4223
-# s(VelMag0)       0        0.0818  0.0480   0.1429  0.3419   0.2442     0.3253     1.0000
+# s(CEddyDist0)    0        1.0000  0.0230   0.0346  0.1824   0.1164     0.0695     0.1097
+# s(EKE0)          0        0.0403  1.0000   0.0366  0.1266   0.0377     0.0427     0.0862
+# s(FSLE0)         0        0.0304  0.0259   1.0000  0.2263   0.1374     0.1548     0.2002
+# s(Sal0)          0        0.1899  0.0449   0.1182  1.0000   0.4449     0.2632     0.2912
+# s(Temp0)         0        0.0989  0.0211   0.0694  0.3406   1.0000     0.1823     0.2363
+# s(VelAsp0)       0        0.0977  0.0221   0.1378  0.3904   0.2782     1.0000     0.4971
+# s(VelMag0)       0        0.0821  0.0689   0.1570  0.3295   0.2374     0.2995     1.0000
 
 # Only slight concurvity remains
 
@@ -251,48 +242,44 @@ weekModCompTable = dredge(weekMod,
                           trace=TRUE)
 
 # Save best models
-# optDayMod = get.models(dayModCompTable,subset=1)
-# optDayMod = optDayMod[[names(optDayMod)]]
-# save(optDayMod,dayModCompTable,file=paste(outDir,'/',spec,'/','DailyRegionalModel.Rdata',sep=""))
 # optWeekMod = get.models(weekModCompTable,subset=1)
 # optWeekMod = optWeekMod[[names(optWeekMod)]]
 # save(optWeekMod,weekModCompTable,file=paste(outDir,'/',spec,'/','WeeklyRegionalModel.Rdata',sep=""))
-topMods = get.models(weekModCompTable,subset=delta<2)
-optWeekMod = model.avg(weekModCompTable,subset=delta<2,fit=TRUE)
-save(optWeekMod,topMods,weekModCompTable,file=paste(spec,'_','WeeklyRegionalModel_Updated.Rdata',sep=""))
+topMods = get.models(weekModCompTable,subset=delta<2) # all best-performing models
+if (numel(names(topMods))>1){
+  optWeekMod = model.avg(weekModCompTable,subset=delta<2,fit=TRUE) # averaged model
+  save(optWeekMod,topMods,weekModCompTable,file=paste(spec,'_','WeeklyRegionalModel_Updated.Rdata',sep=""))
+}else{optWeekMod = topMods[[1]]
+save(optWeekMod,weekModCompTable,file=paste(spec,'_','WeeklyRegionalModel_Updated.Rdata',sep=""))}
 
 # sink(paste(outDir,'/',spec,'/','WeeklyRegionalModelSummary.txt',sep=""))
 sink(paste(spec,'_','WeeklyRegionalModelSummary_Updated.txt',sep=""))
 for (i in 1:length(names(topMods))){
-print(summary(topMods[[names(topMods)[i]]]))}
+  print(summary(topMods[[names(topMods)[i]]]))}
 sink()
 
 # plot
-# png(filename=paste(outDir,'/',spec,'/',spec,'_allSitesDaily.png',sep=""),width=600,height=600)
-# plot.gam(optDayMod,all.terms=TRUE,rug=TRUE,pages=1,scale=0)
+# png(filename=paste(spec,'_allSitesWeekly_Updated.png',sep=""),width=600,height=600)
+# plot.gam(optWeekMod,all.terms=TRUE,rug=TRUE,pages=1,scale=0,main="Optimal Model")
 # while (dev.cur()>1) {dev.off()}
-# png(filename=paste(outDir,'/',spec,'/',spec,'_allSitesWeekly.png',sep=""),width=600,height=600)
-png(filename=paste(spec,'_allSitesWeekly_Updated.png',sep=""),width=600,height=600)
-plot.gam(optWeekMod,all.terms=TRUE,rug=TRUE,pages=1,scale=0,main="Optimal Model")
-while (dev.cur()>1) {dev.off()}
-
 
 # Retrain model with 2/3 of data, then validate by predicting remaining 1/3
 trainInd = sample(1:nrow(weeklyDF),floor(nrow(weeklyDF)*.66))
 testInd = setdiff(1:nrow(weeklyDF),trainInd)
 
-valModList = list()
-for (i in 1:numel(names(topMods))){
-  valMod = update(topMods[[1]],data=weeklyDF[trainInd,])
-  valModList[[i]] = valMod
-}
-avgValMod = model.avg(valModList,subset=delta<2,fit=TRUE)
-
-# plot.gam(valMod,all.terms=TRUE,rug=TRUE,pages=1,scale=0,main="Optimal Model")
-save(valMod,file=paste(spec,'_','ValidationModel_Updated.Rdata',sep=""))
+if (numel(names(topMods))>1){
+  valModList = list()
+  for (i in 1:numel(names(topMods))){
+    valMod = update(topMods[[1]],data=weeklyDF[trainInd,])
+    valModList[[i]] = valMod
+  }
+  valMod = model.avg(valModList,subset=delta<2,fit=TRUE)
+  save(valModList,valMod,file=paste(spec,'_','ValidationModel_Updated.Rdata',sep=""))
+}else{valMod = update(optWeekMod,data=weeklyDF[trainInd,])
+save(valMod,file=paste(spec,'_','ValidationModel_Updated.Rdata',sep=""))}
 
 true = weeklyDF[testInd,"Pres"]$Pres
-preds = predict(avgValMod,weeklyDF[testInd,],full=TRUE,type="link",backtransform=TRUE)
+preds = predict(valMod,weeklyDF[testInd,],full=TRUE,type="response",backtransform=FALSE)
 plot(true,preds,type="p")
 cor(true,preds)
 

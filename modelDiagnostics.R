@@ -8,16 +8,19 @@ specs = cbind(c("SBCD","Risso","SFPW","Blainville","Gervais","Cuvier","Sowerby",
               c("Dd","Gg","Gm","Md","Me","Zc","Mb","Mm","Kg","Pm"))
 
 
-# Remove zeros in FSLE data to prepare for later transformation
-masterDF$FSLE0[masterDF$FSLE0==0] = NA
+# # Remove zeros in FSLE data to prepare for later transformation
+# masterDF$FSLE0[masterDF$FSLE0==0] = NA
+# 
+# # Transform data to fix skew, get all predictors on a similar scale
+# masterDF$log_Chl0 = log10(masterDF$Chl0)
+# masterDF$log_abs_FSLE0 = log10(abs(masterDF$FSLE0))
+# masterDF$sqrt_CEddyDist0 = sqrt(masterDF$CEddyDist0)
+# masterDF$sqrt_AEddyDist0 = sqrt(masterDF$AEddyDist0)
+# masterDF$sqrt_VelAsp0 = sqrt(masterDF$VelAsp0)
+# masterDF$sqrt_EKE0 = sqrt(masterDF$EKE0)
 
-# Transform data to fix skew, get all predictors on a similar scale
-masterDF$log_Chl0 = log10(masterDF$Chl0)
-masterDF$log_abs_FSLE0 = log10(abs(masterDF$FSLE0))
-masterDF$sqrt_CEddyDist0 = sqrt(masterDF$CEddyDist0)
-masterDF$sqrt_AEddyDist0 = sqrt(masterDF$AEddyDist0)
-masterDF$sqrt_VelAsp0 = sqrt(masterDF$VelAsp0)
-masterDF$sqrt_EKE0 = sqrt(masterDF$EKE0)
+# Center and scale all predictors
+masterDF[,3:12] = scale(masterDF[,3:12],center=TRUE,scale=TRUE)
 
 # Remove incomplete observations (NAs in FSLE)
 badRows = unique(which(is.na(masterDF),arr.ind=TRUE)[,1])

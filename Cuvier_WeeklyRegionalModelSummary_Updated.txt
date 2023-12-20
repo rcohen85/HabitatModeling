@@ -1,27 +1,30 @@
 
-Family: Tweedie(p=1.557) 
+Family: Tweedie(p=1.62) 
 Link function: log 
 
 Formula:
-Pres ~ s(Sal700, bs = "cs", k = 5) + s(sqrt_VelAsp0, bs = "cc", 
-    k = 5) + s(SSH0, bs = "cs", k = 5) + s(Temp0, bs = "cs", 
-    k = 4) + sqrt_CEddyDist0 + 1
+Pres ~ s(CEddyDist0, bs = "ts", k = 4) + s(EKE0, bs = "ts", k = 4) + 
+    s(FSLE0, bs = "ts", k = 4) + s(Sal0, bs = "ts", k = 4) + 
+    s(Temp0, bs = "ts", k = 4) + s(VelAsp0, bs = "cc", k = 4) + 
+    s(VelMag0, bs = "ts", k = 4) + 1
 
 Parametric coefficients:
-                Estimate Std. Error t value Pr(>|t|)    
-(Intercept)      2.80937    0.19208  14.626  < 2e-16 ***
-sqrt_CEddyDist0 -0.08100    0.01561  -5.187 2.43e-07 ***
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept)  2.03186    0.05024   40.44   <2e-16 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 Approximate significance of smooth terms:
-                  edf Ref.df      F p-value    
-s(Sal700)       3.100      4  34.00  <2e-16 ***
-s(sqrt_VelAsp0) 2.248      3  10.72  <2e-16 ***
-s(SSH0)         3.942      4 277.79  <2e-16 ***
-s(Temp0)        2.643      3  13.81  <2e-16 ***
+                 edf Ref.df       F  p-value    
+s(CEddyDist0) 1.2401      3  20.964  < 2e-16 ***
+s(EKE0)       0.9204      3   4.698 7.76e-05 ***
+s(FSLE0)      2.7513      3  21.496  < 2e-16 ***
+s(Sal0)       2.9521      3  85.956  < 2e-16 ***
+s(Temp0)      2.7222      3  44.397  < 2e-16 ***
+s(VelAsp0)    1.5676      2   4.397   0.0037 ** 
+s(VelMag0)    2.7966      3 114.761  < 2e-16 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-R-sq.(adj) =  0.462   Deviance explained = 61.7%
--REML = 3080.2  Scale est. = 6.1933    n = 1509
+R-sq.(adj) =  -0.862   Deviance explained =   46%
+-REML = 3301.7  Scale est. = 7.993     n = 1633

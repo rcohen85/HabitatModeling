@@ -2,96 +2,96 @@ library(stringr)
 library(lubridate)
 library(EFDR)
 
-# outDir = 'E:/Chpt_3/Predictions'
-# predictWinter = list()
-# predictSpring = list()
-# predictSummer = list()
-# predictFall = list()
-# 
-# # HYCOM vars -----------------------------------
-# varList = c("EKE","SSH","Salinity","Temperature","VelocityAsp","VelocityMag")
-# # depths = c('_0_','_200_','_400_','_700_')
-# depths = '_0_'
-# inDir = 'E:/Chpt_3/HYCOM/0.08deg'
-# fileList = dir(inDir,".Rdata",full.names=TRUE,recursive=FALSE)
-# latMat = numeric()
-# lonMat = numeric()
-# 
-# for (i in 1:length(varList)){
-#   
-#   if (varList[i]=='SSH' | varList[i]=="EKE"){
-#     depth = '_0_'
-#   } else {
-#     depth = depths
-#   }
-#   
-#   for (j in 1:length(depth)){
-#     
-#     varFiles = which(str_detect(fileList,varList[i]) & str_detect(fileList,depth[j]))
-#     eval(parse(text=paste('thisVar_Winter = numeric()',sep="")))
-#     eval(parse(text=paste('thisVar_Spring = numeric()',sep="")))
-#     eval(parse(text=paste('thisVar_Summer = numeric()',sep="")))
-#     eval(parse(text=paste('thisVar_Fall = numeric()',sep="")))
-#     varName = str_remove_all(paste(varList[i],depth[j],sep=""),'_')
-#     
-#     
-#     for (k in 1:length(varFiles)){
-#       # get 6-digit datestamps from file names
-#       fileDate = str_extract(fileList[varFiles[k]],"\\d\\d\\d\\d\\d\\d\\d\\d") 
-#       time_temp = paste(str_sub(fileDate,start=1L,end=4L),'-',
-#                         str_sub(fileDate,start=5L,end=6L),'-',
-#                         str_sub(fileDate,start=7L,end=8L),sep="")
-#       
-#       thisTime = as.Date(time_temp,format='%Y-%m-%d',tz="UTC")
-#       
-#       if (month(thisTime)==1){
-#         load(fileList[varFiles[k]])
-#         dataVec = stack(data.frame(data))[,1]
-#         eval(parse(text=paste('thisVar_Winter = rbind(thisVar_Winter,dataVec)',sep="")))
-#         latMat = cbind(latMat,lats)
-#         lonMat = cbind(lonMat,lons)
-#       } else if (month(thisTime)==4){
-#         load(fileList[varFiles[k]])
-#         dataVec = stack(data.frame(data))[,1]
-#         eval(parse(text=paste('thisVar_Spring = rbind(thisVar_Spring,dataVec)',sep="")))
-#         latMat = cbind(latMat,lats)
-#         lonMat = cbind(lonMat,lons)
-#       } else if (month(thisTime)==7){
-#         load(fileList[varFiles[k]])
-#         dataVec = stack(data.frame(data))[,1]
-#         eval(parse(text=paste('thisVar_Summer = rbind(thisVar_Summer,dataVec)',sep="")))
-#         latMat = cbind(latMat,lats)
-#         lonMat = cbind(lonMat,lons)
-#       } else if (month(thisTime)==10){
-#         load(fileList[varFiles[k]])
-#         dataVec = stack(data.frame(data))[,1]
-#         eval(parse(text=paste('thisVar_Fall = rbind(thisVar_Fall,dataVec)',sep="")))
-#         latMat = cbind(latMat,lats)
-#         lonMat = cbind(lonMat,lons)
-#       }
-#       
-#     }
-#     
-#     matplot(latMat,main=paste(varName," Latitudes"),type="p")
-#     matplot(lonMat,main=paste(varName," Longitudes"),type="p")
-#     
-#     predictWinter$lat = rep(lats,length.out=length(lons)*length(lats))
-#     predictWinter$lon = rep(lons,each=length(lats))
-#     eval(parse(text=paste('predictWinter$',varName,'=apply(thisVar_Winter,MARGIN=2,mean,na.rm=TRUE)',sep="")))
-#     predictSpring$lat = rep(lats,length.out=length(lons)*length(lats))
-#     predictSpring$lon = rep(lons,each=length(lats))
-#     eval(parse(text=paste('predictSpring$',varName,'=apply(thisVar_Spring,MARGIN=2,mean,na.rm=TRUE)',sep="")))
-#     predictSummer$lat = rep(lats,length.out=length(lons)*length(lats))
-#     predictSummer$lon = rep(lons,each=length(lats))
-#     eval(parse(text=paste('predictSummer$',varName,'=apply(thisVar_Summer,MARGIN=2,mean,na.rm=TRUE)',sep="")))
-#     predictFall$lat = rep(lats,length.out=length(lons)*length(lats))
-#     predictFall$lon = rep(lons,each=length(lats))
-#     eval(parse(text=paste('predictFall$',varName,'=apply(thisVar_Fall,MARGIN=2,mean,na.rm=TRUE)',sep="")))
-#     
-#   }
-# }
-# 
-# save(predictWinter,predictSummer,predictSpring,predictFall,file=paste(outDir,'/PredictionData.Rdata',sep=""))
+outDir = 'E:/Chpt_3/Predictions'
+predictWinter = list()
+predictSpring = list()
+predictSummer = list()
+predictFall = list()
+
+# HYCOM vars -----------------------------------
+varList = c("EKE","SSH","Salinity","Temperature","VelocityAsp","VelocityMag")
+# depths = c('_0_','_200_','_400_','_700_')
+depths = '_0_'
+inDir = 'E:/Chpt_3/HYCOM/0.08deg'
+fileList = dir(inDir,".Rdata",full.names=TRUE,recursive=FALSE)
+latMat = numeric()
+lonMat = numeric()
+
+for (i in 1:length(varList)){
+
+  if (varList[i]=='SSH' | varList[i]=="EKE"){
+    depth = '_0_'
+  } else {
+    depth = depths
+  }
+
+  for (j in 1:length(depth)){
+
+    varFiles = which(str_detect(fileList,varList[i]) & str_detect(fileList,depth[j]))
+    eval(parse(text=paste('thisVar_Winter = numeric()',sep="")))
+    eval(parse(text=paste('thisVar_Spring = numeric()',sep="")))
+    eval(parse(text=paste('thisVar_Summer = numeric()',sep="")))
+    eval(parse(text=paste('thisVar_Fall = numeric()',sep="")))
+    varName = str_remove_all(paste(varList[i],depth[j],sep=""),'_')
+
+
+    for (k in 1:length(varFiles)){
+      # get 6-digit datestamps from file names
+      fileDate = str_extract(fileList[varFiles[k]],"\\d\\d\\d\\d\\d\\d\\d\\d")
+      time_temp = paste(str_sub(fileDate,start=1L,end=4L),'-',
+                        str_sub(fileDate,start=5L,end=6L),'-',
+                        str_sub(fileDate,start=7L,end=8L),sep="")
+
+      thisTime = as.Date(time_temp,format='%Y-%m-%d',tz="UTC")
+
+      if (month(thisTime)==1){
+        load(fileList[varFiles[k]])
+        dataVec = stack(data.frame(data))[,1]
+        eval(parse(text=paste('thisVar_Winter = rbind(thisVar_Winter,dataVec)',sep="")))
+        latMat = cbind(latMat,lats)
+        lonMat = cbind(lonMat,lons)
+      } else if (month(thisTime)==4){
+        load(fileList[varFiles[k]])
+        dataVec = stack(data.frame(data))[,1]
+        eval(parse(text=paste('thisVar_Spring = rbind(thisVar_Spring,dataVec)',sep="")))
+        latMat = cbind(latMat,lats)
+        lonMat = cbind(lonMat,lons)
+      } else if (month(thisTime)==7){
+        load(fileList[varFiles[k]])
+        dataVec = stack(data.frame(data))[,1]
+        eval(parse(text=paste('thisVar_Summer = rbind(thisVar_Summer,dataVec)',sep="")))
+        latMat = cbind(latMat,lats)
+        lonMat = cbind(lonMat,lons)
+      } else if (month(thisTime)==10){
+        load(fileList[varFiles[k]])
+        dataVec = stack(data.frame(data))[,1]
+        eval(parse(text=paste('thisVar_Fall = rbind(thisVar_Fall,dataVec)',sep="")))
+        latMat = cbind(latMat,lats)
+        lonMat = cbind(lonMat,lons)
+      }
+
+    }
+
+    matplot(latMat,main=paste(varName," Latitudes"),type="p")
+    matplot(lonMat,main=paste(varName," Longitudes"),type="p")
+
+    predictWinter$lat = rep(lats,length.out=length(lons)*length(lats))
+    predictWinter$lon = rep(lons,each=length(lats))
+    eval(parse(text=paste('predictWinter$',varName,'=apply(thisVar_Winter,MARGIN=2,mean,na.rm=TRUE)',sep="")))
+    predictSpring$lat = rep(lats,length.out=length(lons)*length(lats))
+    predictSpring$lon = rep(lons,each=length(lats))
+    eval(parse(text=paste('predictSpring$',varName,'=apply(thisVar_Spring,MARGIN=2,mean,na.rm=TRUE)',sep="")))
+    predictSummer$lat = rep(lats,length.out=length(lons)*length(lats))
+    predictSummer$lon = rep(lons,each=length(lats))
+    eval(parse(text=paste('predictSummer$',varName,'=apply(thisVar_Summer,MARGIN=2,mean,na.rm=TRUE)',sep="")))
+    predictFall$lat = rep(lats,length.out=length(lons)*length(lats))
+    predictFall$lon = rep(lons,each=length(lats))
+    eval(parse(text=paste('predictFall$',varName,'=apply(thisVar_Fall,MARGIN=2,mean,na.rm=TRUE)',sep="")))
+
+  }
+}
+
+save(predictWinter,predictSummer,predictSpring,predictFall,file=paste(outDir,'/PredictionData.Rdata',sep=""))
 
 # FSLE ------------------------------------
 
@@ -376,7 +376,7 @@ colnames(predictFall) = c("lat","lon","EKE0","SSH0","Sal0","Temp0","VelAsp0","Ve
 # predictFall$sqrt_EKE0 = sqrt(predictFall$EKE0)
 
 # get elevation values to later remove prediction values on land
-load('J:/Chpt_3/GEBCO/DownsampledGrid_08deg.Rdata')
+load('E:/Chpt_3/GEBCO/DownsampledGrid_08deg.Rdata')
 x = seq(278,297,by=0.08)
 y = seq(24,44,by=0.08)
 depth = unlist(stack(data.frame(matrix(newGrid$Depth,ncol=length(x),byrow=TRUE)))[,1])
@@ -386,26 +386,26 @@ predictSpring$Depth = depth
 predictSummer$Depth = depth
 predictFall$Depth = depth
 
-# set margin values = NA
-lim300 = which(predictWinter$Depth>-300)
-var200 = which(str_detect(colnames(predictWinter),"200"))
-predictWinter[lim300,var200] = NA
-predictSpring[lim300,var200] = NA
-predictSummer[lim300,var200] = NA
-predictFall[lim300,var200] = NA
-
-lim500 = which(predictWinter$Depth>-500)
-var400 = which(str_detect(colnames(predictWinter),"400"))
-predictWinter[lim500,var400] = NA
-predictSpring[lim500,var400] = NA
-predictSummer[lim500,var400] = NA
-predictFall[lim500,var400] = NA
-
-lim800 = which(predictWinter$Depth>-800)
-var700 = which(str_detect(colnames(predictWinter),"700"))
-predictWinter[lim800,var700] = NA
-predictSpring[lim800,var700] = NA
-predictSummer[lim800,var700] = NA
-predictFall[lim800,var700] = NA
+# # set margin values = NA
+# lim300 = which(predictWinter$Depth>-300)
+# var200 = which(str_detect(colnames(predictWinter),"200"))
+# predictWinter[lim300,var200] = NA
+# predictSpring[lim300,var200] = NA
+# predictSummer[lim300,var200] = NA
+# predictFall[lim300,var200] = NA
+# 
+# lim500 = which(predictWinter$Depth>-500)
+# var400 = which(str_detect(colnames(predictWinter),"400"))
+# predictWinter[lim500,var400] = NA
+# predictSpring[lim500,var400] = NA
+# predictSummer[lim500,var400] = NA
+# predictFall[lim500,var400] = NA
+# 
+# lim800 = which(predictWinter$Depth>-800)
+# var700 = which(str_detect(colnames(predictWinter),"700"))
+# predictWinter[lim800,var700] = NA
+# predictSpring[lim800,var700] = NA
+# predictSummer[lim800,var700] = NA
+# predictFall[lim800,var700] = NA
 
 save(predictWinter,predictSummer,predictSpring,predictFall,file=paste(outDir,'/PredictionData.Rdata',sep=""))

@@ -22,7 +22,7 @@ library(mgcv)
 library(SimDesign)
 source("getPvalues.R")
 
-data = data.frame(read.csv('J:/Chpt_3/ModelData/Kogia_masterDF.csv'))
+data = data.frame(read.csv('E:/Chpt_3/ModelData/Kogia_masterDF_plusJAX.csv'))
 lagID = 75
 numClust = length(data$Pres)/(lagID-1)
 if (numClust<length(data$Pres)){
@@ -205,9 +205,7 @@ Covar selection to start:
 ```{r plotCovars}
 # Fill in smoothVarList based on selection made above
 smoothVarList = c("Temp0",
-                  "Temp700",
                   "Sal0",
-                  "Sal700",
                   "Chl0",
                   "SSH0",
                   "FSLE0",
