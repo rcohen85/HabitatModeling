@@ -3,24 +3,15 @@ library(mgcv)
 library(Metrics)
 library(stringr)
 modFam = tw
-masterDF = data.frame(read.csv("MasterWeeklyDF.csv"))
+masterDF = data.frame(read.csv("MasterWeeklyDF_plusJAX.csv"))
 specs = cbind(c("SBCD","Risso","SFPW","Blainville","Gervais","Cuvier","Sowerby","True","Kogia","SpermWhale"),
               c("Dd","Gg","Gm","Md","Me","Zc","Mb","Mm","Kg","Pm"))
 
-
-# # Remove zeros in FSLE data to prepare for later transformation
-# masterDF$FSLE0[masterDF$FSLE0==0] = NA
-# 
-# # Transform data to fix skew, get all predictors on a similar scale
-# masterDF$log_Chl0 = log10(masterDF$Chl0)
-# masterDF$log_abs_FSLE0 = log10(abs(masterDF$FSLE0))
-# masterDF$sqrt_CEddyDist0 = sqrt(masterDF$CEddyDist0)
-# masterDF$sqrt_AEddyDist0 = sqrt(masterDF$AEddyDist0)
-# masterDF$sqrt_VelAsp0 = sqrt(masterDF$VelAsp0)
-# masterDF$sqrt_EKE0 = sqrt(masterDF$EKE0)
-
 # Center and scale all predictors
 masterDF[,3:12] = scale(masterDF[,3:12],center=TRUE,scale=TRUE)
+
+# Round presence data
+masterDF[,13:22] = round(masterDF[,13:22])
 
 # Remove incomplete observations (NAs in FSLE)
 badRows = unique(which(is.na(masterDF),arr.ind=TRUE)[,1])
@@ -38,12 +29,34 @@ for (i in 1:dim(specs)[1]){
   # load model
   load(paste(getwd(),'/',specs[i,1],'_WeeklyRegionalModel.Rdata',sep=""))
   
-  # find non-zero input data to compare to associated fitted values
+  # # find non-zero input data to compare to associated fitted values
+  # abbrev = specs[i,2]
+  # pres = which(masterDF[[abbrev]]>0)
+  # 
+  # # calculate model predictions for input data
+  # modPreds = predict.gam(optWeekMod,masterDF,type="response")
+  # Retrain model with 2/3 of data, then validate by predicting remaining 1/3
+  trainInd = sample(1:nrow(weeklyDF),floor(nrow(weeklyDF)*.66))
+  testInd = setdiff(1:nrow(weeklyDF),trainInd)
+
+  # find non-zero validation data to compare to associated fitted values
   abbrev = specs[i,2]
-  pres = which(masterDF[[abbrev]]>0)
+  pres = which(masterDF[[abbrev]][testInd]>0)
   
-  # calculate model predictions for input data
-  modPreds = predict.gam(optWeekMod,masterDF,type="response")
+  if (numel(names(topMods))>1){
+    valModList = list()
+    for (i in 1:numel(names(topMods))){
+      valMod = update(topMods[[1]],data=weeklyDF[trainInd,])
+      valModList[[i]] = valMod
+    }
+    valMod = model.avg(valModList,subset=delta<2,fit=TRUE)
+    save(valModList,valMod,file=paste(spec,'_','ValidationModel_Updated.Rdata',sep=""))
+  }else{valMod = update(optWeekMod,data=weeklyDF[trainInd,])
+  save(valMod,file=paste(spec,'_','ValidationModel_Updated.Rdata',sep=""))}
+  
+  true = weeklyDF[testInd,"Pres"]$Pres
+  preds = predict(valMod,weeklyDF[testInd,],full=TRUE,type="response",backtransform=FALSE)
+
   
   # calculate Spearman's rank correlation
   ZeroModStats[i,1] = round(cor(masterDF[[abbrev]][pres], modPreds[pres],method="spearman"),digits=4)

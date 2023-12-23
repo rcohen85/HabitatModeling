@@ -1,0 +1,53 @@
+
+Family: Tweedie(p=1.435) 
+Link function: log 
+
+Formula:
+Pres ~ s(EKE0, bs = "ts", k = 4) + s(FSLE0, bs = "ts", k = 4) + 
+    s(Sal0, bs = "ts", k = 4) + s(Temp0, bs = "ts", k = 4) + 
+    1
+
+Parametric coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept) -0.63173    0.08784  -7.192 9.72e-13 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Approximate significance of smooth terms:
+            edf Ref.df      F  p-value    
+s(EKE0)  0.9311      3  5.458 2.71e-05 ***
+s(FSLE0) 1.0231      3 17.887  < 2e-16 ***
+s(Sal0)  2.9023      3 50.413  < 2e-16 ***
+s(Temp0) 2.4998      3 20.024  < 2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+R-sq.(adj) =   0.13   Deviance explained =   43%
+-REML = 1711.5  Scale est. = 4.6552    n = 1633
+
+Family: Tweedie(p=1.435) 
+Link function: log 
+
+Formula:
+Pres ~ s(EKE0, bs = "ts", k = 4) + s(FSLE0, bs = "ts", k = 4) + 
+    s(Sal0, bs = "ts", k = 4) + s(Temp0, bs = "ts", k = 4) + 
+    s(VelMag0, bs = "ts", k = 4) + 1
+
+Parametric coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept) -0.63164    0.08784  -7.191 9.77e-13 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Approximate significance of smooth terms:
+               edf Ref.df      F  p-value    
+s(EKE0)    0.93108      3  5.446 2.74e-05 ***
+s(FSLE0)   1.02310      3 17.870  < 2e-16 ***
+s(Sal0)    2.90226      3 50.276  < 2e-16 ***
+s(Temp0)   2.49970      3 20.007  < 2e-16 ***
+s(VelMag0) 0.01107      3  0.004     0.31    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+R-sq.(adj) =   0.13   Deviance explained =   43%
+-REML = 1711.5  Scale est. = 4.6552    n = 1633
