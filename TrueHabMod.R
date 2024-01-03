@@ -253,7 +253,7 @@ testInd = setdiff(1:nrow(weeklyDF),trainInd)
 if (numel(names(topMods))>1){
   valModList = list()
   for (i in 1:numel(names(topMods))){
-    valMod = update(topMods[[1]],data=weeklyDF[trainInd,])
+    valMod = update(topMods[[i]],data=weeklyDF[trainInd,])
     valModList[[i]] = valMod
   }
   valMod = model.avg(valModList,subset=delta<2,fit=TRUE)
